@@ -1,0 +1,33 @@
+Version notes. 
+
+1_CDAMT_functions_v1.cpp
+1_CDAMT_functions_v2.cpp
+1_CDAMT_functions_v3.cpp: Drop lnZ as exogenous shock. 
+
+--------------------------------------------------------------------
+1_nielsen_6_DP_v1.r: income nodes vary by segment. 
+1_nielsen_6_DP_v2.r: unify income nodes for all data. 
+1_nielsen_6_DP_v3.r: Drop lnZ as exogenous shocks. 
+
+--------------------------------------------------------------------
+2015/05/30
+1_nielsen_6_DP_v3.r
+Change my_lag into my_forward
+Add a function of mytransition
+Increase the max number of iteration of NM optimization.
+Change the initial values. 
+
+1_CDAMT_functions_v3.cpp:
+Change the normalized parameter (Inc-y) from .1 to .01; 
+Add DP iteration check: if max(value function) > bound, return NA.
+--------------------------------------------------------------------
+2015/05/31
+1_CDAMT_functions_v3.cpp:
+Add bounds to y: y < Inc;
+Add initial value functions generator to the policy iteration function; 
+Add control of NM_startsize. 
+
+--------------------------------------------------------------------
+2015/06/09
+1_nielsen_6_DP_v4.r: 
+Estimation with Laplas transformation. 

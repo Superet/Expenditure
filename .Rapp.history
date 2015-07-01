@@ -1,0 +1,761 @@
+ui %*% inits[[3]] - ci
+ui %*% inits[[2]] - ci
+ui %*% inits[[1]] - ci
+tmp	  <- min(y/price, Q) * .9#
+		sel   <- which.min(price)#
+		inits <- list(c(rep(tmp/(Ra-1), Ra-1), Q - tmp/R - 1e-6), #
+					  c(rep(1e-8, R), y-(R+2)*1e-8, Q - sum(price)*1e-8 - 1e-6),#
+					  c(rep(tmp/R, R), y- sum(tmp/R*price) -1e-6, 1e-8) )
+tmp	  <- min(y/price, Q) * .9#
+		sel   <- which.min(price)#
+		inits <- list(c(rep(tmp/(Ra-1), Ra-1), Q - tmp/(R-1)*R - 1e-6), #
+					  c(rep(1e-8, R), y-(R+2)*1e-8, Q - sum(price)*1e-8 - 1e-6),#
+					  c(rep(tmp/R, R), y- sum(tmp/R*price) -1e-6, 1e-8) )
+ui %*% inits[[1]] - ci
+inits[[1]]
+sum(price*inits[[1]][1:R])
+sum(price*inits[[1]][1:R]) + inits[[1]][Ra]
+Q
+ci
+y
+length(ci)
+ui %*% inits[[1]] - ci
+ui
+price
+?constrOptim
+1/price
+inits[[1]][1:R]/price
+price
+Q
+sum(inits[[1]][1:R]/price)
+sum(inits[[1]][1:R]/price) + inits[[1]][Ra]
+tmp
+y/max(price)
+Q
+y/price
+sum(inits[[1]][1:R]*price) + inits[[1]][Ra]
+ui
+ui[7,]%*%inits[[1]]
+tmp	  <- min(y/price, Q) * .9
+tmp
+tmp*min(price)
+tmp	  <- min(y/price, Q) * .9#
+		sel   <- which.min(price)#
+		tmp	  <- tmp * min(price)#
+		inits <- list(c(rep(tmp/(Ra-1), Ra-1), Q - tmp/(R-1)*R - 1e-6), #
+					  c(rep(1e-8, R), y-(R+2)*1e-8, Q - sum(price)*1e-8 - 1e-6),#
+					  c(rep(tmp/R, R), y- sum(tmp/R*price) -1e-6, 1e-8) )
+inits
+ui %*% inits[[1]]
+ui %*% inits[[1]] - ci
+ui %*% inits[[2]] - ci
+ui %*% inits[[3]] - ci
+tmpq  <- min(y/price, Q) * .9#
+		sel   <- which.min(price)#
+		tmp	  <- tmpq * min(price)#
+		inits <- list(c(rep(tmp/(Ra-1), Ra-1), Q - tmpq - 1e-6), #
+					  c(rep(1e-8, R), y-(R+2)*1e-8, Q - sum(price)*1e-8 - 1e-6),#
+					  c(rep(tmp/R, R), y- tmp -1e-6, 1e-8) )
+inits
+ui %*% inits[[3]] - ci
+ui %*% inits[[2]] - ci
+ui %*% inits[[1]] - ci
+# Allocation function - solve a constrained optimization#
+Allocation_fn <- function(y, psi, gamma, Q=NULL, price,R,Ra, inits=NULL){#
+	# We have Ra non-negativity constraints, one budget constraint, and one quantity constraint#
+	# ui <- rbind(diag(R+2), c(rep(-1, R+1), 0) )#
+	# inits is a list of initial values#
+	ui <- rbind(diag(Ra), c(rep(-1, R+1),rep(0, Ra-R-1 )) )#
+	ci <- c(rep(0,R+1), -qz_cons, -y)#
+	if(is.null(inits)){#
+		tmpq  <- min(y/price, Q) * .9#
+		sel   <- which.min(price)#
+		tmp	  <- tmpq * min(price)#
+		inits <- list(c(rep(tmp/(Ra-1), Ra-1), Q - tmpq - 1e-6), #
+					  c(rep(1e-8, R), y-(R+2)*1e-8, Q - sum(price)*1e-8 - 1e-6),#
+					  c(rep(tmp/R, R), y- tmp -1e-6, 1e-8) )#
+	}#
+	if(is.null(Q)){#
+		sol <- constrOptim(theta = inits, f=uP_fn, grad=NULL, ui=ui, ci=ci,psi=psi, gamma=gamma, price=price, R=R)#
+		return(list(e = sol$par, max = -sol$value))#
+	}else{#
+		if(Q<=0){#
+			e <- c(rep(0,R),y)#
+			if(Ra>R+1){#
+				e <- c(e, 0)#
+			}#
+			return(list(e = e, max = log(y) ) )#
+		}else{#
+			ui <- rbind(ui, c(-1/price, 0, -1))#
+			ci <- c(ci, -Q)#
+			sol.list <- vector("list", length(inits))#
+			for(j in 1:length(inits)){#
+				sol.list[[j]] <- constrOptim(theta = inits[[j]], f=uP_fn, grad=uPGrad_fn, ui=ui, ci=ci,psi=psi, gamma=gamma, price=price, R=R)#
+			}#
+			sel <- which.min(sapply(sol.list, function(x) x$value))#
+			sol <- sol.list[[sel]]#
+			if(sol$convergence != 0){#
+				cat("Constrained optimization does not converge at value y=",y,", Q=",Q,"\n")#
+			}#
+			return(list(e = sol$par, max = -sol$value, convergence = sol$convergence))#
+		}#
+	}#
+}
+#############################
+# Simulate allocation data # #
+#############################
+# Set parameters #
+R 		<- 3#
+Ra		<- R+2#
+beta	<- c(-2, -1)#
+beta_o	<- c(0, 0)			# The utility parameters of the two outside alternatives#
+gamma	<- rep(1, R)		# Ratiation paramters for only for R alternatives#
+sigma 	<- 1				# Standard deviation of the errors in psi#
+nx 		<- length(beta)	#
+qz_cons <- 0#
+#
+N 		<- 500#
+X_arr 	<- array(rnorm(N*R*nx), c(R, N, nx))#
+price 	<- matrix(runif(N*R), N, R)#
+y		<- rexp(N, 2)#
+Q		<- y/apply(price, 1, median)#
+eps		<- matrix(rnorm(N*R,0, sigma), N, R)#
+xbeta 	<- apply(X_arr,1,function(xx) xx%*% beta)
+i <- 1
+tmp.psi 	<- exp(xbeta[i,] + rnorm(R, 0, sigma))#
+	tmp.gamma	<- c(gamma, 1, 1)#
+	tmp			<- Allocation_fn(y[i], tmp.psi, tmp.gamma, Q[i], price[i,], R, Ra)
+warnings()
+128289/3418202
+library(maxLik)
+?maxLik
+1774640/6468674
+1.06+2.4+1+2
+library(Rcpp)
+library(RcppArmadillo)
+sourceCpp("~/Documents/Research/Store switching/Exercise/MDCP_wo_outside_function.cpp")#
+N <- 10#
+R <- 3#
+p <- matrix(rexp(N*R), N, R)#
+e <- p * .5#
+Q <- runif(N, 1.5, 2)#
+y <- rowSums(e)#
+nx <- 2#
+param <- runif(nx+ 2*R)#
+c_q <- 0#
+e1_index <- sample(1:R, N, replace=T)#
+tmp <- matrix(rnorm(N*nx), N, nx)#
+X_list <- list(tmp, tmp, tmp)
+tmp <- eAdjust(param, nx, c_q, e1_index, y, Q, e, p, X_list)
+str(tmp)
+src <- '#
+#include <RcppArmadillo.h>#
+#include <algorithm>#
+#include <Rcpp.h>#
+using namespace Rcpp;#
+using namespace arma;#
+// [[Rcpp::depends(RcppArmadillo)]]#
+#
+// [[Rcpp::export]]#
+mat my_fn(mat x, vec y){#
+	int r = x.n_cols;#
+	return(x - y * ones<rowvec>(r));#
+}#
+'#
+#
+sourceCpp(code = src)
+x <- matrix(rnorm(12), 3, 4)
+x
+my_fn(x, 1:3)
+x
+pnorm(x)
+sourceCpp("~/Documents/Research/Store switching/Exercise/MDCP_wo_outside_function.cpp")
+src <- '#
+#include <RcppArmadillo.h>#
+#include <algorithm>#
+#include <Rcpp.h>#
+using namespace Rcpp;#
+using namespace arma;#
+// [[Rcpp::depends(RcppArmadillo)]]#
+#
+// [[Rcpp::export]]#
+mat my_fn(mat V){#
+	NumericMatrix tmp = as<NumericMatrix>(wrap(V));#
+	NumericMatrix tmp1 = pnorm(tmp, 0.0, sigma);#
+	mat F		= as<mat>(tmp1);#
+	return(F);#
+}#
+'#
+#
+sourceCpp(code = src)
+src <- '#
+#include <RcppArmadillo.h>#
+#include <algorithm>#
+#include <Rcpp.h>#
+using namespace Rcpp;#
+using namespace arma;#
+// [[Rcpp::depends(RcppArmadillo)]]#
+#
+// [[Rcpp::export]]#
+mat my_fn(mat V){#
+	NumericMatrix tmp = as<NumericMatrix>(wrap(V));#
+	NumericMatrix tmp1 = pnorm(tmp, 0.0, 1.0);#
+	mat F		= as<mat>(tmp1);#
+	return(F);#
+}#
+'
+sourceCpp(code = src)
+sourceCpp("~/Documents/Research/Store switching/Exercise/MDCP_wo_outside_function.cpp")
+e_R2 <- Q - rowSums(e/p)
+e_R1
+e_R2
+tmp <- eAdjust(param, nx, c_q, e1_index, y, Q, e, p, X_list)
+e1 <- tmp$e1
+gamma1 <- tmp$gamma1
+p1 <- tmp$p1
+psi1 <- tmp$psi1
+e_bar <- tmp$e_bar
+gamma_bar <- tmp$gamma_bar
+p_bar <- tmp$p_bar
+xbeta <- tmp$xbeta
+tmp1 <- MDCP_ll_fnC(param, nx, c_q, Q, e, e_R2, e1, gamma1, p1, psi1, e_bar, gamma_bar, p_bar, xbeta)
+param
+param <- c(param,0)
+tmp1 <- MDCP_ll_fnC(param, nx, c_q, Q, e, e_R2, e1, gamma1, p1, psi1, e_bar, gamma_bar, p_bar, xbeta)
+sourceCpp("~/Documents/Research/Store switching/Exercise/MDCP_wo_outside_function.cpp")
+tmp1 <- MDCP_ll_fnC(param, nx, c_q, Q, e, e_R2, e1, gamma1, p1, psi1, e_bar, gamma_bar, p_bar, xbeta)
+str(tmp1)
+V
+tmp1$V
+str(tmp)
+tmp1$Lambda
+p
+e1_index <- apply(p, 1, which.max)
+e1_index
+tmp <- eAdjust(param, nx, c_q, e1_index, y, Q, e, p, X_list)#
+e1 <- tmp$e1#
+gamma1 <- tmp$gamma1#
+ p1 <- tmp$p1#
+psi1 <- tmp$psi1#
+ e_bar <- tmp$e_bar#
+ gamma_bar <- tmp$gamma_bar#
+ p_bar <- tmp$p_bar#
+ xbeta <- tmp$xbeta
+tmp1 <- MDCP_ll_fnC(param, nx, c_q, Q, e, e_R2, e1, gamma1, p1, psi1, e_bar, gamma_bar, p_bar, xbeta)
+str(tmp1)
+tmp1$Lambda
+tmp1$V
+sourceCpp("~/Documents/Research/Store switching/Exercise/MDCP_wo_outside_function.cpp")
+tmp1 <- MDCP_ll_fnC(param, nx, c_q, Q, e, e_R2, e1, gamma1, p1, psi1, e_bar, gamma_bar, p_bar, xbeta)
+str(tmp1)
+tmp1$ll
+sourceCpp("~/Documents/Research/Store switching/Exercise/MDCP_wo_outside_function.cpp")
+MDCP_LogLike_fnC(param, nx, c_q, e1_index, y, Q, e, p, X_list)
+library(ggplot2)	#
+library(reshape2)#
+library(Rcpp)#
+library(RcppArmadillo)#
+library(maxLik)#
+#
+setwd("~/Documents/Research/Store switching/Exercise/Multiple discrete continuous model")#
+sourceCpp("2_MDCP_function_missing fixed budget.cpp ")#
+#
+######################
+# Utility functions ##
+######################
+uP_fn <- function(e, psi, gamma,price, R){#
+# Negative purchase utility #
+# e: R+2 vecotr#
+# psi, gammais (R+2)-dimension vector #
+# price is R-dimension vector#
+	e0 		<- e[1:R]#
+	e_R1	<- e[(R+1):length(e)]#
+	u0		<- c(log(e0/(gamma[1:R]*price) + 1), log(e_R1[1]), log(e_R1[2]+qz_cons))#
+	out 	<- sum(psi*gamma*u0 ) #
+	return(-out)#
+}#
+#
+uPGrad_fn <- function(e, psi, gamma,price, R){#
+	e0 		<- e[1:R]#
+	e_R1	<- e[(R+1):length(e)]#
+	u0		<- c(1/(e0+price*gamma[1:R]), 1/e_R1[1], 1/(e_R1[2]+qz_cons) )#
+	out 	<- psi*gamma*u0 #
+	return(-out)#
+}#
+#
+# Allocation function - solve a constrained optimization#
+Allocation_fn <- function(y, psi, gamma, Q=NULL, price,R,Ra, inits=NULL){#
+	# We have Ra non-negativity constraints, one budget constraint, and one quantity constraint#
+	# ui <- rbind(diag(R+2), c(rep(-1, R+1), 0) )#
+	# inits is a list of initial values#
+	ui <- rbind(diag(Ra), c(rep(-1, R+1),rep(0, Ra-R-1 )) )#
+	ci <- c(rep(0,R+1), -qz_cons, -y)#
+	if(is.null(inits)){#
+		tmpq  <- min(y/price, Q) * .9#
+		sel   <- which.min(price)#
+		tmp	  <- tmpq * min(price)#
+		inits <- list(c(rep(tmp/(Ra-1), Ra-1), Q - tmpq - 1e-6), #
+					  c(rep(1e-8, R), y-(R+2)*1e-8, Q - sum(price)*1e-8 - 1e-6),#
+					  c(rep(tmp/R, R), y- tmp -1e-6, 1e-8) )#
+	}#
+	if(is.null(Q)){#
+		sol <- constrOptim(theta = inits, f=uP_fn, grad=NULL, ui=ui, ci=ci,psi=psi, gamma=gamma, price=price, R=R)#
+		return(list(e = sol$par, max = -sol$value))#
+	}else{#
+		if(Q<=0){#
+			e <- c(rep(0,R),y)#
+			if(Ra>R+1){#
+				e <- c(e, 0)#
+			}#
+			return(list(e = e, max = log(y) ) )#
+		}else{#
+			ui <- rbind(ui, c(-1/price, 0, -1))#
+			ci <- c(ci, -Q)#
+			sol.list <- vector("list", length(inits))#
+			for(j in 1:length(inits)){#
+				sol.list[[j]] <- try(constrOptim(theta = inits[[j]], f=uP_fn, grad=uPGrad_fn, ui=ui, ci=ci,psi=psi, #
+									gamma=gamma, price=price, R=R) )#
+			}#
+			sol.list1 <- sol.list[sapply(sol.list, function(x) !inherits(x, "try-error"))]#
+			sel <- which.min(sapply(sol.list1, function(x) x$value))#
+			if(length(sel)==0){#
+				sol <- list(par = rep(NA, Ra), value=NA, convergence = NA)#
+			}else{#
+				sol <- sol.list1[[sel]]#
+				if(sol$convergence != 0){#
+					cat("Constrained optimization does not converge at value y=",y,", Q=",Q,"\n")#
+				}#
+			}#
+			return(list(e = sol$par, max = -sol$value, convergence = sol$convergence))#
+		}#
+	}#
+}#
+#
+#############################
+# Simulate allocation data
+setwd("~/Documents/Research/Store switching/Exercise/Multiple discrete continuous model")
+getwd()
+setwd("~/Documents/Research/Store switching/Exercise/Multiple discrete continuous model")
+library(ggplot2)	#
+library(reshape2)#
+library(Rcpp)#
+library(RcppArmadillo)#
+library(maxLik)
+sourceCpp("~/Documents/Research/Store switching/Exercise/Multiple discrete continuous model /2_MDCP_function_missing fixed budget.cpp")
+library(ggplot2)	#
+library(reshape2)#
+library(Rcpp)#
+library(RcppArmadillo)#
+library(maxLik)#
+#
+setwd("~/Documents/Research/Store switching/Exercise/Multiple discrete continuous model")#
+sourceCpp("2_MDCP_function_missing_fixed_budget.cpp")
+setwd("~/Documents/Research/Store switching/Exercise/Multiple discrete continuous model")
+ls()
+hh_exp <- read.csv("~/Documents/Research/Store switching/processed data/2_hh_month_exp_merge.csv")
+head(hh_exp)
+names(hh_exp)
+ggplot(hh_exp, aes(food_quant)) + geom_histogram()
+library(ggplot2)
+ggplot(hh_exp, aes(food_quant)) + geom_histogram()
+ggplot(hh_exp, aes(food_quant)) + geom_histogram() + #
+	xlim(c(0, 500))
+ggplot(hh_exp, aes(nonedible_quant)) + geom_histogram() + #
+	xlim(c(0, 500))
+ggplot(hh_exp, aes(nonedible_quant)) + geom_histogram()
+selc <- c("food_quant","nonedible_quant", "num_food_module","num_noned_module")#
+summary(hh_exp[,selc])
+tmp <- hh_exp[,selc]#
+tmp$quant <- with(tmp, food_quant + nonedible_quant)#
+tmp$n_mod <- with(tmp, num_food_module + num_noned_module)
+head(tmp)
+plot(tmp$quant, tmp$n_mod)
+plot(tmp$quant, tmp$n_mod, xlim=c(0,2000))
+plot(tmp$quant, tmp$n_mod, xlim=c(0,1000))
+x <- tmp$food_quant
+y <- tmp$nonedible_quant
+?cut
+x.cut <- 100 * seq(1, 5, 1)
+x.cut
+x1 <- cut(x, x.cut)
+head(x1)
+?cut
+x1 <- cut(x, x.cut, right=F)
+head(x1)
+x.cut <- c( 100 * seq(1, 5, 1), Inf)
+x1 <- cut(x, x.cut, right=F)
+x1 <- cut(x, x.cut, include.lowest=T)
+head(x1)
+x.cut <- c( 100 * seq(0, 5, 1), Inf)
+x1 <- cut(x, x.cut, include.lowest=T)
+head(x1)
+?cut
+x.cut
+y.cut <- c( 50*seq(0,5,1), Inf)
+y1 <- cut(y, y.cut)
+y1 <- cut(y, y.cut, include.lowest=T)
+head(y1)
+tmp <- table(x1, y1)
+tmp
+library(reshape2)
+ggtmp <- melt(tmp)
+head(ggtmp)
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile()
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+			scale_fill_gradientn(colours = myPalette(100)) + #
+			theme_bw()
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+			scale_fill_gradientn() + #
+			theme_bw()
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")), space="Lab")
+library(RColorBrewer)
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")), space="Lab")
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+			scale_fill_gradientn(colours = myPalette(100)) + #
+			theme_bw()
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+			scale_fill_gradientn(colours = myPalette(10)) + #
+			theme_bw()
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+			scale_fill_gradient2() + #
+			theme_bw()
+x1 <- cut(x, x.cut, include.lowest=T)#
+	y1 <- cut(y, y.cut, include.lowest=T)#
+	tmp <- table(x1, y1)/length(x)*100#
+	ggtmp <- melt(tmp)
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+			scale_fill_gradient2() + #
+			theme_bw()
+heat_map <- function(x, y, x.cut, y.cut, print=F){#
+	x1 <- cut(x, x.cut, include.lowest=T)#
+	y1 <- cut(y, y.cut, include.lowest=T)#
+	tmp <- table(x1, y1)/length(x)*100#
+	ggtmp <- melt(tmp)#
+	if(print){#
+		p <- ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+				scale_fill_gradient2() + #
+				theme_bw()#
+		print(p)#
+	}		#
+	return(ggtmp)#
+}
+ggtmp <- heat_map(tmp$food_quant, tmp$nonedible_quant, c(50*seq(0,20,1),Inf), c(10*seq(0,50,1),Inf), T)
+tmp <- hh_exp[,selc]#
+tmp$quant <- with(tmp, food_quant + nonedible_quant)#
+tmp$n_mod <- with(tmp, num_food_module + num_noned_module)#
+#
+ggtmp <- heat_map(tmp$food_quant, tmp$nonedible_quant, c(50*seq(0,20,1),Inf), c(10*seq(0,50,1),Inf), T)
+dim(ggtmp)
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+		scale_fill_gradient2(low = "white", high = "steelblue") + #
+		theme_bw()
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+		scale_fill_gradientn(low = "white", high = "steelblue") + #
+		theme_bw()
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+		scale_fill_gradientn() + #
+		theme_bw()
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+		scale_fill_gradientn(colours = myPalette(100)) + #
+		theme_bw()
+heat_map <- function(x, y, x.cut, y.cut, print=F){#
+	x1 <- cut(x, x.cut, include.lowest=T)#
+	y1 <- cut(y, y.cut, include.lowest=T)#
+	tmp <- table(x1, y1)/length(x)*100#
+	ggtmp <- melt(tmp)#
+	if(print){#
+		p <- ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+				scale_fill_gradientn(colours = myPalette(100)) + #
+				theme_bw()#
+		print(p)#
+	}		#
+	return(ggtmp)#
+}#
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")), space="Lab")
+ggtmp <- heat_map(tmp$food_quant, tmp$nonedible_quant, c(20*seq(0,50,1),Inf), c(10*seq(0,50,1),Inf), T)
+x.cut <- c(20*seq(1, 10, 1), 500, 1000, 5000, Inf)#
+ggtmp <- heat_map(tmp$food_quant, tmp$nonedible_quant, x.cut, c(10*seq(0,50,1),Inf), T)
+x.cut <- c(20*seq(0, 10, 1), 500, 1000, 5000, Inf)#
+y.cut <- c(10*seq(0, 20,1), 500, 1000, Inf)#
+ggtmp <- heat_map(tmp$food_quant, tmp$nonedible_quant, x.cut, y.cut, T)
+head(ggtmp)
+head(tmp)
+summary(tmp)
+x.cut <- c(2*seq(0, 25, 1), 80, 100, Inf)#
+y.cut <- c(1*seq(0, 15,1), 20, 50, Inf)#
+ggtmp <- heat_map(tmp$num_food_module, tmp$num_noned_module, x.cut, y.cut, T)
+x.cut <- c(2*seq(0, 25, 1), 80, 100, Inf)#
+y.cut <- c(1*seq(0, 20,1), 30, 40, 50, 60, Inf)#
+ggtmp <- heat_map(tmp$num_food_module, tmp$num_noned_module, x.cut, y.cut, T)
+x.cut <- c(5*seq(0, 20, 1), 110, 120, 150, Inf)#
+y.cut <- c(2*seq(0, 25,1), 60, 70, 80, Inf)#
+ggtmp <- heat_map(tmp$num_food_module, tmp$num_noned_module, x.cut, y.cut, T)
+x.cut <- c(20*seq(0, 10, 1), 500, 1000, 5000, Inf)#
+y.cut <- c(5*seq(0, 20, 1), 110, 120, 150, Inf)#
+ggtmp <- heat_map(tmp$quant, tmp$n_mod, x.cut, y.cut, T)
+x.cut <- c(20*seq(0, 20, 1), 500, 1000, 5000, Inf)#
+y.cut <- c(5*seq(0, 20, 1), 110, 120, 150, Inf)#
+ggtmp <- heat_map(tmp$quant, tmp$n_mod, x.cut, y.cut, T)
+library(ggplot2)#
+library(reshape2)#
+library(RColorBrewer)#
+#
+heat_map <- function(x, y, x.cut, y.cut, print=F){#
+	x1 <- cut(x, x.cut, include.lowest=T)#
+	y1 <- cut(y, y.cut, include.lowest=T)#
+	tmp <- table(x1, y1)/length(x)*100#
+	ggtmp <- melt(tmp)#
+	if(print){#
+		p <- ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+				scale_fill_gradientn(colours = myPalette(100)) + #
+				theme_bw()#
+		print(p)#
+	}		#
+	return(ggtmp)#
+}#
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")), space="Lab")#
+hh_exp <- read.csv("~/Documents/Research/Store switching/processed data/2_hh_month_exp_merge.csv")
+selc <- c("food_quant","nonedible_quant", "num_food_module","num_noned_module")#
+summary(hh_exp[,selc])#
+ggplot(hh_exp, aes(food_quant)) + geom_histogram() + #
+	xlim(c(0, 500))#
+ggplot(hh_exp, aes(nonedible_quant)) + geom_histogram() + #
+	xlim(c(0, 500))
+tmp <- hh_exp[,selc]#
+tmp$quant <- with(tmp, food_quant + nonedible_quant)#
+tmp$n_mod <- with(tmp, num_food_module + num_noned_module)
+x.cut <- c(20*seq(0, 20, 1), 500, 1000, 5000, Inf)#
+y.cut <- c(5*seq(0, 20, 1), 110, 120, 150, Inf)#
+ggtmp <- heat_map(tmp$quant, tmp$n_mod, x.cut, y.cut, T)
+dim(ggtmp)
+head(ggtmp)
+summary(ggtmp4value)
+summary(ggtmp$value)
+hist(ggtmp$value)
+ggtmp <- heat_map(tmp$quant, tmp$n_mod, x.cut, y.cut, T)
+summary(tmp)
+x.cut <- c(0,100, Inf)#
+y.cut <- c(0,40, Inf)#
+ggtmp <- heat_map(tmp$quant, tmp$n_mod, x.cut, y.cut, T)#
+quartz()#
+hist(ggmtp$value)
+ggtmp
+ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+				scale_fill_gradientn(colours = myPalette(100)) + #
+				theme_bw()
+quantile(tmp$quant, c(1/3,2/3))
+quantile(tmp$quant, c(1/3,2/3), na.rm=T)
+quantile(tmp$n_mod, c(1/3,2/3), na.rm=T)
+x.cut <- c(0,72, 139, Inf)#
+y.cut <- c(0,34, 56, Inf)#
+ggtmp <- heat_map(tmp$quant, tmp$n_mod, x.cut, y.cut, T)#
+quartz()#
+hist(ggmtp$value)
+ggtmp
+x.cut <- c(5*seq(0, 20, 1), 110, 120, 150, Inf)#
+y.cut <- c(2*seq(0, 25,1), 60, 70, 80, Inf)#
+ggtmp <- heat_map(tmp$num_food_module, tmp$num_noned_module, x.cut, y.cut, T)
+breaks = 3
+quantile(tmp$quant, c(0:breaks)/breaks, na.rm=T)
+heat_map <- function(x, y, x.cut, y.cut, breaks=NULL, print=F){#
+	if(!is.null(breaks)){#
+		x.cut <- quantile(x, c(0:breaks)/breaks, na.rm=T)#
+		y.cut <- quantile(y, c(0:breaks)/breaks, na.rm=T)#
+	}#
+	x1 <- cut(x, x.cut, include.lowest=T)#
+	y1 <- cut(y, y.cut, include.lowest=T)#
+	tmp <- table(x1, y1)/length(x)*100#
+	ggtmp <- melt(tmp)#
+	if(print){#
+		p <- ggplot(ggtmp, aes(x1, y1, fill=value)) + geom_tile() + #
+				scale_fill_gradientn(colours = myPalette(100)) + #
+				theme_bw()#
+		print(p)#
+	}		#
+	return(ggtmp)#
+}
+ggtmp <- heat_map(tmp$num_food_module, tmp$num_noned_module, x.cut, y.cut, breaks=3, print=T)
+ggtmp
+with(tmp, cor(quant, n_mod))
+with(tmp, cor(quant, n_mod, na.rm=T))
+cor(tmp$quant, tmp$n_mod)
+?cor
+cor(tmp$quant, tmp$n_mod, use = "complete.obs")
+x.cut <- c(20*seq(0, 10, 1), 500, 1000, 5000, Inf)#
+y.cut <- c(10*seq(0, 20,1), 500, 1000, Inf)#
+ggtmp <- heat_map(tmp$food_quant, tmp$nonedible_quant, x.cut, y.cut, breaks=NULL, T)
+ggtmp <- heat_map(tmp$food_quant, tmp$nonedible_quant, x.cut, y.cut, breaks=3, T)
+ggtmp
+ggtmp1 <- heat_map(tmp$quant, tmp$n_mod, x.cut, y.cut, breaks=3, T)
+ggtmp1
+cor(tmp$food_quant, tmp$nonedible_quant, use="complete.obs")
+2631681/8795667
+library(ggplot2)	#
+library(reshape2)#
+library(Rcpp)#
+library(RcppArmadillo)#
+library(maxLik)#
+#
+setwd("~/Documents/Research/Store switching/Exercise")#
+sourceCpp("MDCP_function.cpp")
+######################
+# Utility functions ##
+######################
+uP_fn <- function(e, psi, gamma,price, R){#
+# Negative purchase utility #
+# e: R+2 vecotr#
+# psi, gammais (R+2)-dimension vector #
+# price is R-dimension vector#
+	e0 		<- e[1:R]#
+	e_R1	<- e[(R+1):length(e)]#
+	u0		<- c(log(e0/(gamma[1:R]*price) + 1), log(e_R1[1]), log(e_R1[2]+qz_cons))#
+	out 	<- sum(psi*gamma*u0 ) #
+	return(-out)#
+}#
+#
+uPGrad_fn <- function(e, psi, gamma,price, R){#
+	e0 		<- e[1:R]#
+	e_R1	<- e[(R+1):length(e)]#
+	u0		<- c(1/(e0+price*gamma[1:R]), 1/e_R1[1], 1/(e_R1[2]+qz_cons) )#
+	out 	<- psi*gamma*u0 #
+	return(-out)#
+}#
+#
+# Allocation function - solve a constrained optimization#
+Allocation_fn <- function(y, psi, gamma, Q=NULL, price,R,Ra, inits=NULL){#
+	# We have Ra non-negativity constraints, one budget constraint, and one quantity constraint#
+	# ui <- rbind(diag(R+2), c(rep(-1, R+1), 0) )#
+	# inits is a list of initial values#
+	ui <- rbind(diag(Ra), c(rep(-1, R+1),rep(0, Ra-R-1 )) )#
+	ci <- c(rep(0,R+1), -qz_cons, -y)#
+	if(is.null(inits)){#
+		tmpq  <- min(y/price, Q) * .9#
+		sel   <- which.min(price)#
+		tmp	  <- tmpq * min(price)#
+		inits <- list(c(rep(tmp/(Ra-1), Ra-1), Q - tmpq - 1e-6), #
+					  c(rep(1e-8, R), y-(R+2)*1e-8, Q - sum(price)*1e-8 - 1e-6),#
+					  c(rep(tmp/R, R), y- tmp -1e-6, 1e-8) )#
+	}#
+	if(is.null(Q)){#
+		sol <- constrOptim(theta = inits, f=uP_fn, grad=NULL, ui=ui, ci=ci,psi=psi, gamma=gamma, price=price, R=R)#
+		return(list(e = sol$par, max = -sol$value))#
+	}else{#
+		if(Q<=0){#
+			e <- c(rep(0,R),y)#
+			if(Ra>R+1){#
+				e <- c(e, 0)#
+			}#
+			return(list(e = e, max = log(y) ) )#
+		}else{#
+			ui <- rbind(ui, c(-1/price, 0, -1))#
+			ci <- c(ci, -Q)#
+			sol.list <- vector("list", length(inits))#
+			for(j in 1:length(inits)){#
+				sol.list[[j]] <- try(constrOptim(theta = inits[[j]], f=uP_fn, grad=uPGrad_fn, ui=ui, ci=ci,psi=psi, #
+									gamma=gamma, price=price, R=R) )#
+			}#
+			sol.list1 <- sol.list[sapply(sol.list, function(x) !inherits(x, "try-error"))]#
+			sel <- which.min(sapply(sol.list1, function(x) x$value))#
+			if(length(sel)==0){#
+				sol <- list(par = rep(NA, Ra), value=NA, convergence = NA)#
+			}else{#
+				sol <- sol.list1[[sel]]#
+				if(sol$convergence != 0){#
+					cat("Constrained optimization does not converge at value y=",y,", Q=",Q,"\n")#
+				}#
+			}#
+			return(list(e = sol$par, max = -sol$value, convergence = sol$convergence))#
+		}#
+	}#
+}#
+#
+#############################
+# Simulate allocation data # #
+#############################
+# Set parameters #
+R 		<- 3#
+Ra		<- R+2#
+beta	<- c(1, -1)#
+beta_int<- c(0,-.5,.5)			# The alternative-specific intercepts#
+beta_o	<- c(.5, -1)			# The utility parameters of the two outside alternatives#
+gamma	<- c(1,1,.5)		# Ratiation paramters for only for R alternatives#
+sigma 	<- 1.5				# Standard deviation of the errors in psi#
+nx 		<- length(beta)	#
+qz_cons <- 0#
+#
+N 		<- 1000#
+X_arr 	<- array(rnorm(N*R*nx), c(R, N, nx))#
+X_list  <- lapply(1:R, function(i) X_arr[i,,])#
+price 	<- matrix(runif(N*R), N, R)#
+Q		<- rexp(N, .8)#
+y		<- rowSums(price) * Q/3 + rexp(N)#
+eps		<- matrix(rnorm(N*R,0, sigma), N, R)#
+xbeta 	<- apply(X_arr,1,function(xx) xx%*% beta)#
+#
+e_mat	<- matrix(NA, N, Ra)#
+for(i in 1:N){#
+	tmp.psi 	<- c(exp(xbeta[i,] + beta_int + rnorm(R, 0, sigma)), exp(beta_o))#
+	tmp.gamma	<- c(gamma, 1, 1)#
+	tmp			<- Allocation_fn(y[i], tmp.psi, tmp.gamma, Q[i], price[i,], R, Ra)#
+	e_mat[i,]	<- tmp$e#
+	if(i%%50==0){print(i)}#
+}#
+eps <- 1e-4#
+eR 	<- e_mat[,1:R]#
+eR[eR<=eps] <- 0#
+mean(eR==0)
+# Esimation #
+param <- c(beta, beta_int, gamma, beta_o, sigma)#
+names(param) <- c(paste("beta",1:nx,sep=""), paste("intercept",1:R,sep=""), paste("gamma",1:R, sep=""), "ln_psi1", "ln_psi2", "sigma")#
+param_init <- param #
+param_init[1] <- param[1] + 1#
+param_init[2] <- param[2] + 3#
+#
+system.time(tmp <- MDCP_LogLike_fnC(param_init, nx, qz_cons, y, Q, eR, price, X_list) )#
+param2 <- param_init#
+param2[6:7] <- 0#
+#
+MCDP_wrapper <- function(param){#
+	return(MDCP_LogLike_fnC(param, nx, qz_cons, y, Q, eR, price, X_list))#
+}#
+#
+param2 <- runif(length(param))#
+summary(sol.free <- maxLik(MCDP_wrapper, start=param2, method="BFGS"))
+param
+system.time(sol.free <- maxLik(MCDP_wrapper, start=param2, method="BFGS", fixed = c(F,F,F,F,F,T,T,T,F,F,F)))
+summary(sol.free)
+summary(sol.fixed <- maxLik(MCDP_wrapper, start=param_init, method="BFGS", fixed = c(F,F,T,T,T,F,F)))
+summary(sol.fixed <- maxLik(MCDP_wrapper, start=param_init, method="BFGS", fixed = c(F,F,F,F,F,T,T,T,F,F,F)))
+param
+setwd("~/Documents/Research/Store switching/Exercise")#
+sourceCpp("MDCP_function.cpp")
+# Esimation #
+param <- c(beta, beta_int, gamma, beta_o, sigma)#
+names(param) <- c(paste("beta",1:nx,sep=""), paste("intercept",1:R,sep=""), paste("gamma",1:R, sep=""), "ln_psi1", "ln_psi2", "sigma")#
+param_init <- param #
+param_init[1] <- param[1] + 1#
+param_init[2] <- param[2] + 3#
+#
+system.time(tmp <- MDCP_LogLike_fnC(param_init, nx, qz_cons, y, Q, eR, price, X_list) )#
+param2 <- param_init#
+param2[6:7] <- 0#
+#
+MCDP_wrapper <- function(param){#
+	return(MDCP_LogLike_fnC(param, nx, qz_cons, y, Q, eR, price, X_list))#
+}#
+#
+param2 <- runif(length(param))#
+summary(sol.free <- maxLik(MCDP_wrapper, start=param2, method="BFGS"))
+summary(sol.fixed <- maxLik(MCDP_wrapper, start=param_init, method="BFGS", fixed = c(F,F,F,F,F,T,T,T,F,F,F)))
+sourceCpp("~/Documents/Research/Store switching/Exercise/Multiple_discrete_continuous_model /MDCEV.cpp")
+sourceCpp("~/Documents/Research/Store switching/Exercise/Multiple_discrete_continuous_model /MDCEV.cpp")
+sourceCpp("~/Documents/Research/Store switching/Exercise/Multiple_discrete_continuous_model /MDCEV.cpp")
+ls()
+sourceCpp("~/Documents/Research/Store switching/Exercise/Multiple_discrete_continuous_model /MDCEV.cpp")
+sourceCpp("~/Documents/Research/Store switching/Exercise/Multiple_discrete_continuous_model /MDCEV.cpp")
+setwd("~/Documents/Research/Store switching/Exercise")#
+sourceCpp("MDCP_function.cpp")
+tmp <- MDCP_LogLike_fnC(param, nx, qz_cons, y, Q, eR, price, X_list)
+tmp <- MDCEV_LogLike_fnC(param, nx, qz_cons, y, Q, eR, price, X_list)
+library(microbenchmark)
+microbenchmark(MDCP_LogLike_fnC(param, nx, qz_cons, y, Q, eR, price, X_list), MDCEV_LogLike_fnC(param, nx, qz_cons, y, Q, eR, price, X_list))

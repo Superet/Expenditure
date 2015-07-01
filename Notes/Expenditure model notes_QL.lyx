@@ -1,0 +1,1228 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Expenditure notes 
+\end_layout
+
+\begin_layout Title
+Quadratic - linear dynamic programming 
+\end_layout
+
+\begin_layout Section
+Dynamic allocation model 
+\end_layout
+
+\begin_layout Standard
+Step 1: we compute the inclusive value from the allocation model 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\omega(y) & = & E\left[\max_{e_{1},\dots e_{R}}U^{P}(e_{1,}\dots,e_{K})\right]\\
+s.t. &  & \sum_{r=1}^{R}e_{r}\leq y\\
+U^{P}(e_{1,}\dots,e_{K}) & = & \sum_{r=1}^{R}\psi_{r}\gamma_{r}\log\left(\frac{e_{r}}{p_{r}\gamma_{r}}+1\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Step 2: we model expenditure and consumption in a dynamic setting, accounting
+ for the allocation utility from step 1.
+ Let 
+\begin_inset Formula $y$
+\end_inset
+
+ and 
+\begin_inset Formula $c$
+\end_inset
+
+ denote the choice variables of expenditure and consumption.
+ The state variables are 
+\begin_inset Formula $\{I,B,Inc\}$
+\end_inset
+
+, representing inventory, grocery budget stock, and income.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align}
+V(I,B,Inc)= & \max_{y,c}U(y,c,I,B,Inc)+\beta EV(I',B',Inc')\nonumber \\
+s.t. & y\leq B+Inc-Z,c\leq I+Q(y)
+\end{align}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+I assume that 
+\begin_inset Formula $Q(y)=ky$
+\end_inset
+
+.
+ The transition of the states is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align}
+I'= & I+Q(y)-c=I+ky-c\nonumber \\
+B'= & B+Inc-Z-y\label{eq:transition}\\
+Inc'= & \rho Inc+\epsilon_{Inc}\nonumber 
+\end{align}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the transition above, 
+\begin_inset Formula $Z$
+\end_inset
+
+ is an exogenous need, following 
+\begin_inset Formula $Z\sim LN(\mu_{z},\sigma_{z})$
+\end_inset
+
+ and 
+\begin_inset Formula $\epsilon_{Inc}\sim LN(\mu_{Inc},\sigma_{Inc}^{2})$
+\end_inset
+
+.
+ We specify the flow utility function as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+U(y,c,I,B,Inc)=\underbrace{\lambda_{2}^{\omega}y^{2}+\lambda_{1}^{\omega}y}_{\text{quadratic approx \omega(y)}}+\underbrace{\lambda_{2}^{c}c^{2}+\lambda_{1}^{c}c}_{\text{consumption}}+\underbrace{\lambda_{1}^{o}(Inc-y)}_{\text{outside composite}}\underbrace{-\tau_{2}(I+Q(y)-c)^{2}-\tau_{1}(I+Q(y)-c)}_{\text{inventory cost}}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Numerical solution of quadratic-linear dynamic programming
+\end_layout
+
+\begin_layout Standard
+Due to the functional specification, we can write the problem in matrix
+ form.
+ Let state 
+\begin_inset Formula $x=(I,B,Inc)'$
+\end_inset
+
+ and control 
+\begin_inset Formula $u=(y,c)'$
+\end_inset
+
+.
+ Let 
+\begin_inset Formula $\epsilon$
+\end_inset
+
+ be the stacked random terms, i.e., 
+\begin_inset Formula $\epsilon=(0,Z,\epsilon_{Inc})'$
+\end_inset
+
+.
+ 
+\begin_inset Formula $E(\epsilon)=\mu$
+\end_inset
+
+ and 
+\begin_inset Formula $E(\epsilon)=\Sigma$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+V(I,B,Inc)= & \max_{y,c}x'R_{2}x+R_{1}x+uQ_{2}u+Q_{1}u+2x'Wu\\
+s.t. & x'=Ax+Du+\epsilon
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula 
+\begin{align*}
+R_{2}=\left(\begin{array}{ccc}
+-\tau_{2} & 0 & 0\\
+0 & 0 & 0\\
+0 & 0 & 0
+\end{array}\right) & R_{1}=(-\tau_{1},0,\lambda_{1}^{o})\\
+Q_{2}=\left(\begin{array}{cc}
+\lambda_{2}^{\omega}+\lambda_{2}^{o}-\tau_{2}k^{2} & \tau_{2}k\\
+\tau_{2}k & \lambda_{2}^{c}-\tau_{2}
+\end{array}\right) & Q_{1}=\left(\lambda_{1}^{\omega}-\lambda_{1}^{o}-\tau_{1}k,\lambda_{1}^{c}+\tau_{1}\right)\\
+W=\left(\begin{array}{cc}
+-\tau_{2}k & \tau_{2}\\
+0 & 0\\
+-\lambda_{2}^{o} & 0
+\end{array}\right)\\
+A=\left(\begin{array}{ccc}
+1 & 0 & 0\\
+0 & 1 & 1\\
+0 & 0 & \rho
+\end{array}\right) & D=\left(\begin{array}{cc}
+k & -1\\
+-1 & 0\\
+0 & 0
+\end{array}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Guess the value function has a quadratic form in state variables, 
+\begin_inset Formula $V=x'Px+Sx+d$
+\end_inset
+
+.
+ Using the approach of quadratic-linear control, we an solve for the policy
+ function 
+\begin_inset Formula $u=Fx+G$
+\end_inset
+
+.
+ See appendix for details.
+ Similar to the canonical quadratic-linear problem, we can obtain 
+\begin_inset Formula $P$
+\end_inset
+
+ and 
+\begin_inset Formula $F$
+\end_inset
+
+ by iterating the equation below.
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+In the canonical quadratic-linear problem, the flow utility function only
+ contains quadratic terms, and the random components must have expectation
+ 0.
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+F= & -(Q_{2}+\beta B'PB)^{-1}(\beta B'PA+W')\\
+P= & R_{2}+\beta A'PA+2(W+\beta A'PB)F+F'(Q_{2}+\beta B'PB)F
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Once we know 
+\begin_inset Formula $F$
+\end_inset
+
+ and 
+\begin_inset Formula $P$
+\end_inset
+
+, the rest parameters are 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+S= & (R_{1}+Q_{1}F+2\beta\mu'P'(A+BF))(I-\beta A-\beta BF)^{-1}\\
+d= & \frac{1}{(1-\beta)}[\frac{1}{2}(Q_{1}+\beta SB+2\beta\mu'PB)G+\beta\mu'S+\beta tr(P\Sigma)]\\
+G= & -(2Q_{2}+2\beta B'PB)^{-1}(2\beta B'P\mu+\beta B'S'+Q_{1}')
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We need to bound the optimal interior solution so that the constraints are
+ satisfied.
+ Hence, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+u^{*}=\left(\begin{array}{c}
+y\\
+c
+\end{array}\right)=\min\left\{ Fx+G,\left(\begin{array}{c}
+B+Inc-Z\\
+I+Q(y^{*})
+\end{array}\right)\right\} \label{eq:policy}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Exact analytical solution when 
+\begin_inset Formula $\tau_{2}=0$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Alternatively, we can use the method of undetermined coefficients to solve
+ for the exact analytical solution.
+ However, the problem is often difficult to solve when the state dimension
+ is greater than 2 and the utility is quadratic in states.
+ Therefore, we further simplify the utilify function by restricting 
+\begin_inset Formula $\tau_{2}=0$
+\end_inset
+
+.
+ Guess that the value function 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+V(I,B,Inc)=\kappa_{1}I^{2}+\kappa_{2}I+\kappa_{3}Inc+\kappa_{4}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We use the following steps to solve for value function.
+ 
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+Step 1: Derive the optimal conditions.
+ 
+\emph default
+Taking the derivatives with respect to 
+\begin_inset Formula $y$
+\end_inset
+
+ and 
+\begin_inset Formula $c$
+\end_inset
+
+ yield the first order condition:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+U_{c}(y,c,I,B,Inc)+\beta E\left[V_{I'}(I',B',Inc')\frac{\partial I'}{\partial c}\right]=0\\
+U_{y}(y,c,I,B,Inc)+\beta E\left[V_{I'}(I',B',Inc')\frac{\partial I'}{\partial y}+V_{B'}(I',B',Inc')\frac{\partial B'}{\partial y}\right]=0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Using Envelop Theorem, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+V_{I}(I,B,Inc)= & U_{I}(y,c,I,B,Inc)+\beta E\left[V_{I'}(I',B',Inc')\frac{\partial I'}{\partial I}\right]\\
+V_{B}(I,B,Inc)= & U_{B}(y,c,I,B,Inc)+\beta E\left[V_{B'}(I',B',Inc')\frac{\partial B'}{\partial B}\right]
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The state transition implies that 
+\begin_inset Formula $\frac{\partial I'}{\partial c}=-1$
+\end_inset
+
+, 
+\begin_inset Formula $\frac{\partial I'}{\partial I}=1$
+\end_inset
+
+, 
+\begin_inset Formula $\frac{\partial I'}{\partial y}=k$
+\end_inset
+
+, and 
+\begin_inset Formula $\frac{\partial B'}{\partial B}=1$
+\end_inset
+
+, 
+\begin_inset Formula $\frac{\partial B'}{\partial y}=-1$
+\end_inset
+
+.
+ Then combining the two sets of conditions gives the Euler equation:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\begin{cases}
+U_{c}(y,c,I,B,Inc)=\beta E\left[U_{I'}(y',c',I',B',Inc')+U_{c'}(y',c',I',B',Inc')\right]\\
+U_{y}(y,c,I,B,Inc)=\beta E\left[U_{B'}(y',c',I',B',Inc')+U_{y'}(y',c',I',B',Inc')-kU_{I'}(y',c',I',B',Inc')\right]
+\end{cases}\label{eq:Euler}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+Step 2: solve for the optimal choice variables.
+ 
+\emph default
+If the value function has the assumed functional form, then we take derivatives
+ of the value function with respect to 
+\begin_inset Formula $I$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+: 
+\begin_inset Formula $V_{I'}(I',B',Inc')=2\kappa_{1}I'+\kappa_{2}=2\kappa_{1}(I+ky-c)$
+\end_inset
+
+ , 
+\begin_inset Formula $V_{B'}(I',B',Inc')=0$
+\end_inset
+
+.
+ Substitute them to FOC
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+2\lambda_{2}^{c}c+\lambda_{1}^{c}+\tau_{1}+2\tau_{2}(I+ky-c)+\beta E_{B',Inc'}\left[-2\kappa_{1}(I+ky-c)-\kappa_{2}\right]=0\\
+2\lambda_{2}^{\omega}y+\lambda_{1}^{\omega}-\lambda_{1}^{o}-\tau_{1}k-2k\tau_{2}(I+ky-c)+\beta E_{B',Inc'}\left[k*2\kappa_{1}(I+ky-c)+k\kappa_{2}\right]=0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Solving for 
+\begin_inset Formula $y$
+\end_inset
+
+ and 
+\begin_inset Formula $c$
+\end_inset
+
+ from the two equations above: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+y^{*}= & -\frac{k\beta\kappa_{1}\lambda_{2}^{c}}{\beta k^{2}\kappa_{1}\lambda_{2}^{c}+(\beta\kappa_{1}+\lambda_{2}^{c})\lambda_{2}^{\omega}}I+\frac{-k\beta\kappa_{1}\lambda_{1}^{c}-k\beta\kappa_{2}\lambda_{2}^{c}+(\beta\kappa_{1}+\lambda_{2}^{c})(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\lambda_{2}^{c}\tau_{1}}{2\left(k^{2}\beta\kappa_{1}\lambda_{2}^{c}+(\beta\kappa_{1}+\lambda_{2}^{c})\lambda_{2}^{\omega}\right)}\\
+c^{*}= & \frac{k\beta\kappa_{1}\lambda_{2}^{\omega}}{\beta k^{2}\kappa_{1}\lambda_{2}^{c}+(\beta\kappa_{1}+\lambda_{2}^{c})\lambda_{2}^{\omega}}I+\frac{-k\beta\kappa_{1}\lambda_{1}^{c}+k\beta\kappa_{1}(\lambda_{1}^{o}-\lambda_{1}^{\omega})+\beta\lambda_{2}^{\omega}\kappa_{2}-\lambda_{1}^{c}\lambda_{2}^{\omega}-\lambda_{2}^{\omega}\tau_{1}}{2\left(k^{2}\beta\kappa_{1}\lambda_{2}^{c}+(\beta\kappa_{1}+\lambda_{2}^{c})\lambda_{2}^{\omega}\right)}
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+Step 3: Obtain the parameters in the value function.
+
+\emph default
+ Substitute the optimal 
+\begin_inset Formula $y^{*}$
+\end_inset
+
+ and 
+\begin_inset Formula $c^{*}$
+\end_inset
+
+ to the value function, we can solve for the undetermined parameters, 
+\begin_inset Formula $\kappa_{1},\kappa_{2},\kappa_{3},\kappa_{4}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\kappa_{1}= & 0\\
+\kappa_{2}= & -\frac{\tau_{1}}{1-\beta}\\
+\kappa_{3}= & \frac{\lambda_{1}^{o}}{1-\beta\rho}\\
+\kappa_{4}= & \frac{-\lambda_{2}^{\omega}(1-\beta\rho)(\lambda_{1}^{c}-\beta\lambda_{1}^{c}+\tau_{1})^{2}-\lambda_{2}^{c}(1-\beta\rho)[(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}]^{2}+4\beta\mu_{Inc}\lambda_{1}^{o}\lambda_{2}^{c}\lambda_{2}^{\omega}(1-\beta)^{2}}{4\lambda_{2}^{c}\lambda_{2}^{\omega}(1-\beta)^{3}(1-\beta\rho)}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+Step 4: Obtain the policy function with parameters.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+y^{*}= & \frac{(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}}{2\lambda_{2}^{\omega}(1-\beta)}\\
+c^{*}= & \frac{-\lambda_{1}^{c}(1-\beta)-\tau_{1}}{2\lambda_{2}^{c}(1-\beta)}
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+Step 5: Check the Euler equation.
+ 
+\emph default
+Substitute the parameterized policy function to the Euler equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:Euler"
+
+\end_inset
+
+ to check whether the eqaulity holds.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+LHS=RHS=-\frac{\beta\tau_{1}}{1-\beta}\\
+LHS=RHS=\frac{k\beta\tau_{1}}{1-\beta}
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that the policy function is constant when 
+\begin_inset Formula $\tau_{2}=0$
+\end_inset
+
+.
+ This is the interior solution assuming that the optimal values satisfy
+ the constraints.
+ Taking account of the constraints
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+Expenditure and consumption should also satisfy non-negativity constraints.
+ If the parameter regions are reasonable, the non-negativity should be satisifie
+d.
+ Otherwise, we could complete the non-negativity by restricting 
+\begin_inset Formula $y*=\max\left\{ 0,\min\left\{ B+Inc-Z,\frac{(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}}{2\lambda_{2}^{\omega}(1-\beta)}\right\} \right\} $
+\end_inset
+
+ and 
+\begin_inset Formula $c^{*}=\max\left\{ 0,\min\left\{ I+Q(y*),\frac{-\lambda_{1}^{c}(1-\beta)-\tau_{1}}{2\lambda_{2}^{c}(1-\beta)}\right\} \right\} $
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+, then 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+y^{*}= & \min\left\{ B+Inc-Z,\frac{(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}}{2\lambda_{2}^{\omega}(1-\beta)}\right\} \\
+c^{*}= & \min\left\{ I+Q(y*),\frac{-\lambda_{1}^{c}(1-\beta)-\tau_{1}}{2\lambda_{2}^{c}(1-\beta)}\right\} 
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Mapping the model to the data
+\end_layout
+
+\begin_layout Standard
+We consider the special case when 
+\begin_inset Formula $\tau_{2}=0$
+\end_inset
+
+ again.
+ The value function is linear in states and the policy function is constant.
+ The expenditure observed in the data is not constant.
+ In order to map the data to the model, we assume that there is an additional
+ unobserved state 
+\begin_inset Formula $\nu_{y}$
+\end_inset
+
+, consumers optimze over 
+\begin_inset Formula $\tilde{y}=y^{*}+\nu_{y}$
+\end_inset
+
+.
+ Then the observed data 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+y=\min\left\{ B+Inc-Z,\frac{(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}}{2\lambda_{2}^{\omega}(1-\beta)}+\nu_{y}\right\} 
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $g(\cdot)$
+\end_inset
+
+ and 
+\begin_inset Formula $f(\cdot)$
+\end_inset
+
+ denote the cdf of 
+\begin_inset Formula $Z$
+\end_inset
+
+ and 
+\begin_inset Formula $\nu_{y}$
+\end_inset
+
+.
+ The density function of observing 
+\begin_inset Formula $y$
+\end_inset
+
+ at state 
+\begin_inset Formula $(I,B,Inc)$
+\end_inset
+
+ is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align}
+p(y;I,B,Inc)= & g(B-Inc-y)Pr\left[Z\geq\frac{(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}}{2\lambda_{2}^{\omega}(1-\beta)}+\nu_{y}\right]+\nonumber \\
+ & f\left(y-\frac{(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}}{2\lambda_{2}^{\omega}(1-\beta)}\right)Pr\left[Z\leq\frac{(1-\beta)(\lambda_{1}^{o}-\lambda_{1}^{\omega})+k\tau_{1}}{2\lambda_{2}^{\omega}(1-\beta)}+\nu_{y}\right]\label{eq:py}
+\end{align}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Simulated maximum likelihood estimation
+\end_layout
+
+\begin_layout Standard
+While we observe income level at each period, we don't observe the other
+ two state variables -- inventory and budget stock.
+ According to the transition laid out in equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:transition"
+
+\end_inset
+
+, inventory is deterministic following the policy function 
+\begin_inset Formula $c$
+\end_inset
+
+ which is dictated by the model.
+ However, the budget stock 
+\begin_inset Formula $B$
+\end_inset
+
+ is unobserved and stochastic.
+ Therefore, we turn to simulated maximum likelihood.
+ Suppose we observe a household's expenditure for 
+\begin_inset Formula $T$
+\end_inset
+
+ periods.
+ We take 
+\begin_inset Formula $Z$
+\end_inset
+
+ draws of length 
+\begin_inset Formula $T$
+\end_inset
+
+, and simlate it for 
+\begin_inset Formula $M$
+\end_inset
+
+ times.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+p_{h}(y_{1},\dots,y_{T}|I_{0},B_{0},Inc_{0})= & \frac{1}{M}\sum_{m=1}^{M}\prod_{t=1}^{T}p(y_{t};I_{t-1},B_{t-1},Inc_{t-1},Z_{t-1}^{(m)})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Discussions and questions
+\end_layout
+
+\begin_layout Enumerate
+I use min operator to the interior solution in equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:policy"
+
+\end_inset
+
+, I'm not sure whether it changes the quadratic form of value function.
+ 
+\end_layout
+
+\begin_layout Enumerate
+In a more general case where the flow utility funciton is quadratic in states,
+ the policy function is linear in states.
+ As can be seen in equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:py"
+
+\end_inset
+
+, the presence of two unobserved states can impose difficulty on identification.
+ Specifically, the model suggests that the policy function is 
+\begin_inset Formula $y=\min\left\{ F_{1}I+G_{1},B+Inc-Z\right\} $
+\end_inset
+
+.
+ Therefore, the vairation of 
+\begin_inset Formula $y$
+\end_inset
+
+ could be due to vairiation of inventory 
+\begin_inset Formula $I$
+\end_inset
+
+ or due to vairation of budget stock 
+\begin_inset Formula $B$
+\end_inset
+
+, or even the exogenous shock 
+\begin_inset Formula $Z$
+\end_inset
+
+.
+ Both states are unobserved, and thus we might encouter weak idenfitication.
+ On the contrary, in the special case where the flow utility function is
+ linear in state, the policy function is constant.
+ The advantage of a constant policy function is that it helps identification,
+ because if the observed 
+\begin_inset Formula $y$
+\end_inset
+
+ deviates from a constant, we know the deviation is due to bounds 
+\begin_inset Formula $B+Inc-Z$
+\end_inset
+
+.
+ However, is it less interesting dynamic behavior? Or does the model still
+ display sufficient dynamics since the bounds imposed on the policy function
+ by states? 
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+newpage
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+\start_of_appendix
+Derivation of quadratic-linear dynamic programming
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\max{}_{u} & x'R_{2}x+R_{1}x+u'Q_{2}u+Q_{1}u+2x'Wu\\
+s.t. & x_{t+1}=Ax_{t}+Du+\epsilon
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\epsilon$
+\end_inset
+
+ is the stochastic component, with 
+\begin_inset Formula $E(\epsilon)=\mu$
+\end_inset
+
+ and 
+\begin_inset Formula $cov(\epsilon)=\Sigma$
+\end_inset
+
+.
+ Guess that the value function 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+V(x)=x'Px+Sx+d
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We substitute it to the Bellman equation
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\max_{u} & x'R_{2}x+R_{1}x+u'Q_{2}u+Q_{1}u+2x'Wu\\
+ & +\beta E_{\epsilon}\left[(Ax+Du+\epsilon)'P(Ax+Du+\epsilon)+S(Ax+Du+\epsilon)+d\right]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now take derivative with respect to 
+\begin_inset Formula $u$
+\end_inset
+
+, we will have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial V}{\partial u}=2Q_{2}u+Q_{1}'+2W'x+\beta\left[2D'PAx+2D'PDu+2D'P\mu+D'S'\right]=0
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Solving for 
+\begin_inset Formula $u$
+\end_inset
+
+,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+u^{*}= & -(2Q_{2}+2\beta D'PD)^{-1}(2\beta D'PAx+2\beta D'P\mu+\beta D'S'+Q_{1}'+2W'x)\\
+= & Fx+G\\
+where\\
+F= & -(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')\\
+G= & -(2Q_{2}+2\beta D'PD)^{-1}(2\beta D'P\mu+\beta D'S'+Q_{1}')
+\end{align*}
+
+\end_inset
+
+Now we substitute the policy function back to the value function to verify
+ the functional form:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & V\\
+= & x'R_{2}x+R_{1}x+u'Q_{2}u+Q_{1}u+2x'Wu\\
+ & +\beta E_{\epsilon}\left\{ [Ax+Du+\epsilon]'P[Ax+Du+\epsilon]+S[Ax+Du+\epsilon]+d\right\} \\
+= & x'R_{2}x+R_{1}x+u'Q_{2}u+Q_{1}u+2x'Wu\\
+ & +\beta\{(Ax+Du)'P(Ax+Du)+2(Ax+Du)'PE(\epsilon)+E(\epsilon'P\epsilon)+S(Ax+Du)+SE(\epsilon)+d\}\\
+= & x'R_{2}x+R_{1}x+u'Q_{2}u+Q_{1}u+2x'Wu\\
+ & +\beta\{x'A'PAx+2x'A'PDu+u'D'PDu+(S+2\mu'P)Ax+(2\mu'P+S)Du+S\mu+d+tr(P\Sigma)\}\\
+= & x'(R_{2}+\beta A'PA)x+(R_{1}+2\beta\mu'PA+\beta SA)x\\
+ & +u'(Q_{2}+\beta D'PD)u+(Q_{1}+2\beta\mu'PD+\beta SD)u+2x'(W+\beta A'PD)u\\
+ & +\beta[S\mu+d+tr(P\Sigma)]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Substitute 
+\begin_inset Formula $u=Fx+G$
+\end_inset
+
+ in the equation above, then the second line becomes
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & u'(Q_{2}+\beta D'PD)u+(Q_{1}+2\beta\mu'PD+\beta SD)u+2x'(W+\beta A'PD)u\\
+= & (Fx+G)'(Q_{2}+\beta D'PD)(Fx+G)+(Q_{1}+2\beta\mu'PD+\beta SD)(Fx+G)+2x'(W+\beta A'PD)(Fx+G)\\
+= & x'F'(Q_{2}+\beta D'PD)Fx+2G'(Q_{2}+\beta D'PD)Fx+G'(Q_{2}+\beta D'PD)G+\\
+ & (Q_{1}+2\beta\mu'PD+\beta SD)Fx+(Q_{1}+2\beta\mu'PD+\beta SD)G+2x'(W+\beta A'PD)Fx+2x'(W+\beta A'PD)G\\
+= & x'[F'(Q_{2}+\beta D'PD)F+2(W+\beta A'PD)F]x\\
+ & +[2G'(Q_{2}+\beta D'PD)F+(Q_{1}+2\beta\mu'PD+\beta SD)F+2G'(W+\beta A'PD)']x\\
+ & +G'(Q_{2}+\beta D'PD)G+(Q_{1}+2\beta\mu'PD+\beta SD)G
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Organizing the terms by the order of 
+\begin_inset Formula $x$
+\end_inset
+
+ yields 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & V\\
+= & x'[R_{2}+\beta A'PA+F'(Q_{2}+\beta D'PD)F+2(W+\beta A'PD)F]x\\
+ & +[R_{1}+2\beta\mu'PA+\beta SA+2G'(Q_{2}+\beta D'PD)F+(Q_{1}+2\beta\mu'PD+\beta SD)F+2G'(W+\beta A'PD)']x\\
+ & +\beta[S\mu+d+tr(P\Sigma)]+G'(Q_{2}+\beta D'PD)G+(Q_{1}+2\beta\mu'PD+\beta SD)G\\
+= & x'[R_{2}+2WF+F'Q_{2}F+\beta(A+DF)'P(A+DF)]x\\
+ & +[R_{1}+2\beta\mu'PA+\beta SA+(Q_{1}+2\beta\mu'PD+\beta SD)F]x\\
+ & +\beta[S\mu+d+tr(P\Sigma)]+\frac{1}{2}(Q_{1}+2\beta\mu'PD+\beta SD)G
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The second equality holds because 
+\begin_inset Formula $G'(Q_{2}+\beta D'PD)F=-G'(Q_{2}+\beta D'PD)(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')=-G(\beta D'PA+W')$
+\end_inset
+
+ and 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $G'(Q_{2}+\beta D'PD)G=-\frac{1}{2}(Q_{1}+2\beta\mu'PD+\beta SD)(Q_{2}+\beta D'PD)^{-1}(Q_{2}+\beta D'PD)G=-\frac{1}{2}(Q_{1}+2\beta\mu'PD+\beta SD)G$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+.
+ Comparing the coefficients on each term.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+d= & \beta[S\mu+d+tr(P\Sigma)]+\frac{1}{2}(Q_{1}+2\beta\mu'PD+\beta SD)G\\
+S= & R_{1}+2\beta\mu'PA+\beta SA+(Q_{1}+2\beta\mu'PD+\beta SD)F\\
+P= & R_{2}+F'Q_{2}F+2WF+\beta(A+DF)'P(A+DF)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Rearrange the terms in 
+\begin_inset Formula $P$
+\end_inset
+
+ by the order of 
+\begin_inset Formula $F$
+\end_inset
+
+, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+P= & R_{2}+F'Q_{2}F+2WF+\beta A'PA+\beta F'D'PD+2\beta A'PDF\\
+= & R_{2}+\beta A'PA+2(W+\beta A'PD)F+F'(Q_{2}+\beta D'PD)F
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the equation above, use the fact that 
+\begin_inset Formula $(Z^{-1})'=(Z')^{-1}$
+\end_inset
+
+ and 
+\begin_inset Formula $(Q_{2}+\beta D'PD)'=Q_{2}+\beta D'PD$
+\end_inset
+
+, we can show 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+F'(Q_{2}+\beta D'PD)F= & (\beta A'P'D+W)[(Q_{2}+\beta D'PD)^{-1}]'(Q_{2}+\beta D'PD)(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')\\
+= & (\beta A'P'D+W)(Q_{2}+\beta D'PD)^{-1}(Q_{2}+\beta D'PD)(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')\\
+= & (\beta A'P'D+W)(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Hence, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+P= & R_{2}+\beta A'PA-2(W+\beta A'PD)(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')+(\beta A'P'D+W)(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')\\
+= & R_{2}+\beta A'PA-(\beta A'P'D+W)(Q_{2}+\beta D'PD)^{-1}(\beta D'PA+W')
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Notice that this is the same as the cannonical form of linear quadratic
+ control problem.
+ Solving for 
+\begin_inset Formula $S$
+\end_inset
+
+ yields 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+S= & (R_{1}+Q_{1}F+2\beta\mu'P'(A+DF))(I-\beta A-\beta DF)^{-1}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+And it is easy to show that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+d & = & \frac{1}{(1-\beta)}[\frac{1}{2}(Q_{1}+\beta SD+2\beta\mu'PD)G+\beta\mu'S+\beta tr(P\Sigma)]
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
