@@ -1,3 +1,5 @@
+# Estimation v1: Use optimization approach
+
 library(ggplot2)
 library(reshape2)
 library(scatterplot3d)
@@ -16,19 +18,17 @@ if(length(args)>0){
       eval(parse(text=args[[i]]))
     }
 }
-# vid_save 	<- vid
-# run_id_save <- run_id
-vid_save	<- vid	<- 2
-run_id_save	<- run_id <- 5
-seg_id 		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
+vid_save	<- vid	<- 1
+run_id_save	<- run_id <- 1
+# seg_id 		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 
 # setwd("~/Documents/Research/Store switching/processed data/Estimation")
-# sourceCpp("~/Documents/Research/Store switching/Exercise/main/1_CDAMT_functions.cpp")
+# sourceCpp("~/Documents/Research/Store switching/Exercise/main/1_DAM_functions.cpp")
 # setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 setwd("/sscc/home/c/ccv103/Exercise/run")
 
-sourceCpp("1_CDAMT_functions.cpp")
+sourceCpp("1_DAM_functions.cpp")
 model_name 	<- "MDCEV_a1b1"
 make_plot	<- FALSE
 
@@ -106,6 +106,8 @@ mytransition <- function(x1, x2){
 # Read data and extract segment data # 
 ######################################
 load(paste("run_",run_id,"/5_est_MDCEV_seg",seg_id,".rdata",sep=""))
+param_mat <- read.csv(paste("run_",run_id,"/inits.csv",sep=""), header = T)
+# param_mat <- read.csv("~/Documents/Research/Store switching/processed data/Estimation/inits.csv", header=T)
 rm(list = c("run_id", "vid"))
 vid					<- vid_save
 run_id				<- run_id_save
@@ -204,7 +206,7 @@ cat("dim(choice_seq) =",dim(choice_seq),"\n")
 ########################################################################################################							
 # -------------------------------------------# 
 # Model the income transition
-# Lag income by 1 year
+# Forward income by 1 year
 tmp		<- data.table(mydata)
 tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(household_code, recession, year)]
 tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(household_code)]
@@ -305,7 +307,9 @@ cat("Grids of states:\n"); summary(state); cat("\n")
 # ------------------------------ # 
 # Find DP solution at the intial parameters;
 beta	<- .96
-param	<- param_mat[,seg_id]
+sel		<- param_mat$seg_id == seg_id & param_mat$chain == 1
+param	<- as.vector(as.matrix(param_mat[sel,-(1:2)])); 
+names(param) <- colnames(param_mat)[-c(1:2)]
 cat("Inital parameters at seg =", seg_id, "are:\n"); print(param); cat("\n")
 
 DP_list	<- list(state 	= state,
@@ -326,7 +330,7 @@ control_list <- list(	max_iter 		= 30,
 						inner_max		= 50, 
 						inner_tol		= 1e-5,
 						NM_sizetol		= 1e-6, 
-						NM_startsize 	= .5, 
+						NM_startsize 	= 1.5, 
 						NM_iter			= 500, 
 						NM_stop			= 15,
 						brent_tol 		= 1e-6, 
@@ -391,7 +395,7 @@ if(make_plot){
 ##############
 set.seed(666)
 n_M 		<- 2 * (D+1)		# Number of moments; 
-W			<- diag(n_M)/100
+W			<- diag(n_M)/1e4
 DP_init		<- DP_list
 DP_init$value_fn <- 20*log(5*state[,1]+1) 
 Q_obs		<- Q_fn(choice_seq[,2])
@@ -429,9 +433,9 @@ param_init[par_exp_idx]	<- log(param_init[par_exp_idx]*tmp)
 
 system.time(print(GMM_wrapper(param_init)))
 
-# Run Nelder-Mead for a few runs
+# Run Nelder-Mead 
 cat("--------------------------------------------------------------------\n")
-opt_ctr	<- list(trace = 10, maxit = 800)
+opt_ctr	<- list(trace = 10, maxit = 1000)
 pct 	<- proc.time()
 sol		<- optim(par = param_init, GMM_wrapper, method="Nelder-Mead", hessian = TRUE, control = opt_ctr)
 use.time <- proc.time() - pct
@@ -451,27 +455,7 @@ par_est1[par_exp_idx]	<- exp(par_est1[par_exp_idx])
 par_est1[par_neg_idx] 	<- -par_est1[par_neg_idx]
 cat("The current parameters are:\n"); print(par_est1); cat("\n")
 
-
 save.image(file = paste("run_",run_id,"/6_est_seg",seg_id,"_v", vid,".rdata",sep=""))
-
-if(sol$convergence != 0){
-	cat("--------------------------------------------------------------------\n")
-	cat("Now starting BFGS optimization.\n")
-	opt_ctr	<- list(trace = 10, maxit = 200)
-	param_init	<- sol$par
-	pct 	<- proc.time()
-	sol		<- optim(par = param_init, GMM_wrapper, method = "BFGS", hessian = TRUE, control = opt_ctr)
-	use.time <- proc.time() - pct
-	cat("The BFGS optimization finishes with", use.time[3]/60,"min.\n")
-	print(sol)
-	
-	par_est1	<- sol$par
-	par_est1[par_exp_idx]	<- exp(par_est1[par_exp_idx])
-	par_est1[par_neg_idx] 	<- -par_est1[par_neg_idx]
-	cat("The current parameters are:\n"); print(par_est1); cat("\n")
-	
-	save.image(file = paste("run_",run_id,"/6_est_seg",seg_id,"_v", vid,".rdata",sep=""))
-}
 
 #-------------------------------------------------------------------------#
 # Using new weighting matrix
@@ -491,7 +475,7 @@ GMM_wrapper <- function(param_conv){
 }
 
 cat("Now starting Nelder-Mead optimization with new weighting matrix.\n")
-opt_ctr	<- list(trace = 10, maxit = 500)
+opt_ctr	<- list(trace = 10, maxit = 1000)
 param_init	<- sol$par
 pct 	<- proc.time()
 sol_w1	<- optim(par = param_init, GMM_wrapper, method = "Nelder-Mead", hessian = TRUE, control = opt_ctr)
@@ -516,12 +500,12 @@ save.image(file = paste("run_",run_id,"/6_est_seg",seg_id,"_v", vid,".rdata",sep
 #-------------------------------------------------------------------------#
 # Using nested logit prediction
 nest_pred	<- TRUE
-cat("Now starting BFGS optimization with nested logit prediction.\n")
+cat("Now starting NM optimization with nested logit prediction.\n")
 param_init	<- sol_w1$par
 pct 	<- proc.time()
-sol_w2	<- optim(par = param_init, GMM_wrapper, method = "BFGS", hessian = TRUE, control = opt_ctr)
+sol_w2	<- optim(par = param_init, GMM_wrapper, method = "Nelder-Mead", hessian = TRUE, control = opt_ctr)
 use.time <- proc.time() - pct
-cat("The BFGS optimization with nested logit prediction finishes with", use.time[3]/60,"min.\n")
+cat("The NM optimization with nested logit prediction finishes with", use.time[3]/60,"min.\n")
 print(sol_w2)
 
 par_est3	<- sol_w2$par
@@ -538,10 +522,17 @@ cat("Standard error of the parameters adjusted using Delta method are:\n"); prin
 
 #-------------------------------------------------------------------------#
 # Save data
+# Write the 1st round estimation to inits. 
+tmp			<- data.frame(seg_id = seg_id, chain = 4, matrix(par_est1,nrow=1))
+colnames(tmp)[-(1:2)]	<- names(par_est1)
+f			<- file(paste("run_",run_id,"/inits.csv",sep=""), "at")
+write.csv(tmp, f, row.names = FALSE)
+close(f)
+
 rm(list = c("mydata", "make_plot", "GMM_wrapper", "a", "args", "bdate", "byear", "comp_policy", "comp_W", "delta_q","ggtmp", "GMM_objC",
 			"MM1C","model_name","myidx","ord","panelist","policy_iterC", "sel","sel1","sel2", "selc", "selhh", "sim_hhseqC",
-			"tmp1","tmp2","tmp3","tmpa","tmpb","tmpn", "tmpX_list","tmpy","X_list","tmpdata"))
-
+			"tmp1","tmp2","tmp3","tmpa","tmpb","tmpn", "tmpX_list","tmpy","X_list","tmpdata", "make_plot", "f"))
+			
 save.image(file = paste("run_",run_id,"/6_est_seg",seg_id,"_v", vid,".rdata",sep=""))
 
 cat("File has been saved.\n")

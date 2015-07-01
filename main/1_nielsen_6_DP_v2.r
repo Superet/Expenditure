@@ -1,3 +1,5 @@
+# Estimation v2: sampling approach 
+
 library(ggplot2)
 library(reshape2)
 library(scatterplot3d)
@@ -16,22 +18,20 @@ if(length(args)>0){
       eval(parse(text=args[[i]]))
     }
 }
-nchain		<- 3
-# vid_save 	<- vid
-# run_id_save <- run_id
-vid_save	<- vid	<- 4
-run_id_save	<- run_id <- 5
+nchain		<- 4
+vid_save	<- vid	<- 2
+run_id_save	<- run_id <- 1
 # arr_idx		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 seg_id		<- ceiling(arr_idx/nchain)
 chain_id	<- arr_idx - (seg_id - 1) * nchain
 
 # setwd("~/Documents/Research/Store switching/processed data/Estimation")
-# sourceCpp("~/Documents/Research/Store switching/Exercise/main/1_CDAMT_functions.cpp")
+# sourceCpp("~/Documents/Research/Store switching/Exercise/main/1_DAM_functions.cpp")
 setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 
-sourceCpp("1_CDAMT_functions.cpp")
+sourceCpp("1_DAM_functions.cpp")
 model_name 	<- "MDCEV_a1b1"
 make_plot	<- FALSE
 
@@ -195,7 +195,7 @@ cat("dim(choice_seq) =",dim(choice_seq),"\n")
 ########################################################################################################							
 # -------------------------------------------# 
 # Model the income transition
-# Lag income by 1 year
+# Forward income by 1 year
 tmp		<- data.table(mydata)
 tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(household_code, recession, year)]
 tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(household_code)]
@@ -432,32 +432,42 @@ lobj_fun 	<- function(param_conv){
 	}
 	J		<- param_conv[par_exp_idx]
 	J[which(par_exp_idx==par_neg_idx)] <- - J[which(par_exp_idx==par_neg_idx)]
-	return(L + sum(J) + lprior_fun(param_conv))
+	obj		<- L + sum(J) + lprior_fun(param_conv)
+	return(c(obj = obj, ll = L))
 }
 
-my.mtretrop	<- function(lobj_fun, inits, scale=1, niter, nburn=0, nthin=1,  print_freq = 20){
+my.mtretrop	<- function(lobj_fun, inits, scale=1, niter, nburn=0, nthin=1,  print_freq = 20, seed=1){
+	set.seed(seed)
 	theta.old	<- inits
-	p.old		<- lobj_fun(inits)
+	post		<- lobj_fun(inits)
+	p.old		<- post[1]
+	ll.old		<- post[2]
 	np			<- length(inits)
 	p.ser		<- rep(NA, niter)
 	accept		<- rep(NA, niter)
+	ll			<- rep(NA, niter)
 	chain		<- matrix(NA, niter, np)
 	cnt			<- 0
 	prc			<- proc.time()
 	for(i in 1:niter){
 		theta.new	<- theta.old + rnorm(np, 0, scale)
-		p.new		<- lobj_fun(theta.new)
+		post		<- lobj_fun(theta.new)
+		p.new		<- post[1]
+		ll.new		<- post[2]
 		alpha		<- min(1, exp(p.new - p.old))
 		if(runif(1) < alpha){
 			accept[i]	<- 1
 			chain[i,]	<- theta.new
 			p.ser[i]	<- p.new
+			ll[i]		<- ll.new
 			p.old		<- p.new
 			theta.old	<- theta.new
+			ll.old		<- ll.new
 		}else{
 			accept[i]	<- 0
 			chain[i,]	<- theta.old
 			p.ser[i]	<- p.old
+			ll[i]		<- ll.old
 		}
 		if(i%%print_freq == 0){
 			sel		<- cnt + 1:print_freq
@@ -471,9 +481,10 @@ my.mtretrop	<- function(lobj_fun, inits, scale=1, niter, nburn=0, nthin=1,  prin
 	keep.idx	<- keep.idx[seq(1,length(keep.idx), nthin)]
 	out.draw	<- chain[keep.idx,]
 	out.dev		<- p.ser[keep.idx]
+	out.ll		<- ll[keep.idx]
 	
 	# Compute DIC 
-	Dbar 		<- mean(-2*out.dev)
+	Dbar 		<- mean(-2*out.ll)
 	theta_bar	<- colMeans(out.draw)
 	Dtilde		<- lobj_fun(theta_bar)
 	pD			<- Dbar - Dtilde
@@ -511,7 +522,7 @@ nthin		<- 40
 print_freq	<- 500
 
 pct			<- proc.time()
-sol			<- my.mtretrop(lobj_fun, scale_ls[[sel]]$last.draw, scale = mcmc.scale, niter, nburn, nthin,  print_freq)
+sol			<- my.mtretrop(lobj_fun, scale_ls[[sel]]$last.draw, scale = mcmc.scale, niter, nburn, nthin,  print_freq, seed = chain_id)
 use.time	<- proc.time() - pct
 
 # Check convergence
