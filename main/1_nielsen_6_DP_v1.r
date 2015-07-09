@@ -18,15 +18,15 @@ if(length(args)>0){
       eval(parse(text=args[[i]]))
     }
 }
-vid_save	<- vid	<- 1
+vid_save	<- vid	<- 3
 run_id_save	<- run_id <- 1
 # seg_id 		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 
 # setwd("~/Documents/Research/Store switching/processed data/Estimation")
 # sourceCpp("~/Documents/Research/Store switching/Exercise/main/1_DAM_functions.cpp")
-# setwd("/home/brgordon/ccv103/Exercise/run")
+setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
-setwd("/sscc/home/c/ccv103/Exercise/run")
+# setwd("/sscc/home/c/ccv103/Exercise/run")
 
 sourceCpp("1_DAM_functions.cpp")
 model_name 	<- "MDCEV_a1b1"
@@ -106,11 +106,12 @@ mytransition <- function(x1, x2){
 # Read data and extract segment data # 
 ######################################
 load(paste("run_",run_id,"/5_est_MDCEV_seg",seg_id,".rdata",sep=""))
-param_mat <- read.csv(paste("run_",run_id,"/inits.csv",sep=""), header = T)
-# param_mat <- read.csv("~/Documents/Research/Store switching/processed data/Estimation/inits.csv", header=T)
-rm(list = c("run_id", "vid"))
+rm(list = c("run_id", "vid", "sol"))
 vid					<- vid_save
 run_id				<- run_id_save
+
+param_mat <- read.csv(paste("run_",run_id,"/inits.csv",sep=""), header = T)
+# param_mat <- read.csv("~/Documents/Research/Store switching/processed data/Estimation/inits.csv", header=T)
 
 # Recode income levels 
 sum(is.na(hh_exp$income_real))
@@ -308,7 +309,7 @@ cat("Grids of states:\n"); summary(state); cat("\n")
 # Find DP solution at the intial parameters;
 beta	<- .96
 sel		<- param_mat$seg_id == seg_id & param_mat$chain == 1
-param	<- as.vector(as.matrix(param_mat[sel,-(1:2)])); 
+param	<- as.vector(as.matrix(as.numeric(param_mat[sel,-(1:2)]))); 
 names(param) <- colnames(param_mat)[-c(1:2)]
 cat("Inital parameters at seg =", seg_id, "are:\n"); print(param); cat("\n")
 
@@ -435,7 +436,7 @@ system.time(print(GMM_wrapper(param_init)))
 
 # Run Nelder-Mead 
 cat("--------------------------------------------------------------------\n")
-opt_ctr	<- list(trace = 10, maxit = 1000)
+opt_ctr	<- list(trace = 1, maxit = 1000)
 pct 	<- proc.time()
 sol		<- optim(par = param_init, GMM_wrapper, method="Nelder-Mead", hessian = TRUE, control = opt_ctr)
 use.time <- proc.time() - pct
@@ -475,12 +476,12 @@ GMM_wrapper <- function(param_conv){
 }
 
 cat("Now starting Nelder-Mead optimization with new weighting matrix.\n")
-opt_ctr	<- list(trace = 10, maxit = 1000)
+opt_ctr	<- list(trace = 1, maxit = 1000)
 param_init	<- sol$par
 pct 	<- proc.time()
 sol_w1	<- optim(par = param_init, GMM_wrapper, method = "Nelder-Mead", hessian = TRUE, control = opt_ctr)
 use.time <- proc.time() - pct
-cat("The BFGS optimization using the new weighting matrix finishes with", use.time[3]/60,"min.\n")
+cat("The NM optimization using the new weighting matrix finishes with", use.time[3]/60,"min.\n")
 print(sol_w1)
 
 par_est2	<- sol_w1$par

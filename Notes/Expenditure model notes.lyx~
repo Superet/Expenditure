@@ -1,0 +1,1821 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\date{January, 2015}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Expenditure Reallocation Notes
+\end_layout
+
+\begin_layout Section
+Model Overview
+\end_layout
+
+\begin_layout Standard
+We assume that consumers make decisions according to the following timing:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\tilde{V}(I,y,\nu)= & \max_{Q_{t},c_{t}}\sum_{t=1}^{\infty}\beta^{t-1}\left\{ E_{\epsilon}\left[\max_{e}U^{P}(e,\mathbb{\epsilon};Q_{t})\right]+u^{c}(c_{t})-C(I_{t+1})+\nu\right\} \\
+s.t. & \sum_{r=1}^{R}e_{r}+e_{R+1}\leq y_{t},\quad\sum_{r=1}^{R}\frac{e_{rt}}{p_{rt}}+e_{R+2}\leq Q_{t},\quad0\leq c_{t}\leq I_{t}+Q_{t}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Simplified model 
+\end_layout
+
+\begin_layout Standard
+The dynamic allocation problem is hard to solve, but we are able to simplify
+ the problem thanks to the separability assumption.
+ We make two observations.
+ First, inventory transition only depends on the quantity of the basket.
+ Therefore, conditional on a basket type, allocation decisions do not affect
+ the state transition.
+ Second, consumption decisions do not depend on the how the expenditure
+ is allocated, but only the current inventory plus the quantity purchased.
+ The two features allow us to separately model the allocation decisions
+ conditional on a basket type.
+ Once conditional on a basket type, we do not need to solve the dynamic
+ programming for 
+\begin_inset Formula $\{e_{1t},\ldots,e_{St}\}$
+\end_inset
+
+, and thus reduce the allocation problem into a static model.
+ Then we know the contingent preference towards retailersÕ attributes.
+ We can compute the expected purchase utility conditional on a basket type
+ and budget.
+ Finally, we substitute the purchase utility back in the dynamic model,
+ and solve for the decision path of basket type and consumption.
+ Specifically, our dynamic model is simplified in three steps:
+\end_layout
+
+\begin_layout Standard
+Step 1: we model expenditure allocation decisions conditional a basket type.
+\end_layout
+
+\begin_layout Standard
+Step 2: we compute 
+\begin_inset Quotes eld
+\end_inset
+
+inclusive value
+\begin_inset Quotes erd
+\end_inset
+
+ conditional on a basket type and expenditure:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{alignat*}{1}
+\omega(y,Q)= & E_{\epsilon}\left[\max_{e}U^{P}(e,\epsilon;Q_{t})\right]\\
+s.t. & \sum_{r=1}^{R}e_{r}+e_{R+1}\leq y_{t},\quad\sum_{r=1}^{R}\frac{e_{rt}}{p_{rt}}+e_{R+2}\leq Q_{t}
+\end{alignat*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Step 3: we solve dynamic decisions of basket type and consumption.
+ It can be shown that the original Bellman equation is equivalent to
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\tilde{V}(I,y,\nu)= & \max_{Q,c}\left\{ \omega(y,Q)+u^{C}(c)-C(I')+\nu+\beta E_{I',y'}\tilde{V}(I',y',\nu')\right\} \\
+s.t. & 0\leq c\leq I+Q
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Model specification
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+U^{p}(e_{1},\dots,e_{R},e_{R+1},e_{R+2})= & \sum_{r=1}^{R}\gamma_{r}\psi_{r}\log\left(\frac{e_{r}}{p_{r}}+1\right)+\psi_{R+1}\log(e_{R+1})+\psi_{R+2}\log(e_{R+2}+c_{R+2})\\
+s.t. & \sum_{r=1}^{R}e_{r}+e_{R+1}\leq y_{t},\quad\sum_{r=1}^{R}\frac{e_{rt}}{p_{rt}}+e_{R+2}\leq Q_{t}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+And the functions in dynamic functions are 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+u^{C}(c)= & \lambda\log(c+1)\\
+C(I)= & \tau_{1}I
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Identification discussion 
+\end_layout
+
+\begin_layout Section
+Multiple discrete-continuous model
+\end_layout
+
+\begin_layout Subsection
+General model 
+\end_layout
+
+\begin_layout Standard
+I follow the notaiton in Bhat (2008).
+ The differece is that I assume that consumers optimize expenditure, whereas
+ he consider consumers optimizing over quantity.
+ The expression may differ.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+U(e_{1,}\dots,e_{K}) & = & \sum_{r=1}^{K}\psi_{r}\gamma_{r}\log\left(\frac{e_{r}}{p_{r}\gamma_{r}}+1\right)\\
+s.t. &  & \sum_{r=1}^{R}e_{r}+I(Ra>R)e_{R+1}\leq y\\
+ &  & \sum_{r=1}^{R}\frac{e_{r}}{p_{r}}+I(Rb>R)e_{R+2}\leq Q
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where the base utility specification is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\psi_{r}=\exp(X_{r}\beta+\tilde{\epsilon}_{r})
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the equation above, 
+\begin_inset Formula $R$
+\end_inset
+
+ is the number of retailer alternatives.
+ If 
+\begin_inset Formula $Ra>R$
+\end_inset
+
+, then there is expenditure outside option, indexed with 
+\begin_inset Formula $R+1$
+\end_inset
+
+.
+ Similarly, if 
+\begin_inset Formula $Rb>R$
+\end_inset
+
+, then we have an outside option for quantity constraint, indexed with 
+\begin_inset Formula $R+2$
+\end_inset
+
+.
+ 
+\begin_inset Formula $K=R+I(Ra>R)+I(Rb>R)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Under Bhat's notation, suppose the first alternative is the base alternative,
+ the probability function of expenditure 
+\begin_inset Formula $e_{1},\dots,e_{K}$
+\end_inset
+
+ is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+P(e_{1},\dots e_{M},0,\dots,0) & = & |J|\int_{\tilde{\epsilon}_{1}}^{\infty}\int_{\tilde{\epsilon}_{M+1}}^{\tilde{V}_{1}-\tilde{V}_{M+1}+\tilde{\epsilon}_{1}}\dots\int_{\tilde{\epsilon}_{K}}^{\tilde{V}_{1}-\tilde{V}_{K}+\tilde{\epsilon_{1}}}f(\tilde{\epsilon}_{1},\tilde{V}_{1}-\tilde{V}_{2}+\tilde{\epsilon}_{1},\dots,\tilde{V}_{1}-\tilde{V}_{M}+\tilde{\epsilon}_{1},\tilde{\epsilon}_{M+1},\dots,\tilde{\epsilon}_{K})d\tilde{\epsilon}_{K}d\tilde{\epsilon}_{K-1}\dots d\tilde{\epsilon}_{1}\\
+ & = & |J|\int_{\epsilon_{M+1}}^{\tilde{V}_{1}-\tilde{V}_{M+1}}\dots\int_{\epsilon_{K}}^{\tilde{V}_{1}-\tilde{V}_{K}}g(\tilde{V}_{1}-\tilde{V}_{2},\dots,\tilde{V}_{1}-\tilde{V}_{M},\epsilon_{M+1},\dots,\epsilon_{K})d\epsilon_{K}d\epsilon_{K-1}\dots d\epsilon_{1}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $f(\cdot)$
+\end_inset
+
+ is the density function of 
+\begin_inset Formula $\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{K}$
+\end_inset
+
+, and 
+\begin_inset Formula $\epsilon_{r}=\tilde{\epsilon}_{r}-\tilde{\epsilon}_{1}$
+\end_inset
+
+, 
+\begin_inset Formula $g(\cdot)$
+\end_inset
+
+ is the density function of 
+\begin_inset Formula $\epsilon_{1},\dots\epsilon_{K-1}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+The expenditure constraint always exists, but there might be no expenditure
+ outside option 
+\begin_inset Formula $e_{R+1}$
+\end_inset
+
+.
+ There may not may be quantity constraint.
+ We need to distinguish if there is expenditure outside opitoin, because
+ certain assumptions of error structure that simplify the computation might
+ not work otherwise.
+ Additionally, identification of intercepts is different.
+ Like discrete choice model, only utility difference matters, so we need
+ one 
+\begin_inset Quotes eld
+\end_inset
+
+base
+\begin_inset Quotes erd
+\end_inset
+
+ alternative which we normalize parameters.
+ If there is expenditure outside option, things are easy.
+ We can set 
+\begin_inset Formula $\tilde{\epsilon}_{R+1}=0$
+\end_inset
+
+ and 
+\begin_inset Formula $\beta_{R+1}=0$
+\end_inset
+
+, then all the paraemter, especially the intercepts, associated with all
+ the alternatives (
+\begin_inset Formula $r=1,\dots,R)$
+\end_inset
+
+ can be identified.
+ In this case, the computation is easy as iid 
+\begin_inset Formula $\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R}$
+\end_inset
+
+ means that 
+\begin_inset Formula $\tilde{\epsilon}_{1}-\tilde{\epsilon}_{R+1},\dots,\tilde{\epsilon}_{R}-\tilde{\epsilon}_{R+1}$
+\end_inset
+
+ is also iid.
+ However, if there is no outside option, the 
+\begin_inset Quotes eld
+\end_inset
+
+base
+\begin_inset Quotes erd
+\end_inset
+
+ alternative that has positive 
+\begin_inset Formula $e$
+\end_inset
+
+ can change from observation to observation.
+ Thus we can not simply nomarlize, say, the first alternative, to have 
+\begin_inset Formula $\epsilon=0$
+\end_inset
+
+.
+ Iid 
+\begin_inset Formula $\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R}$
+\end_inset
+
+ does not lead to independent 
+\begin_inset Formula $\tilde{\epsilon}_{1}-\tilde{\epsilon}_{R+1},\dots,\tilde{\epsilon}_{R}-\tilde{\epsilon}_{R+1}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsection
+The presence of expenditure outside option
+\end_layout
+
+\begin_layout Subsubsection
+The presence of quantity constraint
+\end_layout
+
+\begin_layout Standard
+Lagrangian equaiton of the constrained optimization: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+L= & \sum_{r=1}^{R}\gamma_{r}\psi_{r}\log\left(\frac{e_{rt}}{p_{rt}\gamma_{rt}}+1\right)+\psi_{R+1}\log(e_{R+1})+\psi_{R+2}\log(e_{R+2}+c_{R+2})\\
+ & +\mu(y-\sum_{r=1}^{R}e_{r}-e_{R+1})+\lambda(Q-\sum_{r=1}^{R}\frac{e_{rt}}{p_{rt}}-e_{R+2})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The KKT condition is 
+\begin_inset Formula $\frac{\partial L}{\partial e_{r}}*e_{r}^{*}\leq0$
+\end_inset
+
+ and it implies that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\frac{\partial L}{\partial e_{rt}}-\mu-\frac{\lambda}{p_{rt}}<0, & \text{and }e_{rt}=0\\
+\frac{\partial L}{\partial e_{rt}}-\mu-\frac{\lambda}{p_{rt}}=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We substitute the derivatives to the equations above and have
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\frac{\psi_{R+1}}{e_{R+1}}-\frac{\psi_{R+2}}{p_{rt}(e_{R+2}+c_{R+2})}<0, & \text{and }e_{rt}=0\\
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\frac{\psi_{R+1}}{e_{R+1}}-\frac{\psi_{R+2}}{p_{rt}(e_{R+2}+c_{R+2})}=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Taking the logarithm of the equations above, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\epsilon_{rt}<V_{rt}, & \text{and }e_{rt}=0\\
+\epsilon_{rt}=V_{rt}, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\epsilon_{r}=\tilde{\epsilon}_{r}-\tilde{\epsilon}_{R+1}=\tilde{\epsilon}_{r}$
+\end_inset
+
+ since 
+\begin_inset Formula $\tilde{\epsilon}_{R+1}$
+\end_inset
+
+ can be set to be zero.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+V_{r} & = & \tilde{V}_{R+1}-\tilde{V}_{r}\\
+\tilde{V}_{r} & = & X_{r}\beta-\log\left(\frac{e_{rt}}{\gamma_{r}}+p_{rt}\right)\\
+\tilde{V}_{R+1} & = & \log\left(\frac{\psi_{R+1}}{e_{R+1}}+\frac{\psi_{R+2}}{p_{r}(e_{R+2}+c_{R+2})}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+If 
+\begin_inset Formula $(\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R})$
+\end_inset
+
+ follows iid 
+\begin_inset Formula $N(0,\sigma^{2})$
+\end_inset
+
+, then the prabability function can be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+P(e_{1},\dots e_{M},0,\dots,0) & = & |J|\int_{\epsilon_{M+1}}^{\tilde{V}_{R+1}-\tilde{V}_{M+1}}\dots\int_{\epsilon_{K}}^{\tilde{V}_{R+1}-\tilde{V}_{K}}g(\tilde{V}_{R+1}-\tilde{V}_{2},\dots,\tilde{V}_{R+1}-\tilde{V}_{M},\epsilon_{M+1},\dots,\epsilon_{K})d\epsilon_{K}d\epsilon_{K-1}\dots d\epsilon_{1}\\
+ & = & |J|\prod_{r\in\{1,\dots,R,e_{r}>0\}}\phi(V_{r};0,\sigma)\prod_{r\in\{1,\dots,R,e_{r}=0\}}\Phi(V_{r};0,\sigma)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+If 
+\begin_inset Formula $(\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R})$
+\end_inset
+
+ follows iid extreme value type I with scale paramter 
+\begin_inset Formula $\sigma$
+\end_inset
+
+, then the prabability function can be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+P(e_{1},\dots e_{M},0,\dots,0) & = & |J|\int_{\epsilon_{M+1}}^{\tilde{V}_{R+1}-\tilde{V}_{M+1}}\dots\int_{\epsilon_{K}}^{\tilde{V}_{R+1}-\tilde{V}_{K}}g(\tilde{V}_{R+1}-\tilde{V}_{2},\dots,\tilde{V}_{R+1}-\tilde{V}_{M},\epsilon_{M+1},\dots,\epsilon_{K})d\epsilon_{K}d\epsilon_{K-1}\dots d\epsilon_{1}\\
+ & = & |J|\prod_{r\in\{1,\dots,R,e_{r}>0\}}\frac{1}{\sigma}\lambda\left(\frac{V_{r}}{\sigma}\right)\prod_{r\in\{1,\dots,R,e_{r}=0\}}\Lambda\left(\frac{V_{r}}{\sigma}\right)\\
+ & = & |J|\prod_{r\in\{1,\dots,R,e_{r}>0\}}\frac{1}{\sigma}\exp\left(-\frac{V_{r}}{\sigma}-e^{-\frac{V_{r}}{\sigma}}\right)\prod_{r\in\{1,\dots,R,e_{r}=0\}}\exp\left(-e^{-\frac{V_{r}}{\sigma}}\right)\\
+ & = & |J|\frac{\exp\left(\sum_{r\in\{1,\dots,R,e_{r}>0\}}-\frac{V_{r}}{\sigma}-\log(\sigma)\right)}{\exp\left(\sum_{r=1}^{R}e^{-\frac{V_{r}}{\sigma}}\right)}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Notice that in either case, we set 
+\begin_inset Formula $\tilde{\epsilon}_{R+1}=0$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Paragraph
+Jacobian matrix
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $n_{p}=\sum_{r=1}^{R}I(e_{r}>0)$
+\end_inset
+
+, and 
+\begin_inset Formula $\mathcal{R}_{p}=\{r=1,\dots,R:e_{r}>0\}$
+\end_inset
+
+.
+ 
+\begin_inset Formula $J$
+\end_inset
+
+ is 
+\begin_inset Formula $n_{p}\times n_{p}$
+\end_inset
+
+ Jacobian matrix.
+ Recall that 
+\begin_inset Formula $V_{r}=\log\left(\frac{e_{r}}{\gamma_{r}}+p_{r}\right)-X_{r}\alpha+\log\left(\frac{\psi_{R+1}}{e_{R+1}}+\frac{\psi_{R+2}}{p_{r}(e_{R+2}+c_{R+2})}\right)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Let 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\lambda_{1}= & \frac{\psi_{R+1}}{e_{R+1}^{2}}\\
+\lambda_{2}= & \frac{\psi_{R+2}}{(e_{R+2}+c_{R+2})^{2}}\\
+\Lambda_{i}= & \frac{\psi_{R+1}}{e_{R+1}}+\frac{\psi_{R+2}}{p_{i}(e_{R+2}+c_{R+2})}\\
+d_{i}= & e_{i}+\gamma_{i}p_{i}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can write the element of the Jacobian matrix as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+J_{ij}=\frac{\partial V_{i}}{\partial e_{j}}=\begin{cases}
+\frac{\lambda_{1}+\frac{\lambda_{2}}{p_{i}p_{j}}}{\Lambda_{i}}+\frac{1}{d_{j}} & i=j\\
+\frac{\lambda_{1}+\frac{\lambda_{2}}{p_{i}p_{j}}}{\Lambda_{i}} & i\neq j
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We use matrix determinant lemma to compute its determinant.
+ Denote 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+A= & \left(\begin{array}{ccc}
+\frac{1}{d_{1}}\\
+ & \ddots\\
+ &  & \frac{1}{d_{np}}
+\end{array}\right)\\
+U=\left(\begin{array}{cc}
+\frac{1}{\Lambda_{1}} & \frac{1}{\Lambda_{1}p_{1}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{1}{\Lambda_{np}p_{np}}
+\end{array}\right), & \quad V^{T}=\left(\begin{array}{ccc}
+\lambda_{1} & \dots & \lambda_{1}\\
+\frac{\lambda_{2}}{p_{1}} & \dots & \frac{\lambda_{2}}{p_{np}}
+\end{array}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We know that 
+\begin_inset Formula $|J|=|A+UV^{T}|=det(I+V^{T}A^{-1}U)det(A)$
+\end_inset
+
+.
+ 
+\begin_inset Formula $|A|=\prod_{i}^{np}\frac{1}{d_{i}}$
+\end_inset
+
+.
+ Now let's compute the 
+\begin_inset Formula $V^{T}A^{-1}U$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+V^{T}A^{-1}U= & \left(\begin{array}{ccc}
+\lambda_{1} & \dots & \lambda_{1}\\
+\frac{\lambda_{2}}{p_{1}} & \dots & \frac{\lambda_{2}}{p_{np}}
+\end{array}\right)\left(\begin{array}{ccc}
+d_{1}\\
+ & \ddots\\
+ &  & d_{np}
+\end{array}\right)\left(\begin{array}{cc}
+\frac{1}{\Lambda_{1}} & \frac{1}{\Lambda_{1}p_{1}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{1}{\Lambda_{np}p_{np}}
+\end{array}\right)\\
+= & \left(\begin{array}{ccc}
+\lambda_{1}d_{1} & \dots & \lambda_{1}d_{np}\\
+\frac{\lambda_{2}d_{1}}{p_{1}} & \dots & \frac{\lambda_{2}d_{np}}{p_{np}}
+\end{array}\right)\left(\begin{array}{cc}
+\frac{1}{\Lambda_{1}} & \frac{1}{\Lambda_{1}p_{1}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{1}{\Lambda_{np}p_{np}}
+\end{array}\right)\\
+= & \left(\begin{array}{cc}
+\lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}} & \lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}}\\
+\lambda_{2}\sum_{i}\frac{d_{i}}{p_{i}\Lambda_{i}} & \lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}
+\end{array}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Hence, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+|J|=\underbrace{\left[\left(1+\lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}}\right)\left(1+\lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)-\lambda_{1}\lambda_{2}\left(\sum_{i}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)^{2}\right]}_{J_{1}}\prod_{i}^{np}\frac{1}{d_{i}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Taking the logritham of the probability function, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+l= & \log\left[\left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\left(1+\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)-\lambda_{1}\lambda_{2}\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)^{2}\right]-\sum_{i\in\mathcal{R}_{p}}\log(d_{i})\\
+ & +\sum_{r\in\mathcal{R}_{p}}\left[-\log(\sqrt{2\pi}\sigma)-\frac{V_{r}^{2}}{2\sigma^{2}}\right]+\sum_{r\in\mathcal{R}_{0}}\log\left(\Psi(V_{r})\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If the error terms follow extreme value distribution, then the log likelihood
+ is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+l & = & \log(J_{1})-\sum_{i\in\mathcal{R}_{p}}\log(d_{i})-\sum_{r=1}^{R}e^{-\frac{V_{i}}{\sigma}}-\sum_{r\in\{1,\dots,R,e_{r}>0\}}\left(\frac{V_{i}}{\sigma}+\log(\sigma)\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Gradiant 
+\end_layout
+
+\begin_layout Standard
+First the gradient w.r.t.
+ 
+\begin_inset Formula $\alpha_{j}$
+\end_inset
+
+ is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{j}}=\sum_{r\in\mathcal{R}_{p}}\frac{V_{r}}{\sigma^{2}}X_{rj}-\sum_{r\in\mathcal{R}_{0}}\frac{\phi(V_{r})}{\Phi(V_{r})}X_{rj}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{0r}}=-I(r\in\mathcal{R}_{p})\frac{V_{r}}{\sigma^{2}}+I(r\in\mathcal{R}_{0})\frac{\phi(V_{r})}{\Phi(V_{r})}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If the error terms follow extreme distribution, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{j}}=\frac{1}{\sigma}\sum_{r=1}^{R}e^{-\frac{V_{r}}{\sigma}}X_{rj}-\frac{1}{\sigma}\sum_{r\in\mathcal{R}_{p}}X_{rj}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{0r}}=\frac{1}{\sigma}e^{-\frac{V_{r}}{\sigma}}-\frac{I(r\in\mathcal{R}_{p})}{\sigma}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then the gradient w.r.t.
+ 
+\begin_inset Formula $\gamma_{r}$
+\end_inset
+
+ dependents on whether 
+\begin_inset Formula $r\in\mathcal{R}_{p}$
+\end_inset
+
+, if so, then
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial l}{\partial\gamma_{r}}= & \frac{1}{J_{1}}\left[\left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\lambda_{2}\frac{p_{r}}{\Lambda_{r}p_{r}^{2}}+\left(1+\lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)\lambda_{1}\frac{p_{r}}{\Lambda_{r}}-2\lambda_{1}\lambda_{2}\left(\sum_{i}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)\frac{p_{r}}{p_{r}\Lambda_{r}}\right]-\frac{p_{r}}{d_{r}}-\frac{V_{r}^{2}}{\sigma^{2}}\frac{e_{r}/\gamma_{r}}{d_{r}}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the equation above, note that 
+\begin_inset Formula $\frac{\partial d_{r}}{\partial\gamma_{r}}=p_{r}$
+\end_inset
+
+ and 
+\begin_inset Formula $\frac{\partial V_{r}}{\partial\gamma_{r}}=-\frac{e_{r}}{\gamma_{r}d_{r}}$
+\end_inset
+
+.
+ In sum 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\gamma_{r}}=\begin{cases}
+\frac{1}{J_{1}}\left[\left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\lambda_{2}\frac{1}{\Lambda_{r}p_{r}}+\left(1+\lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)\lambda_{1}\frac{p_{r}}{\Lambda_{r}}-2\lambda_{1}\lambda_{2}\left(\sum_{i}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)\frac{1}{\Lambda_{r}}\right]-\frac{p_{r}}{d_{r}}-\frac{V_{r}}{\sigma^{2}}\frac{e_{r}}{\gamma_{r}d_{r}}, & r\in\mathcal{R}_{p}\\
+-\frac{\phi(V_{r})}{\Phi(V_{r})}\frac{e_{r}}{\gamma_{r}d_{r}}, & r\in\mathcal{R}_{0}
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Write the gradient w.r.t.
+ 
+\begin_inset Formula $\alpha_{q}$
+\end_inset
+
+, we see 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial l}{\partial\alpha_{q}}= & \frac{1}{J_{1}}\frac{\partial J_{1}}{\partial\alpha_{q}}-\sum_{r\in\mathcal{R}_{p}}\frac{V_{r}}{\sigma^{2}}\frac{\partial V_{r}}{\partial\alpha_{q}}+\sum_{r\in\mathcal{R}_{0}}\frac{\phi(V_{r})}{\Phi(V_{r})}\frac{\partial V_{r}}{\partial\alpha_{q}}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $J_{1}$
+\end_inset
+
+ is the components within the first 
+\begin_inset Formula $\log$
+\end_inset
+
+ parenthesis.
+ To find the gradient of 
+\begin_inset Formula $\frac{\partial l}{\partial\alpha_{q}}$
+\end_inset
+
+, we notice that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial\lambda_{2}}{\partial\alpha_{q}}= & \frac{1}{(e_{R+2}+c_{R+2})^{2}}\frac{\partial\psi_{R+2}}{\partial\alpha_{q}}=\lambda_{2}\\
+\frac{\partial\Lambda_{i}}{\partial\alpha_{q}}= & \frac{\psi_{R+2}}{p_{i}(e_{R+2}+c_{R+2})}\\
+\frac{\partial V_{i}}{\partial\alpha_{q}}= & \frac{\frac{\psi_{R+2}}{p_{i}(e_{R+2}+c_{R+2})}}{\Lambda_{i}}=\delta_{i2}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial J_{1}}{\partial\alpha_{q}}= & \left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\left[-\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}^{2}p_{i}^{2}}\frac{\psi_{R+2}}{p_{i}(e_{R+2}+c_{R+2})}+\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right]\\
+ & +\left(1+\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)\left(-\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}^{2}}\frac{\psi_{R+2}}{p_{i}(e_{R+2}+c_{R+2})}\right)\\
+ & -\left[\lambda_{1}\lambda_{2}*2\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)\left(-\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}^{2}}\frac{\psi_{R+2}}{p_{i}(e_{R+2}+c_{R+2})}\right)+\lambda_{1}\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)^{2}\lambda_{2}\right]\\
+= & \left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\lambda_{2}\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\frac{\frac{\psi_{R+1}}{e_{R+1}}}{\Lambda_{i}}\right)\\
+ & -\lambda_{1}\left(1+\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}\delta_{i2}}{\Lambda_{i}}\right)\\
+ & -\lambda_{1}\lambda_{2}\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)\left[\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)-2\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}\delta_{i2}}{p_{i}\Lambda_{i}}\right)\right]\\
+= & \frac{\psi_{R+1}}{e_{R+1}}\lambda_{2}\left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}^{2}p_{i}^{2}}\right)-\lambda_{1}\left(1+\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}\delta_{i2}}{\Lambda_{i}}\right)\\
+ & -\lambda_{1}\lambda_{2}\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}(1-2\delta_{i2})}{p_{i}\Lambda_{i}}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Hence, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial l}{\partial\alpha_{q}}= & \frac{1}{J_{1}}\frac{\partial J_{1}}{\partial\alpha_{q}}-\sum_{r\in\mathcal{R}_{p}}\frac{V_{r}}{\sigma^{2}}\delta_{r2}+\sum_{r\in\mathcal{R}_{0}}\frac{\phi(V_{r})}{\Phi(V_{r})}\delta_{r2}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+And a similar formular for the gradient w.r.t.
+ 
+\begin_inset Formula $\alpha_{y}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial l}{\partial\alpha_{y}}= & \frac{1}{J_{1}}\frac{\partial J_{1}}{\partial\alpha_{y}}-\sum_{r\in\mathcal{R}_{p}}\frac{V_{r}}{\sigma^{2}}\delta_{r1}+\sum_{r\in\mathcal{R}_{0}}\frac{\phi(V_{r})}{\Phi(V_{r})}\delta_{r1}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\delta_{i1}= & \frac{\frac{\psi_{R+1}}{e_{R+1}}}{\Lambda_{i}}\\
+\frac{\partial J_{1}}{\partial\alpha_{y}}= & -\frac{\psi_{R+1}}{e_{R+1}}\lambda_{2}\left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}^{2}p_{i}^{2}}\right)+\lambda_{1}\left(1+\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}(1-\delta_{i1})}{\Lambda_{i}}\right)\\
+ & -\lambda_{1}\lambda_{2}\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}(1-2\delta_{i1})}{p_{i}\Lambda_{i}}\right)\\
+= & -\frac{\partial J_{1}}{\partial\alpha_{q}}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The last equality holds because 
+\begin_inset Formula $\delta_{i2}=1-\delta_{i1}$
+\end_inset
+
+, and 
+\begin_inset Formula $1-2\delta_{i2}=\delta_{i1}-\delta_{i2}=-(1-2\delta_{i1})$
+\end_inset
+
+.
+ Therefore 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{y}}=-\frac{1}{J_{1}}\frac{\partial J_{1}}{\partial\alpha_{q}}-\sum_{r\in\mathcal{R}_{p}}\frac{V_{r}}{\sigma^{2}}(1-\delta_{r2})+\sum_{r\in\mathcal{R}_{0}}\frac{\phi(V_{r})}{\Phi(V_{r})}(1-\delta_{r2})=-\frac{\partial J_{1}}{\partial\alpha_{q}}-\sum_{r\in\mathcal{R}_{p}}\frac{V_{r}}{\sigma^{2}}+\sum_{r\in\mathcal{R}_{0}}\frac{\phi(V_{r})}{\Phi(V_{r})}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+No quantity constraint
+\end_layout
+
+\begin_layout Standard
+Lagrangian equaiton of the constrained optimization: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+L= & \sum_{r=1}^{R}\gamma_{r}\psi_{r}\log\left(\frac{e_{rt}}{p_{rt}\gamma_{rt}}+1\right)+\psi_{R+1}\log(e_{R+1})\\
+ & +\mu(y-\sum_{r=1}^{R}e_{r}-e_{R+1})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The KKT condition is 
+\begin_inset Formula $\frac{\partial L}{\partial e_{r}}*e_{r}^{*}\leq0$
+\end_inset
+
+ and it implies that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\frac{\partial L}{\partial e_{rt}}-\mu<0, & \text{and }e_{rt}=0\\
+\frac{\partial L}{\partial e_{rt}}-\mu=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We substitute the derivatives to the equations above and have
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\frac{\psi_{R+1}}{e_{R+1}}<0, & \text{and }e_{rt}=0\\
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\frac{\psi_{R+1}}{e_{R+1}}=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Taking the logarithm of the equations above, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\epsilon_{rt}<V_{rt}, & \text{and }e_{rt}=0\\
+\epsilon_{rt}=V_{rt}, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\epsilon_{r}=\tilde{\epsilon}_{r}-\tilde{\epsilon}_{R+1}=\tilde{\epsilon}_{r}$
+\end_inset
+
+ since 
+\begin_inset Formula $\tilde{\epsilon}_{R+1}$
+\end_inset
+
+ can be set to be zero.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+V_{r} & = & \tilde{V}_{R+1}-\tilde{V}_{r}\\
+\tilde{V}_{r} & = & X_{r}\beta-\log\left(\frac{e_{rt}}{\gamma_{r}}+p_{rt}\right)\\
+\tilde{V}_{R+1} & = & \log\left(\frac{\psi_{R+1}}{e_{R+1}}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+If 
+\begin_inset Formula $(\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R})$
+\end_inset
+
+ follows iid 
+\begin_inset Formula $N(0,\sigma^{2})$
+\end_inset
+
+, then the prabability function can be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+P(e_{1},\dots e_{M},0,\dots,0) & = & |J|\int_{\epsilon_{M+1}}^{\tilde{V}_{R+1}-\tilde{V}_{M+1}}\dots\int_{\epsilon_{K}}^{\tilde{V}_{R+1}-\tilde{V}_{K}}g(\tilde{V}_{R+1}-\tilde{V}_{2},\dots,\tilde{V}_{R+1}-\tilde{V}_{M},\epsilon_{M+1},\dots,\epsilon_{K})d\epsilon_{K}d\epsilon_{K-1}\dots d\epsilon_{1}\\
+ & = & |J|\prod_{r\in\{1,\dots,R,e_{r}>0\}}\phi(V_{r};0,\sigma)\prod_{r\in\{1,\dots,R,e_{r}=0\}}\Phi(V_{r};0,\sigma)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+If 
+\begin_inset Formula $(\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R})$
+\end_inset
+
+ follows iid extreme value type I with scale paramter 
+\begin_inset Formula $\sigma$
+\end_inset
+
+, then the prabability function can be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+P(e_{1},\dots e_{M},0,\dots,0) & = & |J|\int_{\epsilon_{M+1}}^{\tilde{V}_{R+1}-\tilde{V}_{M+1}}\dots\int_{\epsilon_{K}}^{\tilde{V}_{R+1}-\tilde{V}_{K}}g(\tilde{V}_{R+1}-\tilde{V}_{2},\dots,\tilde{V}_{R+1}-\tilde{V}_{M},\epsilon_{M+1},\dots,\epsilon_{K})d\epsilon_{K}d\epsilon_{K-1}\dots d\epsilon_{1}\\
+ & = & |J|\prod_{r\in\{1,\dots,R,e_{r}>0\}}\frac{1}{\sigma}\lambda\left(\frac{V_{r}}{\sigma}\right)\prod_{r\in\{1,\dots,R,e_{r}=0\}}\Lambda\left(\frac{V_{r}}{\sigma}\right)\\
+ & = & |J|\prod_{r\in\{1,\dots,R,e_{r}>0\}}\frac{1}{\sigma}\exp\left(-\frac{V_{r}}{\sigma}-e^{-\frac{V_{r}}{\sigma}}\right)\prod_{r\in\{1,\dots,R,e_{r}=0\}}\exp\left(-e^{-\frac{V_{r}}{\sigma}}\right)\\
+ & = & |J|\frac{\exp\left(\sum_{r\in\{1,\dots,R,e_{r}>0\}}-\frac{V_{r}}{\sigma}-\log(\sigma)\right)}{\exp\left(\sum_{r=1}^{R}e^{-\frac{V_{r}}{\sigma}}\right)}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Notice that in either case, we set 
+\begin_inset Formula $\tilde{\epsilon}_{R+1}=0$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $d_{i}=e_{i}+\gamma_{i}p_{i}$
+\end_inset
+
+.
+ It can be shown that the Jacobian matrix 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+|J|=\left(\sum_{i=1}^{np}d_{i}\right)\left(\prod_{i=1}^{np}\frac{1}{d_{i}}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+No expenditure outside option
+\end_layout
+
+\begin_layout Standard
+Since there is no outside option, the baseline alternative changes from
+ observation to observation.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Presence of quantity constraint
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+L= & \sum_{r=1}^{R}\gamma_{r}\psi_{r}\log\left(\frac{e_{rt}}{p_{rt}\gamma_{rt}}+1\right)+\psi_{R+2}\log(e_{R+2}+c_{R+2})\\
+ & +\mu(y-\sum_{r=1}^{R}e_{r})+\lambda(Q-\sum_{r=1}^{R}\frac{e_{rt}}{p_{rt}}-e_{R+2})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The KKT condition is 
+\begin_inset Formula $\frac{\partial L}{\partial e_{r}}*e_{r}^{*}\leq0$
+\end_inset
+
+ and it implies that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\frac{\partial U}{\partial e_{rt}}-\mu-\frac{\lambda}{p_{r}}<0, & \text{and }e_{rt}=0\\
+\frac{\partial U}{\partial e_{rt}}-\mu-\frac{\lambda}{p_{r}}=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For simplicity of notation, assume that expenditure in the first retailer
+ is positive.
+ Therefore, 
+\begin_inset Formula $ $
+\end_inset
+
+
+\begin_inset Formula $ $
+\end_inset
+
+we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial L}{\partial e_{1}}= & \psi_{1}\frac{1}{\frac{e_{1}}{\gamma_{1}}+p_{1}}-\mu-\frac{\lambda}{p_{1}}=0\\
+\frac{\partial L}{\partial e_{R+2}}= & \frac{\psi_{R+2}}{e_{R+2}+c_{R+2}}-\lambda=0
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+which is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\frac{\partial L}{\partial e_{rt}}-\mu-\frac{\lambda}{p_{rt}}<0, & \text{and }e_{rt}=0\\
+\frac{\partial L}{\partial e_{rt}}-\mu-\frac{\lambda}{p_{rt}}=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+which is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\left(\frac{\psi_{1}\gamma_{1}}{e_{1}+\gamma_{1}p_{1}}-\frac{\psi_{R+2}}{p_{1}(e_{R+2}+c_{R+2})}\right)-\frac{\psi_{R+2}}{p_{rt}(e_{R+2}+c_{R+2})}<0, & \text{and }e_{rt}=0\\
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\left(\frac{\psi_{1}\gamma_{1}}{e_{1}+\gamma_{1}p_{1}}-\frac{\psi_{R+2}}{p_{1}(e_{R+2}+c_{R+2})}\right)-\frac{\psi_{R+2}}{p_{rt}(e_{R+2}+c_{R+2})}=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Taking the logarithm of the equations above, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\epsilon_{rt}=\tilde{\epsilon}_{r}-\tilde{\epsilon}_{1}<V_{rt}, & \text{and }e_{rt}=0\\
+\epsilon_{rt}=\tilde{\epsilon}_{r}-\tilde{\epsilon}_{1}=V_{rt}, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+V_{rt} & = & \log\left(\frac{\psi_{1}\gamma_{1}}{e_{1}+\gamma_{1}p_{1}}+\frac{\psi_{R+2}}{(e_{R+2}+c_{R+2})}\left(\frac{1}{p_{r}}-\frac{1}{p_{1}}\right)\right)+\log\left(\frac{e_{rt}}{\gamma_{r}}+p_{rt}\right)-X_{r}\beta\\
+V_{1} & = & 0
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Notice that we set 
+\begin_inset Formula $V_{1}=0$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Paragraph
+Jacobian
+\end_layout
+
+\begin_layout Standard
+Let 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\lambda_{1}= & \frac{\psi_{1}\gamma_{1}}{\left(e_{1}+p_{1}\gamma_{1}\right)^{2}}\\
+\lambda_{2}= & \frac{\psi_{R+2}}{(e_{R+2}+c_{R+2})^{2}}\\
+\tilde{p}_{i}= & \frac{1}{p_{i}}-\frac{1}{p_{1}}\\
+\Lambda_{i}= & \psi_{1}\frac{\gamma_{1}}{e_{1}+p_{1}\gamma_{1}}+\frac{\psi_{R+2}\tilde{p}_{i}}{(e_{R+2}+c_{R+2})}\\
+d_{i}= & e_{i}+\gamma_{i}p_{i}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can write the element of the Jacobian matrix as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+J_{ij}=\frac{\partial V_{i}}{\partial e_{j}}=\begin{cases}
+\frac{\lambda_{1}+\tilde{p}_{i}\lambda_{2}\tilde{p}_{j}}{\Lambda_{i}}+\frac{1}{d_{j}} & i=j\\
+\frac{\lambda_{1}+\tilde{p}_{i}\lambda_{2}\tilde{p}_{j}}{\Lambda_{i}} & i\neq j
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We use matrix determinant lemma to compute its determinant.
+ Denote 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+A= & \left(\begin{array}{ccc}
+\frac{1}{d_{2}}\\
+ & \ddots\\
+ &  & \frac{1}{d_{np}}
+\end{array}\right)\\
+U=\left(\begin{array}{cc}
+\frac{1}{\Lambda_{2}} & \frac{\tilde{p}_{2}}{\Lambda_{2}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{\tilde{p}_{np}}{\Lambda_{np}}
+\end{array}\right), & \quad V^{T}=\left(\begin{array}{ccc}
+\lambda_{1} & \dots & \lambda_{1}\\
+\lambda_{2}\tilde{p}_{2} & \dots & \lambda_{2}\tilde{p}_{np}
+\end{array}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We know that 
+\begin_inset Formula $|J|=|A+UV^{T}|=det(I+V^{T}A^{-1}U)det(A)$
+\end_inset
+
+.
+ 
+\begin_inset Formula $|A|=\prod_{i}^{np}\frac{1}{d_{i}}$
+\end_inset
+
+.
+ Now let's compute the 
+\begin_inset Formula $V^{T}A^{-1}U$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+V^{T}A^{-1}U= & \left(\begin{array}{ccc}
+\lambda_{1} & \dots & \lambda_{1}\\
+\lambda_{2}(\frac{1}{p_{2}}-\frac{1}{p_{1}}) & \dots & \lambda_{2}(\frac{1}{p_{np}}-\frac{1}{p_{1}})
+\end{array}\right)\left(\begin{array}{ccc}
+d_{2}\\
+ & \ddots\\
+ &  & d_{np}
+\end{array}\right)\left(\begin{array}{cc}
+\frac{1}{\Lambda_{2}} & \frac{(\frac{1}{p_{2}}-\frac{1}{p_{1}})}{\Lambda_{2}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{(\frac{1}{p_{np}}-\frac{1}{p_{1}})}{\Lambda_{np}}
+\end{array}\right)\\
+= & \left(\begin{array}{ccc}
+\lambda_{1}d_{2} & \dots & \lambda_{1}d_{np}\\
+\lambda_{2}d_{2}(\frac{1}{p_{2}}-\frac{1}{p_{1}}) & \dots & \lambda_{2}d_{np}(\frac{1}{p_{np}}-\frac{1}{p_{1}})
+\end{array}\right)\left(\begin{array}{cc}
+\frac{1}{\Lambda_{2}} & \frac{(\frac{1}{p_{2}}-\frac{1}{p_{1}})}{\Lambda_{2}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{(\frac{1}{p_{np}}-\frac{1}{p_{1}})}{\Lambda_{np}}
+\end{array}\right)\\
+= & \left(\begin{array}{cc}
+\lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}} & \lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}}\tilde{p}_{i}\\
+\lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}}\tilde{p}_{i} & \lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}}\tilde{p}_{i}^{2}
+\end{array}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Hence, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+|J|=\left[\left(1+\lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}}\right)\left(1+\lambda_{2}\sum_{i}\frac{d_{i}\tilde{p}_{i}^{2}}{\Lambda_{i}}\right)-\lambda_{1}\lambda_{2}\left(\sum_{i}\frac{d_{i}\tilde{p}_{i}}{\Lambda_{i}}\right)^{2}\right]\prod_{i=2}^{np}\frac{1}{d_{i}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We notice that 
+\begin_inset Formula $\frac{1}{\lambda_{1}}=\frac{\psi_{1}\gamma_{1}}{(e_{1}+p_{1}\gamma_{1})^{2}}=\frac{d_{1}}{\Lambda_{1}}$
+\end_inset
+
+, and thus 
+\begin_inset Formula $J$
+\end_inset
+
+ can be simplied as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+J_{1}=\lambda_{1}\lambda_{2}\left[\left(\sum_{i=1}^{np}\frac{d_{i}}{\Lambda_{i}}\right)\left(\frac{1}{\lambda_{2}}+\sum_{i=1}^{np}\frac{d_{i}\tilde{p}_{i}^{2}}{\Lambda_{i}}\right)-\left(\sum_{i}\frac{d_{i}\tilde{p}_{i}}{\Lambda_{i}}\right)^{2}\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+J= & \lambda_{1}\lambda_{2}\left[\left(\sum_{i=1}^{np}\frac{d_{i}}{\Lambda_{i}}\right)\left(\frac{1}{\lambda_{2}}+\sum_{i=1}^{np}\frac{d_{i}\tilde{p}_{i}^{2}}{\Lambda_{i}}\right)-\left(\sum_{i}\frac{d_{i}\tilde{p}_{i}}{\Lambda_{i}}\right)^{2}\right]\prod_{i=2}^{np}\frac{1}{d_{i}}\\
+= & \underbrace{\frac{\psi_{1}\gamma_{1}}{d_{1}}\frac{\psi_{R+2}}{(e_{R+2}+c_{R+2})^{2}}\left[\left(\sum_{i=1}^{np}\frac{d_{i}}{\Lambda_{i}}\right)\left(\frac{1}{\lambda_{2}}+\sum_{i=1}^{np}\frac{d_{i}\tilde{p}_{i}^{2}}{\Lambda_{i}}\right)-\left(\sum_{i}\frac{d_{i}\tilde{p}_{i}}{\Lambda_{i}}\right)^{2}\right]}_{J_{1}}\prod_{i=1}^{np}\frac{1}{d_{i}}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Density function 
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $(\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R})$
+\end_inset
+
+ follows extreme value type 1 with scale parameter 
+\begin_inset Formula $\sigma$
+\end_inset
+
+, then the covariance of 
+\begin_inset Formula $(\epsilon_{2},\dots,\epsilon_{R})$
+\end_inset
+
+ is a diagonal matrix with diagonal of 
+\begin_inset Formula $\frac{\pi^{2}\sigma^{2}}{3}$
+\end_inset
+
+ and off-diagonal of 
+\begin_inset Formula $\frac{\pi^{2}\sigma^{2}}{6}$
+\end_inset
+
+.
+ The probability function can be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+P(e_{1},\dots e_{M},0,\dots,0) & = & |J|\int_{\epsilon_{M+1}}^{V_{2}}\dots\int_{\epsilon_{K}}^{V_{K}}g(V_{2},\dots,V_{M},\epsilon_{M+1},\dots,\epsilon_{K})d\epsilon_{K}d\epsilon_{K-1}\dots d\epsilon_{1}\\
+ & = & \frac{1}{\sigma^{np-1}}J_{1}\left(\prod_{i=1}^{np}\frac{1}{d_{i}}\right)\left[\frac{\prod_{i=1}^{np}e^{-V_{i}/\sigma}}{\left(\sum_{r=1}^{R}e^{-V_{r}/\sigma}\right)^{np}}\right](M-1)!
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $np=\sum_{r=1}^{R}I(e_{r}>0)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+No quantity constraint
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+L= & \sum_{r=1}^{R}\gamma_{r}\psi_{r}\log\left(\frac{e_{rt}}{p_{rt}\gamma_{rt}}+1\right)+\psi_{R+2}\log(e_{R+2}+c_{R+2})\\
+ & +\mu(y-\sum_{r=1}^{R}e_{r})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The KKT condition is 
+\begin_inset Formula $\frac{\partial L}{\partial e_{r}}*e_{r}^{*}\leq0$
+\end_inset
+
+ and it implies that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\frac{\partial U}{\partial e_{rt}}-\mu<0, & \text{and }e_{rt}=0\\
+\frac{\partial U}{\partial e_{rt}}-\mu=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For simplicity of notation, assume that expenditure in the first retailer
+ is positive.
+ Therefore, 
+\begin_inset Formula $ $
+\end_inset
+
+
+\begin_inset Formula $ $
+\end_inset
+
+we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{\partial L}{\partial e_{1}}= & \psi_{1}\frac{1}{\frac{e_{1}}{\gamma_{1}}+p_{1}}-\mu=0
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then we can write 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\psi_{1}\frac{1}{\frac{e_{1}}{\gamma_{1}}+p_{1}}<0, & \text{and }e_{rt}=0\\
+\psi_{r}\frac{1}{\frac{e_{rt}}{\gamma_{r}}+p_{rt}}-\psi_{1}\frac{1}{\frac{e_{1}}{\gamma_{1}}+p_{1}}=0, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Taking the logarithm of the equations above, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\epsilon_{rt}=\tilde{\epsilon}_{r}-\tilde{\epsilon}_{1}<V_{rt}, & \text{and }e_{rt}=0\\
+\epsilon_{rt}=\tilde{\epsilon}_{r}-\tilde{\epsilon}_{1}=V_{rt}, & \text{and }e_{rt}>0
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+V_{rt} & = & \tilde{V}_{1}-\tilde{V}_{r}\\
+V_{r} & = & X_{r}\beta-\log\left(\frac{e_{r}}{\gamma_{r}}+p_{r}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The Jacobian matrix is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+J_{ij}=\begin{cases}
+\frac{1}{e_{1}+\gamma_{1}p_{1}} & i\neq j\\
+\frac{1}{e_{1}+\gamma_{1}p_{1}}+\frac{1}{e_{i}+\gamma_{i}p_{i}} & i=j
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $d_{i}=e_{i}+\gamma_{i}p_{i}$
+\end_inset
+
+.
+ It can be shown that the Jacobian matrix 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+|J|=\left(\sum_{i=1}^{np}d_{i}\right)\left(\prod_{i=1}^{np}\frac{1}{d_{i}}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+If 
+\begin_inset Formula $(\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R})$
+\end_inset
+
+ follows extreme value type 1 with scale parameter 
+\begin_inset Formula $\sigma$
+\end_inset
+
+, then the covariance of 
+\begin_inset Formula $(\epsilon_{2},\dots,\epsilon_{R})$
+\end_inset
+
+ is a diagonal matrix with diagonal of 
+\begin_inset Formula $\frac{\pi^{2}\sigma^{2}}{3}$
+\end_inset
+
+ and off-diagonal of 
+\begin_inset Formula $\frac{\pi^{2}\sigma^{2}}{6}$
+\end_inset
+
+.
+ The probability function can be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+P(e_{1},\dots e_{M},0,\dots,0) & = & |J|\int_{\epsilon_{M+1}}^{\tilde{V}_{1}-\tilde{V}_{M+1}}\dots\int_{\epsilon_{K}}^{\tilde{V}_{1}-\tilde{V}_{K}}g(\tilde{V}_{1}-\tilde{V}_{2},\dots,\tilde{V}_{1}-\tilde{V}_{M},\epsilon_{M+1},\dots,\epsilon_{K})d\epsilon_{K}d\epsilon_{K-1}\dots d\epsilon_{1}\\
+ & = & \frac{1}{\sigma^{np-1}}\left(\sum_{i=1}^{np}d_{i}\right)\left(\prod_{i=1}^{np}\frac{1}{d_{i}}\right)\left[\frac{\prod_{i=1}^{np}e^{\tilde{V}_{i}/\sigma}}{\left(\sum_{r=1}^{R}e^{\tilde{V}_{r}/\sigma}\right)^{np}}\right](M-1)!
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $np=\sum_{r=1}^{R}I(e_{r}>0)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+If we assume that 
+\begin_inset Formula $(\tilde{\epsilon}_{1},\dots,\tilde{\epsilon}_{R})$
+\end_inset
+
+ follows iid normal distribution, we need to compute the correlation of
+ 
+\begin_inset Formula $(\epsilon_{2},\dots,\epsilon_{R})$
+\end_inset
+
+, then the probability function is hard to compute.
+ 
+\end_layout
+
+\begin_layout Paragraph*
+Gradient
+\end_layout
+
+\begin_layout Standard
+If the error terms follow extreme distribution, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{j}}=\frac{1}{\sigma}\sum_{r=1}^{R}e^{-\frac{V_{r}}{\sigma}}\left(X_{1j}-X_{rj}\right)-\frac{1}{\sigma}\sum_{r\in\mathcal{R}_{p}}\left(X_{1j}-X_{rj}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{0r}}=\begin{cases}
+-\frac{1}{\sigma}e^{-\frac{V_{r}}{\sigma}}+\frac{I(r\in\mathcal{R}_{p})}{\sigma} & r\notin1\\
+\sum_{i=2}^{R}e^{-\frac{V_{i}}{\sigma}}-\sum_{i\in\mathcal{R}_{p}}\frac{1}{\sigma} & r\in1
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

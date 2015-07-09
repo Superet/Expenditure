@@ -25,7 +25,7 @@ setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 model_name 	<- "MDCEV_a1b1"
-# run_id		<- "sub"
+run_id		<- 1
 # seg_id		<- 1
 make_plot	<- FALSE
 

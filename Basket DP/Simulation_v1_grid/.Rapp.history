@@ -1,0 +1,1063 @@
+xseq
+my_fun(x,y, xseq)
+tmp1 <- splinefun(x,y, method="natural")(xseq)#
+tmp2 <- predict(smooth.spline(x,y), x=xseq)$y
+tmp1
+tmp2
+plot(x,y)
+lines(xseq, tmp1)
+tmp1 <- splinefun(x,y, method="natural")(xseq)#
+tmp2 <- predict(smooth.spline(x,y), x=xseq)$y#
+tmp3 <- my_fun(x,y,xseq)#
+#
+plot(x,y, xlim=range(xseq), ylim=range(c(tmp1,tmp2,tmp3)))#
+lines(xseq, tmp1)#
+lines(xseq, tmp2, col="red")#
+lines(xseq, tmp3, col="blue")
+plot(x,y, xlim=range(xseq), ylim=range(c(tmp1,tmp2,tmp3), na.rm=T))#
+lines(xseq, tmp1)#
+lines(xseq, tmp2, col="red")#
+lines(xseq, tmp3, col="blue")
+src <- '#
+#include <Rcpp.h>#
+#include <RcppGSL.h>#
+#include <gsl/gsl_errno.h>#
+#include <gsl/gsl_spline.h>#
+using namespace Rcpp;#
+// [[Rcpp::depends(RcppGSL)]]#
+#
+// [[Rcpp::export]]#
+NumericVector my_fun(NumericVector x, NumericVector y, NumericVector x_pred){#
+	gsl_set_error_handler_off();#
+	int k = x.length(), nx = x_pred.length();#
+	NumericVector y_pred(nx);#
+	gsl_interp_accel *acc = gsl_interp_accel_alloc ();#
+	gsl_spline *spline    = gsl_spline_alloc (gsl_interp_cspline, k);#
+	gsl_spline_init (spline, x.begin(), y.begin(), k);#
+	for(int i=0; i<nx; i++){#
+		y_pred[i] = gsl_spline_eval (spline, x_pred[i], acc);#
+	}#
+	gsl_spline_free (spline);#
+	 gsl_interp_accel_free (acc);#
+	return y_pred;#
+}#
+'#
+#
+sourceCpp(code = src)#
+tmp1 <- splinefun(x,y, method="natural")(xseq)#
+tmp2 <- predict(smooth.spline(x,y), x=xseq)$y#
+tmp3 <- my_fun(x,y,xseq)#
+#
+plot(x,y, xlim=range(xseq), ylim=range(c(tmp1,tmp2,tmp3), na.rm=T))#
+lines(xseq, tmp1)#
+lines(xseq, tmp2, col="red")#
+lines(xseq, tmp3, col="blue")
+plot(x,y, xlim=range(xseq), ylim=range(c(tmp1,tmp2,tmp3), na.rm=T))#
+lines(xseq, tmp1)#
+lines(xseq, tmp2, col="red")#
+lines(xseq, tmp3, col="blue")
+src <- '#
+#include <Rcpp.h>#
+#include <RcppGSL.h>#
+#include <gsl/gsl_errno.h>#
+#include <gsl/gsl_spline.h>#
+using namespace Rcpp;#
+// [[Rcpp::depends(RcppGSL)]]#
+#
+// [[Rcpp::export]]#
+NumericVector my_fun(NumericVector x, NumericVector y, NumericVector x_pred){#
+	gsl_set_error_handler_off();#
+	int k = x.length(), nx = x_pred.length();#
+	NumericVector y_pred(nx);#
+	gsl_interp_accel *acc = gsl_interp_accel_alloc ();#
+	gsl_spline *spline    = gsl_spline_alloc (gsl_interp_cspline, k);#
+	gsl_spline_init (spline, x.begin(), y.begin(), k);#
+	for(int i=0; i<nx; i++){#
+		if(x_pred[i]>=x[0] && x_pred[i]<= x[k-1]){#
+			y_pred[i] = gsl_spline_eval (spline, x_pred[i], acc);#
+		}else if(x_pred[i]<x[0]){#
+			y_pred[i] = y(0) + (y(1)-y(0))/(x(1)-x(0)) * (x_pred[i] - x(0))#
+		}else{#
+			y_pred[i] = y(k-1) + (y(k-2)-y(k-1))/(x(k-2)-x(k-1)) * (x_pred[i] - x(k-1))	#
+		}#
+	}#
+	gsl_spline_free (spline);#
+	gsl_interp_accel_free (acc);#
+	return y_pred;#
+}#
+'#
+#
+sourceCpp(code = src)
+src <- '#
+#include <Rcpp.h>#
+#include <RcppGSL.h>#
+#include <gsl/gsl_errno.h>#
+#include <gsl/gsl_spline.h>#
+using namespace Rcpp;#
+// [[Rcpp::depends(RcppGSL)]]#
+#
+// [[Rcpp::export]]#
+NumericVector my_fun(NumericVector x, NumericVector y, NumericVector x_pred){#
+	gsl_set_error_handler_off();#
+	int k = x.length(), nx = x_pred.length();#
+	NumericVector y_pred(nx);#
+	gsl_interp_accel *acc = gsl_interp_accel_alloc ();#
+	gsl_spline *spline    = gsl_spline_alloc (gsl_interp_cspline, k);#
+	gsl_spline_init (spline, x.begin(), y.begin(), k);#
+	for(int i=0; i<nx; i++){#
+		if(x_pred[i]>=x[0] && x_pred[i]<= x[k-1]){#
+			y_pred[i] = gsl_spline_eval (spline, x_pred[i], acc);#
+		}else if(x_pred[i]<x[0]){#
+			y_pred[i] = y(0) + (y(1)-y(0))/(x(1)-x(0)) * (x_pred[i] - x(0));#
+		}else{#
+			y_pred[i] = y(k-1) + (y(k-2)-y(k-1))/(x(k-2)-x(k-1)) * (x_pred[i] - x(k-1))	;#
+		}#
+	}#
+	gsl_spline_free (spline);#
+	gsl_interp_accel_free (acc);#
+	return y_pred;#
+}#
+'#
+#
+sourceCpp(code = src)
+tmp1 <- splinefun(x,y, method="natural")(xseq)#
+tmp2 <- predict(smooth.spline(x,y), x=xseq)$y#
+tmp3 <- my_fun(x,y,xseq)#
+#
+plot(x,y, xlim=range(xseq), ylim=range(c(tmp1,tmp2,tmp3), na.rm=T))#
+lines(xseq, tmp1)#
+lines(xseq, tmp2, col="red")#
+lines(xseq, tmp3, col="blue")
+src <- '#
+#include <Rcpp.h>#
+#include <RcppGSL.h>#
+#include <gsl/gsl_errno.h>#
+#include <gsl/gsl_spline.h>#
+using namespace Rcpp;#
+// [[Rcpp::depends(RcppGSL)]]#
+#
+// [[Rcpp::export]]#
+NumericVector my_fun(NumericVector x, NumericVector y, NumericVector x_pred){#
+	gsl_set_error_handler_off();#
+	int k = x.length(), nx = x_pred.length();#
+	NumericVector y_pred(nx);#
+	gsl_interp_accel *acc = gsl_interp_accel_alloc ();#
+	gsl_spline *spline    = gsl_spline_alloc (gsl_interp_cspline, k);#
+	gsl_spline_init (spline, x.begin(), y.begin(), k);#
+	double esp = 0.0001;#
+	double y0_esp = gsl_spline_eval (spline, x[0]+eps, acc);#
+	double yk_eps = gsl_spline_eval (spline, x[k-1]-eps, acc);#
+	for(int i=0; i<nx; i++){#
+		if(x_pred[i]>=x[0] && x_pred[i]<= x[k-1]){#
+			y_pred[i] = gsl_spline_eval (spline, x_pred[i], acc);#
+		}else if(x_pred[i]<x[0]){#
+			y_pred[i] = y(0) +  ((y0_esp-y(0))/eps)* (x_pred[i] - x(0));#
+		}else{#
+			y_pred[i] = y(k-1) + ((yk_esp-y(k-1))/eps)* (x_pred[i] - x(k-1))	;#
+		}#
+	}#
+	gsl_spline_free (spline);#
+	gsl_interp_accel_free (acc);#
+	return y_pred;#
+}#
+'#
+#
+sourceCpp(code = src)
+src <- '#
+#include <Rcpp.h>#
+#include <RcppGSL.h>#
+#include <gsl/gsl_errno.h>#
+#include <gsl/gsl_spline.h>#
+using namespace Rcpp;#
+// [[Rcpp::depends(RcppGSL)]]#
+#
+// [[Rcpp::export]]#
+NumericVector my_fun(NumericVector x, NumericVector y, NumericVector x_pred){#
+	gsl_set_error_handler_off();#
+	int k = x.length(), nx = x_pred.length();#
+	NumericVector y_pred(nx);#
+	gsl_interp_accel *acc = gsl_interp_accel_alloc ();#
+	gsl_spline *spline    = gsl_spline_alloc (gsl_interp_cspline, k);#
+	gsl_spline_init (spline, x.begin(), y.begin(), k);#
+	double eps = 0.0001;#
+	double y0_eps = gsl_spline_eval (spline, x[0]+eps, acc);#
+	double yk_eps = gsl_spline_eval (spline, x[k-1]-eps, acc);#
+	for(int i=0; i<nx; i++){#
+		if(x_pred[i]>=x[0] && x_pred[i]<= x[k-1]){#
+			y_pred[i] = gsl_spline_eval (spline, x_pred[i], acc);#
+		}else if(x_pred[i]<x[0]){#
+			y_pred[i] = y(0) +  ((y0_eps-y(0))/eps)* (x_pred[i] - x(0));#
+		}else{#
+			y_pred[i] = y(k-1) + ((yk_eps-y(k-1))/eps)* (x_pred[i] - x(k-1))	;#
+		}#
+	}#
+	gsl_spline_free (spline);#
+	gsl_interp_accel_free (acc);#
+	return y_pred;#
+}#
+'#
+#
+sourceCpp(code = src)
+tmp1 <- splinefun(x,y, method="natural")(xseq)#
+tmp2 <- predict(smooth.spline(x,y), x=xseq)$y#
+tmp3 <- my_fun(x,y,xseq)#
+#
+plot(x,y, xlim=range(xseq), ylim=range(c(tmp1,tmp2,tmp3), na.rm=T))#
+lines(xseq, tmp1)#
+lines(xseq, tmp2, col="red")#
+lines(xseq, tmp3, col="blue")
+src <- '#
+#include <Rcpp.h>#
+#include <RcppGSL.h>#
+#include <gsl/gsl_errno.h>#
+#include <gsl/gsl_spline.h>#
+using namespace Rcpp;#
+// [[Rcpp::depends(RcppGSL)]]#
+#
+// [[Rcpp::export]]#
+NumericVector my_fun(NumericVector x, NumericVector y, NumericVector x_pred){#
+	gsl_set_error_handler_off();#
+	int k = x.length(), nx = x_pred.length();#
+	NumericVector y_pred(nx);#
+	gsl_interp_accel *acc = gsl_interp_accel_alloc ();#
+	gsl_spline *spline    = gsl_spline_alloc (gsl_interp_cspline, k);#
+	gsl_spline_init (spline, x.begin(), y.begin(), k);#
+	double eps = 0.0001;#
+	double y0_eps = gsl_spline_eval (spline, x[0]+eps, acc);#
+	double yk_eps = gsl_spline_eval (spline, x[k-1]-eps, acc);#
+	for(int i=0; i<nx; i++){#
+		if(x_pred[i]>=x[0] && x_pred[i]<= x[k-1]){#
+			y_pred[i] = gsl_spline_eval (spline, x_pred[i], acc);#
+		}else if(x_pred[i]<x[0]){#
+			y_pred[i] = y(0) +  ((y0_eps-y(0))/eps)* (x_pred[i] - x(0));#
+		}else{#
+			y_pred[i] = y(k-1) + ((y(k-1) - yk_eps)/eps)* (x_pred[i] - x(k-1))	;#
+		}#
+	}#
+	gsl_spline_free (spline);#
+	gsl_interp_accel_free (acc);#
+	return y_pred;#
+}#
+'#
+#
+sourceCpp(code = src)#
+tmp1 <- splinefun(x,y, method="natural")(xseq)#
+tmp2 <- predict(smooth.spline(x,y), x=xseq)$y#
+tmp3 <- my_fun(x,y,xseq)#
+#
+plot(x,y, xlim=range(xseq), ylim=range(c(tmp1,tmp2,tmp3), na.rm=T))#
+lines(xseq, tmp1)#
+lines(xseq, tmp2, col="red")#
+lines(xseq, tmp3, col="blue")
+Q_grid	<- c(0,.5,1,2,2.5,3)/4#
+nQ		<- length(Q_grid)				#
+Q_weight<- array(NA, c(K, ny, nQ))#
+Q_weight[1,,] <- matrix(c(	1,	0,	0,	0,	0,	0,#
+							.7,	.2,	.1,	0,	0,	0),ny,nQ,byrow=T,)#
+Q_weight[2,,] <- matrix(c(	.5,	.2,	.1,	.1,	.05,.05,#
+							.05,	.05,.2,	.3,	.3,	.1),ny,nQ,byrow=T)#
+Q_weight[3,,] <- matrix(c(	.1,	.2,	.5,	.1,	.05, .05,#
+							0.05,.05,.1,.1,	.3,	.4),ny,nQ,byrow=T)		#
+Q_kernal <- list(nodes = Q_grid, weight = Q_weight,dim_names = c("k","y","Q"))#
+Q_kernal1 <- list(nodes = Q_grid, weight = list(Q_weight[,1,], Q_weight[,2,] ))
+# Set parameters#
+set_list <- list(	value_iter_max 	= 200,#
+					tol				= 10e-8,#
+					display_freq	= 5,#
+					value_fn_max	= 10e4#
+				)#
+beta <- .9#
+param_list	<- list(lambda = 10,#
+					tau1 	= 6,#
+					tau3	= 0#
+					)#
+param <- unlist(param_list)#
+#
+K		<- 3#
+step	<- .1					#
+I_grid	<- seq(0,5,by=step)#
+y_grid	<- c(1,2)#
+c_grid	<- seq(0,8,by=step)#
+state	<- cbind(I=rep(I_grid,length(y_grid)),y=rep(y_grid,each=length(I_grid)))	# state matrix#
+s_idx	<- cbind(I=rep(1:length(I_grid),length(y_grid)), y=rep(1:length(y_grid),each=length(I_grid)))#
+ns		<- nrow(state)#
+ny		<- length(y_grid)#
+I_idx	<- 1#
+y_idx	<- 2#
+#
+y_kernal<- list(nodes = c(1,2), weight = matrix(c(.9,.1,.1,.9),2,2))#
+Q_grid	<- c(0,.5,1,2,2.5,3)/4#
+nQ		<- length(Q_grid)				#
+Q_weight<- array(NA, c(K, ny, nQ))#
+Q_weight[1,,] <- matrix(c(	1,	0,	0,	0,	0,	0,#
+							.7,	.2,	.1,	0,	0,	0),ny,nQ,byrow=T,)#
+Q_weight[2,,] <- matrix(c(	.5,	.2,	.1,	.1,	.05,.05,#
+							.05,	.05,.2,	.3,	.3,	.1),ny,nQ,byrow=T)#
+Q_weight[3,,] <- matrix(c(	.1,	.2,	.5,	.1,	.05, .05,#
+							0.05,.05,.1,.1,	.3,	.4),ny,nQ,byrow=T)		#
+Q_kernal <- list(nodes = Q_grid, weight = Q_weight,dim_names = c("k","y","Q"))#
+Q_kernal1 <- list(nodes = Q_grid, weight = list(Q_weight[,1,], Q_weight[,2,] ))#
+#
+tmp		<- floor(quantile(1:ns, c(1:K)/K))#
+tmp		<- c(tmp[1], diff(tmp))#
+policy_k<- rev(unlist(lapply(1:K,function(i) rep(i,tmp[i])) ))
+str(Q_kernal1)
+ls()
+cons <- .044962
+imp15 <- .0013654
+imp6 <- .000211
+test <- .0104776
+imp15Xtest <- .0003687
+imp6Xtest <- .0011127
+cons + imp15
+cons + imp6
+cons + imp15 + test
+cons + imp15 + test + imp15Xtest
+exp(-3)/(1+exp(-3))
+.5*500
+imp6Xtest
+imp6Xtest*500
+imp15+imp15Xtest
+imp15+imp15Xtest+test
+0.056*500
+0.056*500 - .035
+(0.056*500 - .035)/.035
+7.17/.055
+.832/.035
+imp15 + imp15Xtest
+AllocationPred <- function(X,beta,gamma,y){#
+	psi.mat <- exp(X %*% beta)#
+	out <- AllocationFn(psi.mat,gamma,y)#
+	out#
+}#
+#
+AllocationFn <- function(psi.mat,gamma,y){#
+	# w.mat <- do.call(cbind,lapply(1:length(y),function(i) Allocation_once(psi.mat[i,],gamma.mat[i,],y[i])))#
+	# t(w.mat)#
+	w.mat <- matrix(NA,nrow(psi.mat),ncol(psi.mat))#
+	for(i in 1:length(y)){#
+		w.mat[i,] <- Allocation_once(psi.mat[i,],gamma,y[i])#
+	}#
+	w.mat#
+}#
+#
+Allocation_once <- function(psi,gamma,y){#
+	S <- length(gamma)#
+	A <- (psi*gamma) %*% matrix(1,ncol=S) + diag(S)#
+	A.inv <- solve(A)#
+	b <- (psi - 1/y)*gamma#
+	w <- A.inv %*% b#
+	w[b<0] <- 0 #
+	idxz <- which(w==0)#
+	idxp <- which(w!=0)#
+	while(any(w<0) | sum(w)>=1){#
+		idxz <- c(idxz,idxp[which.min(w[idxp])])#
+		idxp <- setdiff(1:S,idxz)#
+		w <- rep(0,S)#
+		if(length(idxp)>0){#
+			w[idxp] <- solve(A[idxp,idxp]) %*% b[idxp]#
+		}	#
+	}#
+	return(w)#
+}
+psi <- exp(alpha[,1])
+###################
+# Set parameters # #
+###################
+K <- 3#
+S <- 2#
+alpha <- matrix(c(	.3, .4, .5, #
+					0, 	.4, 1), S, K, byrow=T)#
+gamma <- matrix(c(	1, .5, 2, #
+					1, 	.5, 2), S, K, byrow=T)#
+param <- c(lambda = 7, tau1=1)					#
+beta <- .9#
+#
+control_list <- list(	value_max_iter 	= 500,#
+						tol				= 1e-8,#
+						display_freq	= 20,#
+						brent_tol		= 0.00001, #
+						brent_max_iter 	= 300,#
+						inter_spline	= TRUE#
+				)
+psi <- exp(alpha[,1])
+psi
+gamma
+Allocation_once(psi, gamma[,1], 10)
+1-Allocation_once(psi, gamma[,1], 10)
+1-sum(Allocation_once(psi, gamma[,1], 10))
+pis
+psi
+y <- 10
+gamma
+gamma <- gamma[,1]
+w	<- Allocation_once(psi, gamma,y)
+w
+psi*gamma*log(w*y/gamma + 1)
+log(y*(1-sum(w)))
+omega <- sum(psi*gamma*log(w*y/gamma + 1)) + log(y*(1-sum(w)))
+omega
+######################################################################
+# Compute the inclusive value of multiple discrete-continuous modle ##
+######################################################################
+MDC_inclusive1_fn <- function(beta, eps_draw, gamma, y){#
+# This function returns the inclusive value for a single observation given the parameters;#
+# beta		...	a vector of baseline utility parameter (S*1 )#
+# eps_draw	... a vector of baseline utility random draws#
+# gamma		... a vector of satiation parameters(S*1)#
+# y			... a scalor of expenditure budget#
+	psi <- exp(beta + eps_draw)#
+	w	<- Allocation_once(psi, gamma,y)#
+	omega <- sum(psi*gamma*log(w*y/gamma + 1)) + log(y*(1-sum(w)))#
+	return(omega)#
+}
+MDC_inclusive1_fn
+###################
+# Set parameters # #
+###################
+K <- 3#
+S <- 2#
+alpha <- matrix(c(	.3, .4, .5, #
+					0, 	.4, 1), S, K, byrow=T)#
+gamma <- matrix(c(	1, .5, 2, #
+					1, 	.5, 2), S, K, byrow=T)#
+param <- c(lambda = 7, tau1=1)					#
+beta <- .9#
+#
+control_list <- list(	value_max_iter 	= 500,#
+						tol				= 1e-8,#
+						display_freq	= 20,#
+						brent_tol		= 0.00001, #
+						brent_max_iter 	= 300,#
+						inter_spline	= TRUE#
+				)#
+#
+step	<- .5				#
+I_grid	<- seq(0,5,by=step)#
+y_grid	<- c(1,2)#
+y_value <- c(5,10)#
+c_grid	<- seq(0,8,by=step)#
+state	<- cbind(I=rep(I_grid,length(y_grid)),y=rep(y_grid,each=length(I_grid)))	# state matrix#
+s_idx	<- cbind(I=rep(1:length(I_grid),length(y_grid)), y=rep(1:length(y_grid),each=length(I_grid)))#
+ns		<- nrow(state)#
+ny		<- length(y_grid)#
+I_idx	<- 1#
+y_idx	<- 2#
+y_kernal<- list(nodes = c(1,2), weight = matrix(c(.8,.2,.2,.8),2,2))#
+Q_kernal<- list(nodes = c(0,0.5,1), weight = )#
+#
+# Simulate inclusive value #
+numsim 	<- 100#
+eps_draw<- matrix(rgev(numsim*S), numsim, S)#
+omega_draw <- array(NA, c(numsim, ny, K))#
+for(i in 1:numsim){#
+	for(j in 1:ny){#
+		for(k in 1:K){#
+			omega_draw[i,j,k] <- MDC_inclusive1_fn(alpha[,k], eps_draw[i,], gamma[,k], y_value[j])#
+		}#
+	}#
+}
+eps_draw<- matrix(rnom(numsim*S), numsim, S)
+eps_draw<- matrix(rnorm(numsim*S), numsim, S)
+omega_draw <- array(NA, c(numsim, ny, K))#
+for(i in 1:numsim){#
+	for(j in 1:ny){#
+		for(k in 1:K){#
+			omega_draw[i,j,k] <- MDC_inclusive1_fn(alpha[,k], eps_draw[i,], gamma[,k], y_value[j])#
+		}#
+	}#
+}
+str(omega_draw)
+omega <- apply(omega_draw, c(2,3), mean)
+head(omega)
+my.data <- read.csv("~/Documents/Research/Store switching/nielsen.csv", header=T)
+head(my.data)
+library(ggplot2)
+library(reshape2)
+library(ggplot2)
+ggplot(my.data, aes(size_index_volwt)) + geom_histogram() + #
+		facet_wrap(~channel_type)
+ggplot(my.data, aes(size_index_volwt)) + geom_histogram() + #
+		facet_wrap(~channel_type) + xlim(c(0,5000))
+head(my.data)
+my.data$sizeXunits <- with(my.data, size_index_volwt*module_units)
+ggplot(my.data, aes(sizeXunits)) + geom_histogram() + #
+		facet_wrap(~channel_type)
+ggplot(my.data, aes(sizeXunits)) + geom_histogram() + #
+		facet_wrap(~channel_type) + xlim(c(0,50000))
+?rank
+x2 <- c(3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5)
+x2
+rank(x2)
+rank(x2, ties.method="random")
+tmp <- rank(x2, ties.method="random")
+x2[tmp]
+rank(x2, ties.method= "min")
+37.5*2
+62.5*4
+1+2
+1+2+3+4
+10/4
+library(ggplot2)#
+#
+upc <- read.csv("~/Desktop/nielsen_chicago_upc.csv")#
+hh <- read.csv("~/Desktop/nielsen_chicago_hh.csv")
+head(upc)
+sort(table(upc$product_module_descr), decreasing=T)
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY")
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3)) + #
+		facet_wrap(~product_module_descr)
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3, position="identity")) + #
+		facet_wrap(~product_module_descr)
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		facet_wrap(~product_module_descr)
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type)) + #
+		facet_wrap(~product_module_descr)
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY",#
+			"COOKIES", "COSMETICS-NAIL POLISH","SOAP - BAR","BATTERIES","ORAL HYGIENE BRUSHES")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type)) + #
+		facet_wrap(~product_module_descr)
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY",#
+			"COOKIES", "COSMETICS-NAIL POLISH","SOAP - BAR","BATTERIES","ORAL HYGIENE BRUSHES")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type)) + #
+		facet_wrap(~product_module_descr) + xlim(c(0,5000))
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY",#
+			"COOKIES", "COSMETICS-NAIL POLISH","SOAP - BAR","BATTERIES","ORAL HYGIENE BRUSHES")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type)) + #
+		facet_wrap(~product_module_descr) + xlim(c(0,1000))
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY",#
+			"COOKIES", "SOAP - BAR","BATTERIES","ORAL HYGIENE BRUSHES")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type)) + #
+		facet_wrap(~product_module_descr)
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type), position="identity") + #
+		xlim(c(0,1000)) +#
+		facet_wrap(~product_module_descr)
+sel.cat <- c("SOFT DRINKS - CARBONATED", "SHAMPOO-AEROSOL/ LIQUID/ LOTION/ POWDER","CEREAL - READY TO EAT","SOAP - SPECIALTY",#
+			"COOKIES", "SOAP - BAR","BATTERIES","ORAL HYGIENE BRUSHES")#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_index)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type), position="identity") + #
+		xlim(c(0,1000)) +#
+		facet_wrap(~product_module_descr)
+quartz()#
+ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_percentile)) + #
+		# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+		geom_density(aes(col=channel_type), position="identity") + #
+		facet_wrap(~product_module_descr)
+# Histogram of size by channel types#
+length(unique(upc$upcv))#
+length(unique(upc$product_module_descr))
+tmp <- sort(table(upc$product_module_descr), decreasing=T)
+length(tmp)
+summary(tmp)
+setwd("~/Desktop")
+sel.cat <- names(tmp)[tmp>=mean(tmp)]
+sel.cat
+length(sel.cat)
+length(sel.cat)/npage
+npage <- 20
+length(sel.cat)/npage
+ceiling(length(sel.cat)/npage)
+npage <- 20#
+tmp <- sort(table(upc$product_module_descr), decreasing=T)#
+sel.cat <- sort(names(tmp)[tmp>=mean(tmp)])
+i <- 2
+sel <- sel.cat[((i-1)*npage+1):(npage*i)]#
+	print(ggplot(subset(upc, product_module_descr %in% sel.cat), aes(size_percentile)) + #
+			# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+			geom_density(aes(col=channel_type), position="identity") + #
+			facet_wrap(~product_module_descr)#
+		)
+sel <- sel.cat[((i-1)*npage+1):(npage*i)]#
+	print(ggplot(subset(upc, product_module_descr %in% sel), aes(size_percentile)) + #
+			# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+			geom_density(aes(col=channel_type), position="identity") + #
+			facet_wrap(~product_module_descr)#
+		)
+npage <- 20#
+tmp <- sort(table(upc$product_module_descr), decreasing=T)#
+sel.cat <- sort(names(tmp)[tmp>=mean(tmp)])#
+#
+pdf("graph_size_histogram_percentile.pdf",width=10,height=10)#
+for(i in 1:ceiling(length(sel.cat)/npage)){#
+	sel <- sel.cat[((i-1)*npage+1):(npage*i)]#
+	print(ggplot(subset(upc, product_module_descr %in% sel), aes(size_percentile)) + #
+			# geom_histogram(aes(y=..density.., fill=channel_type, alpha=.3), position="identity") + #
+			geom_density(aes(col=channel_type), position="identity") + #
+			facet_wrap(~product_module_descr)#
+		)#
+}#
+dev.off()
+library(lfe)
+install.packages("lfe")
+library(plm)
+install.packages("plm")
+getCRANmirrors()
+chooseBioCmirror()
+chooseCRANmirror()
+install.packages("plm")
+install.packages("lfe")
+library(plm)
+?plm
+head(hh)
+library(data.table)
+# Trend of household monthly expenditure#
+month.exp <- data.table(hh)#
+month.exp <- month.exp[,list(DOL=sum(DOL)),by=list(household_code, year, ymonth, month)]
+head(month.exp)
+?plm
+str(month.exp)
+fit0 <- plm(DOL ~ ymonth, data=month.exp, index=c("household_code","ymonth"), model="within")
+summary(fit0)
+str(fit0)
+fit0
+data("Produc", package = "plm")#
+zz <- plm(log(gsp) ~ log(pcap) + log(pc) + log(emp) + unemp,#
+          data = Produc, index = c("state","year"))#
+summary(zz)
+summary(fit0)
+str(summary(fit0))
+str(summary(zz))
+summary(fit0)$coefficients
+coef(fit0)
+ggtmp <- data.frame(par = names(coef(fit0)), estimate = coef(fit0))
+head(ggtmp)
+ggtmp$ymonth <- substr(ggtmp$par, 7)
+?substr
+ggtmp$ymonth <- substr(ggtmp$par, 7,14)
+head(ggtmp)
+ggtmp$ymonth <- as.Date(paste("01",substr(ggtmp$par, 7,14),sep=""), format="%d%M%Y")
+head(ggtmp)
+ggtmp$ymonth <- as.Date(paste("01",substr(ggtmp$par, 7,14),sep=""), format="%d%b%Y")
+head(ggtmp)
+ggplot(ggtmp, aes(ymonth, estimate)) + geom_point() + geom_line()
+fit0 <- plm(DOL ~ ymonth + month, data=month.exp, index=c("household_code","ymonth"), model="within")
+my.coef <- coef(fit0)#
+sel <- substr(names(my.coef),1,6)=="ymonth"
+my.coef[sel]
+ggtmp <- data.frame(par = names(my.coef)[sel], estimate = my.coef[sel])#
+ggtmp$ymonth <- as.Date(paste("01",substr(ggtmp$par, 7,14),sep=""), format="%d%b%Y")#
+ggplot(ggtmp, aes(ymonth, estimate)) + geom_point() + geom_line()
+head(hh)
+# Trend of hosuehold monthly expenditure share#
+sel.channel <- "Discount Store"#
+my.data <- subset(hh, channel_type==sel.channle)
+my.data <- subset(hh, channel_type==sel.channel)
+dim(my.data)
+head(my.data)
+fit1 <- plm(share ~ ymonth + month, data=my.data, index=c("household_code","ymonth"), model="within")
+my.coef <- coef(fit1)#
+sel <- substr(names(my.coef),1,6)=="ymonth"
+my.coef(sel)
+my.coef
+sel <- substr(names(my.coef),1,6)=="ymonth"
+my.coef[sel]
+ggtmp <- data.frame(par = names(my.coef)[sel], estimate = my.coef[sel])#
+ggtmp$ymonth <- as.Date(paste("01",substr(ggtmp$par, 7,14),sep=""), format="%d%b%Y")#
+ggplot(ggtmp, aes(ymonth, estimate)) + geom_point() + geom_line()
+my.coef
+coef(fit1)
+fit1 <- plm(share ~  factor(month) + ymonth, data=my.data, index=c("household_code","ymonth"), model="within")
+my.coef <- coef(fit1)
+my.coef
+sel <- substr(names(my.coef),1,6)=="ymonth"
+mean(sel)
+ggtmp <- data.frame(par = names(my.coef)[sel], estimate = my.coef[sel])#
+ggtmp$ymonth <- as.Date(paste("01",substr(ggtmp$par, 7,14),sep=""), format="%d%b%Y")#
+ggplot(ggtmp, aes(ymonth, estimate)) + geom_point() + geom_line()
+head(ggtmp)
+ord <- order(ggtmp$ymonth)
+ggtmp <- ggtmp[ord,]
+head(ggtmp)
+ggtmp <- subset(ggtmp, par!="ymonthDEC2003")#
+ggplot(ggtmp, aes(ymonth, estimate)) + geom_point() + geom_line()
+library(ggplot2)#
+library(reshape2)#
+library(scatterplot3d)#
+library(maxLik)#
+library(Rcpp)#
+library(RcppGSL)#
+library(glmmML)#
+#
+# setwd("//tsclient/Resear1/Store switching/Exercise/Basket DP/Simulation_v1_grid")#
+#
+setwd("~/Documents/Research/Store switching/Exercise/Basket DP/Simulation_v1_grid")#
+source("6_utility_functions.R")#
+sourceCpp("6C_Bellman_operator.cpp")
+# Set parameters#
+control_list <- list(	value_max_iter 	= 500,#
+						tol				= 1e-8,#
+						display_freq	= 20,#
+						brent_tol		= 0.00001, #
+						brent_max_iter 	= 300,#
+						inter_spline	= TRUE#
+				)#
+beta <- .9#
+param_list	<- list(lambda = 3,#
+					tau1 	= 0.4,#
+					tau3	= 4#
+					)#
+param <- unlist(param_list)#
+#
+K		<- 3#
+step	<- .5				#
+I_grid	<- seq(0,10,by=step)#
+y_grid	<- c(1,2)#
+c_grid	<- seq(0,8,by=step)#
+state	<- cbind(I=rep(I_grid,length(y_grid)),y=rep(y_grid,each=length(I_grid)))	# state matrix#
+s_idx	<- cbind(I=rep(1:length(I_grid),length(y_grid)), y=rep(1:length(y_grid),each=length(I_grid)))#
+ns		<- nrow(state)#
+ny		<- length(y_grid)#
+I_idx	<- 1#
+y_idx	<- 2#
+y_kernal<- list(nodes = c(1,2), weight = matrix(c(.8,.2,.2,.8),2,2))#
+#
+# Gaussian-Hermite quadrature initialization;#
+nQ <- gh_num_nodes <- 6#
+Q_weight<- ghq(gh_num_nodes, modified = F)$weights#
+Q_nodes <- ghq(gh_num_nodes, modified = F)$zeros#
+Qmu 	<- matrix(c(-50, -.6, -0.3,#
+					-50, 0, .3),2,K, byrow=T, dimnames = list(y_grid, 1:K))		# The location parameters #
+Qsigma 	<- matrix(c(0, .1, .2,#
+					0, .2, .1),2,K, byrow=T, dimnames = list(y_grid, 1:K))#
+Q_kernal <- list(nodes = Q_nodes, weight = Q_weight, mu = Qmu , sigma = Qsigma)#
+#
+# Plot the draws of Q#
+nsim <- 200#
+ggtmp <- data.frame(NULL)#
+for(i in 1:ny){#
+	for(j in 1:K){#
+		ggtmp <- rbind(ggtmp, data.frame(y=i, k=j, mu=Qmu[i,j], sigma = Qsigma[i,j], #
+										Q = rlnorm(nsim, Qmu[i,j], Qsigma[i,j]) ))#
+	}#
+}#
+ggplot(ggtmp, aes(Q)) + geom_histogram(aes(y=..density..)) + facet_grid(y ~ k)#
+#
+tmp		<- floor(quantile(1:ns, c(1:K)/K))#
+tmp		<- c(tmp[1], diff(tmp))#
+policy_k<- rev(unlist(lapply(1:K,function(i) rep(i,tmp[i])) ))#
+tmp		<- as.numeric(sapply(1:ns, function(i) singleu_fn(c=0,I=state[i,1],Q=0,param_list)/(1-beta)))#
+#
+DP_list	<- list(state 		= as.matrix(state), K = K,#
+# 				value_fn 	= 0.5*log(state[,I_idx]+1) ,#
+				value_fn	= tmp,#
+				policy	 	= list(k = policy_k,c = state[,I_idx] %*% t(rep(1,nQ))),#
+				param		= param,#
+				param_list	= param_list,#
+				beta		= beta,#
+				state_idx 	= s_idx,#
+				status 		= 1, #
+				Q_kernal	= Q_kernal,#
+				y_kernal	= y_kernal,#
+				Iteration 	= 0 )#
+#
+# Value function iteration with Brent's method in R#
+# system.time(sol <- value_iteration_fnC(DP_list, Bellman_operator = solve_c_brent_fn, print_level=1, control_list))#
+# DP_list <- sol#
+#
+# Value function iteration with Brent's method written in cpp#
+system.time(sol1 <- value_iteration_fnC(DP_list, Bellman_operator = Bellman_operatorC, print_level=1, control_list))#
+DP_list <- sol1#
+#
+# Compare C function and R function#
+# plot(sol$value_fn, sol1$value_fn)#
+# abline(0, 1, lty = 2)#
+#
+###############################
+# Plot the dynamic solutions ##
+###############################
+# Plot value function and policy function#
+scatterplot3d(DP_list$state[,I_idx], DP_list$state[,y_idx], DP_list$value_fn, xlab = "I", ylab="y", zlab="value", #
+			main="Value funciton")#
+quartz()#
+sel <- state[,y_idx]==2#
+plot(state[sel,I_idx], DP_list$value_fn[sel])#
+#
+# Plot the probability of policy function k#
+V		<- DP_list$value_fn#
+V1		<- V[DP_list$state[,y_idx]==1]#
+V2 		<- V[DP_list$state[,y_idx]==2]#
+tmp 	<- CCP_fnC(state, I_grid, V1, I_grid, V2, K, DP_list$param, beta, #
+					DP_list$Q_kernal, DP_list$y_kernal, makedraw = FALSE, control_list = control_list)#
+tmp1 	<- data.frame(state, k1=tmp$ccp[,1], k2=tmp$ccp[,2], k3=tmp$ccp[,3])#
+ggtmp <- melt(tmp1, id.var=c("I","y"))#
+names(ggtmp)[3] <- "policy"#
+quartz()#
+ggplot(ggtmp, aes(I, value)) + geom_point() + geom_line() + #
+		facet_grid(y ~ policy, labeller = "label_both") + #
+		labs(y="Probability", title = "Policy function k" )#
+#
+# Policy function of c#
+tmp 				<- data.frame(I=state[,I_idx], y=state[,y_idx], DP_list$policy$c)#
+names(tmp) 			<- c("I","y",1:ncol(DP_list$policy$c))#
+ggtmp 				<- melt(tmp,id=c("I","y"))#
+names(ggtmp) 		<- c("I","y","Q_index","c")#
+ggtmp$Q_index 		<- as.numeric(as.character(ggtmp$Q_index))#
+ggtmp$k				<- rep(1:K, each=nQ)[as.numeric(ggtmp$Q_index)]#
+ggtmp$Qnodes_index	<- with(ggtmp, Q_index - (k-1)*nQ)#
+ggtmp$Qnodes 		<- Q_nodes[ggtmp$Qnodes_index]#
+ggtmp$mu 			<- diag(Qmu[ggtmp$y, ggtmp$k])#
+ggtmp$sigma 		<- diag(Qsigma[ggtmp$y, ggtmp$k])#
+ggtmp$Q				<- with(ggtmp, exp(sqrt(2)*sigma*Qnodes + mu))#
+#
+# 3D plot of policy function c along I and Q#
+sel <- ggtmp$y == 1#
+quartz()#
+par(mfrow = c(1,2))#
+scatterplot3d(ggtmp[sel,"I"], ggtmp[sel,"Q"], ggtmp[sel,"c"], xlab = "I", ylab="Q", zlab="c", #
+			main="policy funciton c at y=1")#
+scatterplot3d(ggtmp[!sel,"I"], ggtmp[!sel,"Q"], ggtmp[!sel,"c"], xlab = "I", ylab="Q", zlab="c", #
+			main="policy funciton c at y=2")
+######################
+# Simulate the data # #
+######################
+set.seed(99)#
+TT <- 500#
+init_state <- as.numeric(state[10,])#
+# my_data0 <- simulate_seq_fn(init_state,TT,draw_all=TRUE, y_seq=NULL, Q_seq=NULL, k_seq=NULL, DP_list, control_list)#
+my_data <- simulate_seq_fnC(init_state, TT, draw_all=TRUE, y_seq=rep(NA,TT), Q_seq=rep(NA,TT), #
+							k_seq=rep(NA, TT),DP_list, control_list)    #
+#
+# Plot the simulated data#
+ggtmp <- melt(data.frame(my_data[[1]]), id="t") #
+quartz()#
+ggplot(ggtmp,aes(t, value)) + geom_point() + geom_line() + #
+		facet_grid(variable ~ .)
+# Gaussian-Hermite quadrature initialization;#
+nQ <- gh_num_nodes <- 6#
+Q_weight<- ghq(gh_num_nodes, modified = F)$weights#
+Q_nodes <- ghq(gh_num_nodes, modified = F)$zeros#
+Qmu 	<- matrix(c(-50, -.6, -0.3,#
+					-50, 0, .3),2,K, byrow=T, dimnames = list(y_grid, 1:K))		# The location parameters #
+Qsigma 	<- matrix(c(0, .1, .5,#
+					0, .5, .5),2,K, byrow=T, dimnames = list(y_grid, 1:K))#
+Q_kernal <- list(nodes = Q_nodes, weight = Q_weight, mu = Qmu , sigma = Qsigma)#
+#
+# Plot the draws of Q#
+nsim <- 200#
+ggtmp <- data.frame(NULL)#
+for(i in 1:ny){#
+	for(j in 1:K){#
+		ggtmp <- rbind(ggtmp, data.frame(y=i, k=j, mu=Qmu[i,j], sigma = Qsigma[i,j], #
+										Q = rlnorm(nsim, Qmu[i,j], Qsigma[i,j]) ))#
+	}#
+}#
+ggplot(ggtmp, aes(Q)) + geom_histogram(aes(y=..density..)) + facet_grid(y ~ k)#
+#
+tmp		<- floor(quantile(1:ns, c(1:K)/K))#
+tmp		<- c(tmp[1], diff(tmp))#
+policy_k<- rev(unlist(lapply(1:K,function(i) rep(i,tmp[i])) ))#
+tmp		<- as.numeric(sapply(1:ns, function(i) singleu_fn(c=0,I=state[i,1],Q=0,param_list)/(1-beta)))#
+#
+DP_list	<- list(state 		= as.matrix(state), K = K,#
+# 				value_fn 	= 0.5*log(state[,I_idx]+1) ,#
+				value_fn	= tmp,#
+				policy	 	= list(k = policy_k,c = state[,I_idx] %*% t(rep(1,nQ))),#
+				param		= param,#
+				param_list	= param_list,#
+				beta		= beta,#
+				state_idx 	= s_idx,#
+				status 		= 1, #
+				Q_kernal	= Q_kernal,#
+				y_kernal	= y_kernal,#
+				Iteration 	= 0 )#
+#
+# Value function iteration with Brent's method in R#
+# system.time(sol <- value_iteration_fnC(DP_list, Bellman_operator = solve_c_brent_fn, print_level=1, control_list))#
+# DP_list <- sol#
+#
+# Value function iteration with Brent's method written in cpp#
+system.time(sol1 <- value_iteration_fnC(DP_list, Bellman_operator = Bellman_operatorC, print_level=1, control_list))#
+DP_list <- sol1
+###############################
+# Plot the dynamic solutions ##
+###############################
+# Plot value function and policy function#
+scatterplot3d(DP_list$state[,I_idx], DP_list$state[,y_idx], DP_list$value_fn, xlab = "I", ylab="y", zlab="value", #
+			main="Value funciton")#
+quartz()#
+sel <- state[,y_idx]==2#
+plot(state[sel,I_idx], DP_list$value_fn[sel])#
+#
+# Plot the probability of policy function k#
+V		<- DP_list$value_fn#
+V1		<- V[DP_list$state[,y_idx]==1]#
+V2 		<- V[DP_list$state[,y_idx]==2]#
+tmp 	<- CCP_fnC(state, I_grid, V1, I_grid, V2, K, DP_list$param, beta, #
+					DP_list$Q_kernal, DP_list$y_kernal, makedraw = FALSE, control_list = control_list)#
+tmp1 	<- data.frame(state, k1=tmp$ccp[,1], k2=tmp$ccp[,2], k3=tmp$ccp[,3])#
+ggtmp <- melt(tmp1, id.var=c("I","y"))#
+names(ggtmp)[3] <- "policy"#
+quartz()#
+ggplot(ggtmp, aes(I, value)) + geom_point() + geom_line() + #
+		facet_grid(y ~ policy, labeller = "label_both") + #
+		labs(y="Probability", title = "Policy function k" )#
+#
+# Policy function of c#
+tmp 				<- data.frame(I=state[,I_idx], y=state[,y_idx], DP_list$policy$c)#
+names(tmp) 			<- c("I","y",1:ncol(DP_list$policy$c))#
+ggtmp 				<- melt(tmp,id=c("I","y"))#
+names(ggtmp) 		<- c("I","y","Q_index","c")#
+ggtmp$Q_index 		<- as.numeric(as.character(ggtmp$Q_index))#
+ggtmp$k				<- rep(1:K, each=nQ)[as.numeric(ggtmp$Q_index)]#
+ggtmp$Qnodes_index	<- with(ggtmp, Q_index - (k-1)*nQ)#
+ggtmp$Qnodes 		<- Q_nodes[ggtmp$Qnodes_index]#
+ggtmp$mu 			<- diag(Qmu[ggtmp$y, ggtmp$k])#
+ggtmp$sigma 		<- diag(Qsigma[ggtmp$y, ggtmp$k])#
+ggtmp$Q				<- with(ggtmp, exp(sqrt(2)*sigma*Qnodes + mu))#
+#
+# 3D plot of policy function c along I and Q#
+sel <- ggtmp$y == 1#
+quartz()#
+par(mfrow = c(1,2))#
+scatterplot3d(ggtmp[sel,"I"], ggtmp[sel,"Q"], ggtmp[sel,"c"], xlab = "I", ylab="Q", zlab="c", #
+			main="policy funciton c at y=1")#
+scatterplot3d(ggtmp[!sel,"I"], ggtmp[!sel,"Q"], ggtmp[!sel,"c"], xlab = "I", ylab="Q", zlab="c", #
+			main="policy funciton c at y=2")
+######################
+# Simulate the data # #
+######################
+set.seed(99)#
+TT <- 500#
+init_state <- as.numeric(state[10,])#
+# my_data0 <- simulate_seq_fn(init_state,TT,draw_all=TRUE, y_seq=NULL, Q_seq=NULL, k_seq=NULL, DP_list, control_list)#
+my_data <- simulate_seq_fnC(init_state, TT, draw_all=TRUE, y_seq=rep(NA,TT), Q_seq=rep(NA,TT), #
+							k_seq=rep(NA, TT),DP_list, control_list)    #
+#
+# Plot the simulated data#
+ggtmp <- melt(data.frame(my_data[[1]]), id="t") #
+quartz()#
+ggplot(ggtmp,aes(t, value)) + geom_point() + geom_line() + #
+		facet_grid(variable ~ .)
+# 2D plot of policy function at certain points of Q#
+sel <- 1:4#
+quartz()#
+ggplot(subset(ggtmp, Q %in% unique(ggtmp$Q)[sel]), aes(I,c)) + geom_point() + geom_line() + #
+		facet_grid(Q~y, labeller = "label_both") + #
+		geom_abline(aes(intercept = Q, slope = 1), linetype=2)
+param
+DP_init 		<- DP_list#
+DP_init$param 	<- rep(0, length(param))#
+DataState 		<- as.matrix(my_data[[1]][,c("I","y")])#
+Q_seq			<- as.vector(my_data[[1]][,"Q"])#
+choice_seq		<- as.vector(my_data[[1]][,"k"])
+my_grid <- list(seq(-2, 2, by=.1), seq(-.4, 2, by=0.1), seq(-2,2,by=.1))
+tmp <- NULL
+i <- 1
+j <- 1
+theta_init <- param#
+		theta_init[i] <- theta_init[i]+my_grid[[i]][j]
+theta_init
+tmp <- ll_fnC(theta_init, DataState, choice_seq, Q_seq,  #
+						DP_init, Bellman_operator = Bellman_operatorC, control_list = control_list)
+tmp
+sum(tmp)
+my_grid <- list(seq(-2, 2, by=.1), seq(-.4, 2, by=0.1), seq(-2,2,by=.1))#
+ggtmp <- data.frame(NULL)
+tmp <- NULL
+j
+theta_init <- param#
+		theta_init[i] <- theta_init[i]+my_grid[[i]][j]#
+		ll 	<- sum(ll_fnC(theta_init, DataState, choice_seq, Q_seq,  #
+						DP_init, Bellman_operator = Bellman_operatorC, control_list = control_list))
+tmp <- rbind(tmp, c(theta_init, ll))
+tmp
+rbind(tmp, c(theta_init, ll=ll))
+tmp <- NULL#
+	colnames(tmp) <- c(names(param), "ll")#
+	for(j in 1:length(my_grid[[i]])){#
+		theta_init <- param#
+		theta_init[i] <- theta_init[i]+my_grid[[i]][j]#
+		ll 	<- sum(ll_fnC(theta_init, DataState, choice_seq, Q_seq,  #
+						DP_init, Bellman_operator = Bellman_operatorC, control_list = control_list))#
+		tmp <- rbind(tmp, c(theta_init, ll))#
+	}
+tmp
+data.frame(Variable = names(param)[i], tmp)
+##############################
+# Likelihood function shape # #
+##############################
+my_grid <- list(seq(-2, 2, by=.1), seq(-.4, 2, by=0.1), seq(-2,2,by=.1))#
+ggtmp <- data.frame(NULL)#
+for(i in 1:length(param)){#
+	tmp <- NULL#
+	names(tmp) <- c(names(param), "ll")#
+	for(j in 1:length(my_grid[[i]])){#
+		theta_init <- param#
+		theta_init[i] <- theta_init[i]+my_grid[[i]][j]#
+		ll 	<- sum(ll_fnC(theta_init, DataState, choice_seq, Q_seq,  #
+						DP_init, Bellman_operator = Bellman_operatorC, control_list = control_list))#
+		tmp <- rbind(tmp, c(theta_init, ll))#
+	}#
+	ggtmp <- rbind(ggtmp, data.frame(Variable = names(param)[i], tmp))#
+}
+##############################
+# Likelihood function shape # #
+##############################
+my_grid <- list(seq(-2, 2, by=.1), seq(-.4, 2, by=0.1), seq(-2,2,by=.1))#
+ggtmp <- data.frame(NULL)#
+for(i in 1:length(param)){#
+	tmp <- NULL#
+	for(j in 1:length(my_grid[[i]])){#
+		theta_init <- param#
+		theta_init[i] <- theta_init[i]+my_grid[[i]][j]#
+		ll 	<- sum(ll_fnC(theta_init, DataState, choice_seq, Q_seq,  #
+						DP_init, Bellman_operator = Bellman_operatorC, control_list = control_list))#
+		tmp <- rbind(tmp, c(theta_init, ll))#
+	}#
+	ggtmp <- rbind(ggtmp, data.frame(Variable = names(param)[i], tmp))#
+}
+head(ggtmp)
+names(ggtmp)[4] <- "ll"
+head(ggtmp)
+colnames(ggtmp)[4]
+head(ggtmp)
+names(ggtmp)
+c("Variable", names(param), "ll")
+colnames(ggtmp) <- c("Variable", names(param), "ll")
+head(ggtmp)
+ggtmp$par <- with(ggtmp, ifelse(Variable == "lambda", lambda, ifelse(Variable=="tau1", tau1, tau3)) )
+head(ggtmp)
+ggplot(ggtmp, aes(value, ll)) + geom_point() + geom_line() + #
+		facet_wrap(~Variable)
+ggplot(ggtmp, aes(par, ll)) + geom_point() + geom_line() + #
+		facet_wrap(~Variable)
+ggplot(ggtmp, aes(par, ll)) + geom_point() + geom_line() + #
+		facet_wrap(~Variable)
+ggplot(ggtmp, aes(par, ll)) + geom_point() + geom_line() + #
+		facet_wrap(~Variable) + ylim(c(-5000,0))
+ggplot(ggtmp, aes(par, ll)) + geom_point() + geom_line() + #
+		facet_wrap(~Variable) + #
+		labs(title = "Likelihood function")+ ylim(c(-5000,0))
+ggtmp <- subset(ggtmp, value !=0)
+ggtmp <- subset(ggtmp, par !=0)
+ggplot(ggtmp, aes(par, ll)) + geom_point() + geom_line() + #
+		facet_wrap(~Variable) + #
+		labs(title = "Likelihood function")
+head(ggtmp)
+ggtmp$tue <- param[ggtmp$Variable]
+head(ggtmp)
+ggtmp$true <- param[ggtmp$Variable]
+ggplot(ggtmp, aes(par, ll)) + geom_point() + geom_line() + #
+		facet_wrap(~Variable) + #
+		geom_vline(aes(xintercept = true), col="red", linetype= 2) + #
+		labs(title = "Likelihood function")

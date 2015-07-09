@@ -921,7 +921,7 @@ List policy_iterC(List DP_list, List control_list, int print_level=0, int init_V
 			c_ratio = tmp_sol["c_ratio"]; 
 		}
 	}
-	while( iter<=max_iter && dif > tol && check_stop == 0);
+	while(( iter<=max_iter && dif > tol && check_stop == 0 ) || (iter <= 8) );
 	
 	// Return the policy and value function;
 	NumericVector value_fn 	= policy_evalC(policy_new, cond_y, cond_c, V_new, V0, DP_list, control_list, DPf, 500);

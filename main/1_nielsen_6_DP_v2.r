@@ -21,15 +21,15 @@ if(length(args)>0){
 nchain		<- 4
 vid_save	<- vid	<- 2
 run_id_save	<- run_id <- 1
-# arr_idx		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
+arr_idx		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 seg_id		<- ceiling(arr_idx/nchain)
 chain_id	<- arr_idx - (seg_id - 1) * nchain
 
 # setwd("~/Documents/Research/Store switching/processed data/Estimation")
 # sourceCpp("~/Documents/Research/Store switching/Exercise/main/1_DAM_functions.cpp")
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
-# setwd("/sscc/home/c/ccv103/Exercise/run")
+setwd("/sscc/home/c/ccv103/Exercise/run")
 
 sourceCpp("1_DAM_functions.cpp")
 model_name 	<- "MDCEV_a1b1"
@@ -95,11 +95,10 @@ mytransition <- function(x1, x2){
 # Read data and extract segment data # 
 ######################################
 load(paste("run_",run_id,"/5_est_MDCEV_seg",seg_id,".rdata",sep=""))
-param_mat <- read.csv(paste("run_",run_id,"/inits.csv",sep=""), header = T)
-
-rm(list = c("run_id", "vid"))
+rm(list = c("run_id", "vid", "sol"))
 vid					<- vid_save
 run_id				<- run_id_save
+param_mat <- read.csv(paste("run_",run_id,"/inits.csv",sep=""), header = T)
 
 # Recode income levels 
 sum(is.na(hh_exp$income_real))
@@ -297,7 +296,7 @@ cat("Grids of states:\n"); summary(state); cat("\n")
 # Find DP solution at the intial parameters;
 beta	<- .96
 sel		<- param_mat$seg_id == seg_id & param_mat$chain == chain_id
-param	<- as.vector(as.matrix(param_mat[sel,-(1:2)])); 
+param	<- as.vector(as.matrix(as.numeric(param_mat[sel,-(1:2)]))); 
 names(param) <- colnames(param_mat)[-c(1:2)]
 cat("Inital parameters at seg =", seg_id, "are:\n"); print(param); cat("\n")
 

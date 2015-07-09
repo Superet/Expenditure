@@ -1,0 +1,23 @@
+#!/bin/bash
+#PBS -j oe
+#PBS -l mem=6gb
+#PBS -l walltime=60:00:00
+
+cd /sscc/home/c/ccv103/Exercise/run/run_5
+(R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=7 vid=1" 1_nielsen_5_mdcev_a1b1.r 5_mdcev_seg7.out &&
+R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=7 vid=1" 1_nielsen_6_DP_v3.r  6_est_seg7.out) &
+
+(R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=8 vid=1" 1_nielsen_5_mdcev_a1b1.r 5_mdcev_seg8.out &&
+R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=8 vid=1" 1_nielsen_6_DP_v3.r  6_est_seg8.out) &
+
+(R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=9 vid=1" 1_nielsen_5_mdcev_a1b1.r 5_mdcev_seg9.out &&
+R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=9 vid=1" 1_nielsen_6_DP_v3.r  6_est_seg9.out) &
+
+(R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=10 vid=1" 1_nielsen_5_mdcev_a1b1.r 5_mdcev_seg10.out &&
+R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=10 vid=1" 1_nielsen_6_DP_v3.r  6_est_seg10.out) &
+
+(R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=11 vid=1" 1_nielsen_5_mdcev_a1b1.r 5_mdcev_seg11.out &&
+R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=11 vid=1" 1_nielsen_6_DP_v3.r  6_est_seg11.out) &
+
+(R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=12 vid=1" 1_nielsen_5_mdcev_a1b1.r 5_mdcev_seg12.out &&
+R CMD BATCH --no-save --no-restore "--args run_id=5 seg_id=12 vid=1" 1_nielsen_6_DP_v3.r  6_est_seg12.out) &

@@ -1,0 +1,9 @@
+#!/bin/bash
+#PBS -J 25-28
+#PBS -j oe
+#PBS -l walltime=80:00:00
+#PBS -l mem=8gb
+#PBS -l ncpus=3
+
+cd /sscc/home/c/ccv103/Exercise/run/run_1
+R CMD BATCH 1_nielsen_6_DP_v2.r 6_est_v2_arr${PBS_ARRAY_INDEX}.log

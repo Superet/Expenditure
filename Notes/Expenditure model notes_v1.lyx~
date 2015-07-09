@@ -1,0 +1,1402 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Expenditure Reallocation Notes
+\end_layout
+
+\begin_layout Section
+Model overview 
+\end_layout
+
+\begin_layout Standard
+We assume that consumers make decisions according to the following timing:
+ 
+\end_layout
+
+\begin_layout Enumerate
+A household has an exogenous expenditure budget at a period 
+\begin_inset Formula $t$
+\end_inset
+
+, denoted by 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+, and observes her pantry inventory (
+\begin_inset Formula $I_{t}$
+\end_inset
+
+) and random choice shocks associated with each basket type.
+ Then he decides basket type (
+\begin_inset Formula ${{k}_{t}}=\{0,1,\ldots,K\},k=0$
+\end_inset
+
+ denoting no purchase).
+ 
+\end_layout
+
+\begin_layout Enumerate
+Once having decided the basket type, he observes the random choice shock
+ associated with each retail format 
+\begin_inset Formula $s=\{1,\ldots,S\}$
+\end_inset
+
+, and then decides how much to spend in each retail format 
+\begin_inset Formula $\{{{e}_{1t}},\ldots,{{e}_{St}}\}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Enumerate
+Given the current inventory and the quantity purchased, he observes consumption
+ shocks and then decides how much to consume (
+\begin_inset Formula $c_{t}$
+\end_inset
+
+).
+ We assume that consumers' purchase utility and consumption utility are
+ separably additive.
+ We denote price and quantity at retail format 
+\begin_inset Formula $s$
+\end_inset
+
+ and time 
+\begin_inset Formula $t$
+\end_inset
+
+ with 
+\begin_inset Formula ${{p}_{st}},{{q}_{st}}$
+\end_inset
+
+ respectively.
+ The decisions rules can be represented by:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\max_{k_{t},e_{st},c_{t}} & \sum_{t=1}^{\infty}\beta^{t-1}\left[\underbrace{\sum\limits _{s}u^{P}\left(\frac{e_{st}}{p_{st}},\epsilon_{st};k_{t}\right)}_{\text{purchase}}+\underbrace{u^{C}(c_{t})}_{\text{consumption}}-\underbrace{C(I_{t+1})}_{\text{inventory cost}}+\xi_{kt}\right]\\
+s.t. & \sum_{s=1}^{S}p_{st}q_{st}\leq y_{t}
+\end{align*}
+
+\end_inset
+
+where 
+\begin_inset Formula $C({{I}_{t}})$
+\end_inset
+
+ is the inventory cost that depends on the inventory level.
+ 
+\begin_inset Formula $\beta$
+\end_inset
+
+ is the discount factor.
+ 
+\begin_inset Formula $\epsilon_{\{st\}}$
+\end_inset
+
+ is a random shock associated with the utility for a basket type 
+\begin_inset Formula $k$
+\end_inset
+
+, and 
+\begin_inset Formula ${{\epsilon}_{st}}$
+\end_inset
+
+ is a random shock associated with the marginal utility of retail format
+ 
+\begin_inset Formula $s$
+\end_inset
+
+.
+ Note that the purchase utility depends on the basket type 
+\begin_inset Formula $k$
+\end_inset
+
+.
+ The state parameter 
+\begin_inset Formula $s_{t}=\{I_{t},y_{t},\epsilon_{t},\xi_{t}\}$
+\end_inset
+
+.
+ The Bellman equation is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+v(s_{t})= & \max_{k_{t},c_{t},e_{st}}\sum_{s=1}^{S}u^{P}\left(\frac{e_{st}}{p_{st}},\epsilon_{st};k_{t}\right)+u^{C}(c_{t})-C(I_{t+1})+\xi_{kt}+\beta E\left[v(s_{t+1}|s_{t},k_{t},c_{t})\right]\\
+s.t. & \sum_{s=1}^{S}p_{st}q_{st}\leq y_{t}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Simplified model 
+\end_layout
+
+\begin_layout Standard
+The dynamic allocation problem is hard to solve, but we are able to simplify
+ the problem thanks to the separability assumption.
+ We make two observations.
+ First, inventory transition only depends on the quantity of the basket.
+ Therefore, conditional on a basket type, allocation decisions do not affect
+ the state transition.
+ Second, consumption decisions do not depend on the how the expenditure
+ is allocated, but only the current inventory plus the quantity purchased.
+ The two features allow us to separately model the allocation decisions
+ conditional on a basket type.
+ Once conditional on a basket type, we do not need to solve the dynamic
+ programming for 
+\begin_inset Formula $\{e_{1t},\ldots,e_{St}\}$
+\end_inset
+
+, and thus reduce the allocation problem into a static model.
+ Then we know the contingent preference towards retailersÕ attributes.
+ We can compute the expected purchase utility conditional on a basket type
+ and budget.
+ Finally, we substitute the purchase utility back in the dynamic model,
+ and solve for the decision path of basket type and consumption.
+ Specifically, our dynamic model is simplified in three steps:
+\end_layout
+
+\begin_layout Standard
+Step 1: we model expenditure allocation decisions conditional a basket type.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\max_{e_{st}} & \sum_{s=1}^{S}u^{P}\left(\frac{e_{st}}{p_{st}},\epsilon_{st};k_{t}\right)\\
+s.t. & \sum_{s=1}^{S}p_{st}q_{st}\leq y_{t}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Step 2: we compute 
+\begin_inset Quotes eld
+\end_inset
+
+inclusive value
+\begin_inset Quotes erd
+\end_inset
+
+ conditional on a basket type and expenditure:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\omega(k_{t},y_{t})= & E\left[\max_{e_{st}}u^{P}\left(\frac{e_{st}}{p_{st}},\epsilon_{st};k_{t}\right)\right]\\
+s.t. & \sum_{s=1}^{S}p_{st}q_{st}\leq y_{t}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Step 3: we solve dynamic decisions of basket type and consumption.
+ It can be shown that the original Bellman equation is equivalent to
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+V(y,I,\xi)=\max_{k_{t},c_{t}}u^{C}(c_{t})-C(I_{t+1})+\omega(k_{t},y_{t})+\xi_{kt}+E\left[V(y_{t+1},I_{t+1},\xi_{t+1}|y_{t},I_{t},k_{t},c_{t}\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now, the state variable 
+\begin_inset Formula $\tilde{s}_{t}=\{y_{t},I_{t},\{\xi_{kt}\}_{k=1}^{K}\}$
+\end_inset
+
+ 
+\begin_inset Formula ${{\tilde{s}}_{t}}=\{{y_{t}},{{I}_{t}},{{\nu}_{t}},{{\xi}_{t}}\}$
+\end_inset
+
+.
+ The optimal consumption is solved analytically, and then the choice of
+ shopping task type is standard dynamic discrete choice model.
+ Model specification 
+\begin_inset Formula 
+\begin{align*}
+u^{P}(q_{st},\epsilon_{st};k) & =\gamma_{s}^{(k)}\psi_{s}^{(k)}e^{\epsilon_{st}}\log\left(\frac{q_{st}}{\gamma_{st}}+1\right)\\
+\psi_{s}^{k} & =\exp\left(\alpha_{s}^{(k)}+X_{s}\alpha_{s}^{k}\right)\\
+u^{C}(c) & =\tilde{\lambda}_{1}c+\lambda_{2}c^{2}\\
+C(I) & =\tau I
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Identification discussion 
+\end_layout
+
+\begin_layout Standard
+The identification of contingent preference towards retailers' attributes
+ is similar to the one in a static discrete choice model.
+ The satiation parameters 
+\begin_inset Formula $\gamma$
+\end_inset
+
+'s are identified from the variation of expenditure budget.
+ Now consider the primitive parameters in the dynamic programming, namely,
+ parameters in the utility function and inventory cost.
+ Because we do not observe the inventory, we can not separate the two without
+ any functional form assumptions.
+ We can estimate the parameters for the assumed parametric functions.
+ Conditional on the utility functions, the purchase frequency identifies
+ the inventory cost.
+ Consider two consumers who purchase the same total quantity in a long period,
+ then the one who purchase less frequently have larger inventory cost.
+ 
+\end_layout
+
+\begin_layout Section
+Model details
+\end_layout
+
+\begin_layout Subsection
+Optimal consumption
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+v(y,I,\xi)=\max_{k}\left\{ E_{Q_{k}}\left[\underbrace{\max_{c}u^{C}(c(Q_{k}))-C(I'(Q_{k}))+\omega(k,y)+\beta E[v(y',I',\xi')}_{V^{c}(y,I,Q_{k},k)}\right]+\xi_{k}\right\} 
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $u(c,I,Q_{k})$
+\end_inset
+
+ denote the flow consumption utility and inventory cost
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+u(c,I,Q_{k}) & =u^{C}(c)-C(I')\\
+ & =\tilde{\lambda}_{1}c+\lambda_{2}c^{2}-\tau I'\\
+ & =\tilde{\lambda}_{1}c+\lambda_{2}c^{2}-\tau(I+Q_{k}-c)\\
+ & =(\tilde{\lambda}_{1}+\tau)c+\lambda_{2}c^{2}-\tau(I+Q_{k})\\
+ & =\lambda_{1}c+\lambda_{2}c^{2}-\tau(I+Q_{k})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $V^{c}(s_{t};k)$
+\end_inset
+
+ denote the value function of choice 
+\begin_inset Formula $k$
+\end_inset
+
+ at state 
+\begin_inset Formula $s_{t}$
+\end_inset
+
+, defined as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+V^{c}(y,I;k) & =\max_{c}u(c,I,Q_{k})+\omega(k,y)+\beta E_{y',I',\xi'}\left[v(y',I',\xi'|y,I,\nu,k,c)\right]\\
+ & =\max_{c}u(c,I,Q_{k})+\omega(k,y)+\beta E_{y',I',\xi'}\left[\max_{j}\left\{ E_{Q_{j}}\left[V^{c}(y',I';j\right]+\xi'_{j}\right\} \right]\\
+ & =\max_{c}u(c,I,Q_{k}))+\omega(k,y)+\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}V^{c}(y',I';j)dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+First order condition (FOC) 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial u(c,I,Q_{k})}{\partial c}+\beta\frac{\partial I'}{\partial c}\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)=0
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Envelop condition (EC) with respect to state 
+\begin_inset Formula $I$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial V^{c}(y,I;k)}{\partial I}=\frac{\partial u(c,I,Q_{k})}{\partial I}+\beta\frac{\partial I'}{\partial I}\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since the state transition 
+\begin_inset Formula $I'=I+Q_{k}-c$
+\end_inset
+
+, then 
+\begin_inset Formula $\frac{\partial I'}{\partial I}=1$
+\end_inset
+
+ and 
+\begin_inset Formula $\frac{\partial I'}{\partial c}=-1$
+\end_inset
+
+.
+ We can rewrite the two conditions above as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\text{FOC} & \frac{\partial u}{\partial c}=\beta\int_{y',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'=0\\
+\text{EC} & \frac{\partial V^{c}(y,I;k)}{\partial I}=\frac{\partial u(c,I,Q_{k})}{\partial I}+\beta\int_{y',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Combining two conditions yields 
+\begin_inset Formula $V_{I}^{C}(y,I,k)=u_{c}(c,I,Q_{k})+u_{I}(c,I,Q_{k})$
+\end_inset
+
+ , and we have Euler equation as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+u_{c}(c,I,Q_{k})=\beta E_{y',\xi'}\left\{ \max_{j}E_{Q_{j}'}\left[u_{c}(c',I',Q_{j}')+u_{I}(c',I',Q_{j}')\right]+\xi_{j}'\right\} 
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now we guess the value function is linear in inventory cost.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+V(y,I,Q_{k},k)=\kappa_{0}+\kappa_{1}I+g(y,k,Q_{k})
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If this is the case, then we have 
+\begin_inset Formula $V_{I}^{C}(y,I,k)=\kappa_{1}$
+\end_inset
+
+.
+ Subsititute it back to FOC, and we can solve for the optimal consumption
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & \lambda_{1}+2\lambda_{2}c=\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\kappa_{1}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)\\
+ & \lambda_{1}+2\lambda_{2}c=\beta\int_{y'}\left[\log\left(\sum_{j=1}^{K}e^{\kappa_{1}}\right)\right]dFy'\\
+ & \lambda_{1}+2\lambda_{2}c=\beta\left(\log K+\kappa_{1}\right)\\
+\Rightarrow & c=\frac{\beta(\log K+\kappa_{1})-\lambda_{1}}{2\lambda_{2}}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Take it back to the value function equation, we can 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+RHS & =u(c,I,Q_{k}))+\omega(k,y)+\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}V^{c}(y',I';j)dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)\\
+ & =\lambda_{1}c+\lambda_{2}c^{2}-\tau(I+Q_{k})+\omega(k,y)+\beta\int_{y',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\left(\kappa_{0}+\kappa_{1}I'+g(y',j',Q_{j}')\right)dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'\\
+ & =\lambda_{1}c+\lambda_{2}c^{2}-\tau(I+Q_{k})+\omega(k,y)+\beta\int_{y',\xi'}\left[\max_{j}\left\{ \kappa_{0}+\kappa_{1}I'+E_{Q_{j}'}g(y',j,Q_{j}')+\xi'_{j}\right\} \right]dF\xi'dFy'\\
+ & =\lambda_{1}c+\lambda_{2}c^{2}-\tau(I+Q_{k})+\omega(k,y)+\beta\int_{y'}\left\{ \log\left[\sum_{j=1}^{K}\exp\left(\kappa_{0}+\kappa_{1}I'+E_{Q_{j}'}g(y',j,Q_{j}')\right)\right]\right\} dFy'\\
+ & =\lambda_{1}c+\lambda_{2}c^{2}-\tau(I+Q_{k})+\omega(k,y)+\beta\int_{y'}\left\{ \kappa_{0}+\kappa_{1}I'+\log\left[\sum_{j=1}^{K}\exp\left(E_{Q_{j}'}g(y',j,Q_{j}')\right)\right]\right\} dFy'\\
+ & =\lambda_{1}c+\lambda_{2}c^{2}-\tau(I+Q_{k})+\omega(k,y)+\beta\left(\kappa_{0}+\kappa_{1}(I+Q_{k}-c)\right)+\beta E_{y'}\left\{ \log\left[\sum_{j=1}^{K}\exp\left(E_{Q_{j}'}g(y',j,Q_{j}')\right)\right]\right\} 
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Collect the terms of 
+\begin_inset Formula $I$
+\end_inset
+
+, and equate the form of value function in conjecture and RHS, it must be
+ true that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & \kappa_{1}=-\tau+\beta\kappa_{1}\\
+\Rightarrow & \kappa_{1}=-\frac{\tau}{1-\beta}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now verify whether the Euler equation holds.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\mbox{LHS} & =\lambda_{1}+2\lambda_{2}c=\beta\left(\log K-\frac{\tau}{1-\beta}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+RHS & =\beta E_{y',I',\xi'}\left\{ \max_{j}E_{Q_{j}'}\left[u_{c}(c',I',Q_{j}')+u_{I}(c',I',Q_{j}')\right]+\xi_{j}'\right\} \\
+ & =\beta E_{\xi'}\left\{ \max_{j}E_{Q_{j}'}\left[\lambda_{1}+2\lambda_{2}c'-\tau\right]+\xi_{j}'\right\} \\
+ & =\beta E_{\xi'}\left\{ \max_{j}\beta\left(\log K-\frac{\tau}{1-\beta}\right)-\tau+\xi_{j}'\right\} \\
+ & =\beta\log\left[\sum_{j=1}^{K}\exp(\beta\log K-\frac{\tau}{1-\beta})\right]\\
+ & =\beta(1+\beta)\log K-\frac{\beta\tau}{1-\beta}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+newpage
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Model details
+\end_layout
+
+\begin_layout Subsection
+Statistics preparation
+\end_layout
+
+\begin_layout Subparagraph
+Truncated normal distribution 
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $X\sim Normal(\mu,\sigma$
+\end_inset
+
+), then 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+E(X|a<X\leq b)= & \mu-\sigma\frac{\phi(b_{0})-\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}\\
+Var(X|a<X\leq b)= & \sigma^{2}\left\{ 1-\frac{b_{0}\phi(b_{0})-a_{0}\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}-\left[\frac{\phi(b_{0})-\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}\right]^{2}\right\} \\
+E(X^{2}|a<X\leq b)= & \mu^{2}-2\mu\sigma\frac{\phi(b_{0})-\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}+\sigma^{2}\left[1-\frac{b_{0}\phi(b_{0})-a_{0}\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}\right]\\
+a_{0}=\frac{a-\mu}{\sigma}, & b_{0}=\frac{b-\mu}{\sigma}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subparagraph
+Truncated normal distribution
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $X\sim LogNormal(\mu,\sigma)$
+\end_inset
+
+, then, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+E\left(X^{r}|a<X<b\right)= & \exp(r\mu+r^{2}\sigma^{2}/2)\frac{\Phi(r\sigma-a_{0})-\Phi(r\sigma-b_{0})}{\Phi(b_{0})-\Phi(a_{0})}\\
+P(X<b)= & \Phi(b_{0})\\
+a_{0}=\frac{\log(a)-\mu}{\sigma}, & b_{0}=\frac{\log(b)-\mu}{\sigma}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Multiple discrete-continuous model with quantity constraint
+\end_layout
+
+\begin_layout Standard
+Utitlity specification: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+U^{p}(e_{1},\dots,e_{R},e_{R+1},e_{R+2})=
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We parameter 
+\begin_inset Formula $\psi_{r}=\exp(X_{r}\alpha)$
+\end_inset
+
+, 
+\begin_inset Formula $\psi_{R+2}=\exp(\alpha_{0})$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+We drop household and time subscript here.
+ We denote the set of retailers where a household have positive spending
+ is 
+\begin_inset Formula $\mathcal{R}_{p}$
+\end_inset
+
+ with size 
+\begin_inset Formula $n_{p}$
+\end_inset
+
+, and the set of retailers where a household does not visit is 
+\begin_inset Formula $\mathcal{R}_{0}$
+\end_inset
+
+ with size of n0.
+ The probability of observing an expenditure vector (e1,...,eR) is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+P(e_{1},\dots,e_{R})=|J|\prod_{r\in\mathcal{R}_{p}}\phi(V_{r};0,\sigma)\prod_{r\in\mathcal{R}_{0}}\Phi(V_{r};0,\sigma)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $J$
+\end_inset
+
+ is 
+\begin_inset Formula $n_{p}\times n_{p}$
+\end_inset
+
+ Jacobian matrix.
+ Recall that 
+\begin_inset Formula $V_{r}=\log\left(\frac{e_{r}}{\gamma_{r}}+p_{r}\right)-X_{r}\alpha+\log\left(\frac{\psi_{R+1}}{e_{R+1}}+\frac{\psi_{R+2}}{p_{r}(e_{R+2}+c_{R+2})}\right)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Let 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\lambda_{1}= & \frac{\psi_{R+1}}{e_{R+1}^{2}}\\
+\lambda_{2}= & \frac{\psi_{R+2}}{(e_{R+2}+c_{R+2})^{2}}\\
+\Lambda_{i}= & \frac{\psi_{R+1}}{e_{R+1}}+\frac{\psi_{R+2}}{p_{i}(e_{R+2}+c_{R+2})}\\
+d_{i}= & e_{i}+\gamma_{i}p_{i}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can write the element of the Jacobian matrix as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+J_{ij}=\frac{\partial V_{i}}{\partial e_{j}}=\begin{cases}
+\frac{\lambda_{1}+\frac{\lambda_{2}}{p_{i}p_{j}}}{\Lambda_{i}}+\frac{1}{d_{j}} & i=j\\
+\frac{\lambda_{1}+\frac{\lambda_{2}}{p_{i}p_{j}}}{\Lambda_{i}} & i\neq j
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We use matrix determinant lemma to compute its determinant.
+ Denote 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+A= & \left(\begin{array}{ccc}
+\frac{1}{d_{1}}\\
+ & \ddots\\
+ &  & \frac{1}{d_{np}}
+\end{array}\right)\\
+U=\left(\begin{array}{cc}
+\frac{1}{\Lambda_{1}} & \frac{1}{\Lambda_{1}p_{1}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{1}{\Lambda_{np}p_{np}}
+\end{array}\right), & \quad V^{T}=\left(\begin{array}{ccc}
+\lambda_{1} & \dots & \lambda_{1}\\
+\frac{\lambda_{2}}{p_{1}} & \dots & \frac{\lambda_{2}}{p_{np}}
+\end{array}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We know that 
+\begin_inset Formula $|J|=|A+UV^{T}|=det(I+V^{T}A^{-1}U)det(A)$
+\end_inset
+
+.
+ 
+\begin_inset Formula $|A|=\prod_{i}^{np}\frac{1}{d_{i}}$
+\end_inset
+
+.
+ Now let's compute the 
+\begin_inset Formula $V^{T}A^{-1}U$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+V^{T}A^{-1}U= & \left(\begin{array}{ccc}
+\lambda_{1} & \dots & \lambda_{1}\\
+\frac{\lambda_{2}}{p_{1}} & \dots & \frac{\lambda_{2}}{p_{np}}
+\end{array}\right)\left(\begin{array}{ccc}
+d_{1}\\
+ & \ddots\\
+ &  & d_{np}
+\end{array}\right)\left(\begin{array}{cc}
+\frac{1}{\Lambda_{1}} & \frac{1}{\Lambda_{1}p_{1}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{1}{\Lambda_{np}p_{np}}
+\end{array}\right)\\
+= & \left(\begin{array}{ccc}
+\lambda_{1}d_{1} & \dots & \lambda_{1}d_{np}\\
+\frac{\lambda_{2}d_{1}}{p_{1}} & \dots & \frac{\lambda_{2}d_{np}}{p_{np}}
+\end{array}\right)\left(\begin{array}{cc}
+\frac{1}{\Lambda_{1}} & \frac{1}{\Lambda_{1}p_{1}}\\
+\vdots & \vdots\\
+\frac{1}{\Lambda_{np}} & \frac{1}{\Lambda_{np}p_{np}}
+\end{array}\right)\\
+= & \left(\begin{array}{cc}
+\lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}} & \lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}}\\
+\lambda_{2}\sum_{i}\frac{d_{i}}{p_{i}\Lambda_{i}} & \lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}
+\end{array}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Hence, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+|J|=\left[\left(1+\lambda_{1}\sum_{i}\frac{d_{i}}{\Lambda_{i}}\right)\left(1+\lambda_{2}\sum_{i}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)-\lambda_{1}\lambda_{2}\left(\sum_{i}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)^{2}\right]\prod_{i}^{np}\frac{1}{d_{i}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Taking the logritham of the probability function, we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+l= & \log\left[\left(1+\lambda_{1}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}}\right)\left(1+\lambda_{2}\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{\Lambda_{i}p_{i}^{2}}\right)-\lambda_{1}\lambda_{2}\left(\sum_{i\in\mathcal{R}_{p}}\frac{d_{i}}{p_{i}\Lambda_{i}}\right)^{2}\right]-\sum_{i\in\mathcal{R}_{p}}\log(d_{i})\\
+ & +\sum_{r\in\mathcal{R}_{p}}\left[-\log(\sqrt{2\pi}\sigma)-\frac{V_{r}^{2}}{2\sigma^{2}}\right]+\sum_{r\in\mathcal{R}_{0}}\log\left(\Psi(V_{r})\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Gradiant 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial l}{\partial\alpha_{j}}=\sum_{r\in\mathcal{R}_{p}}\frac{V_{r}}{\sigma^{2}}X_{rj}-\sum_{r\in\mathcal{R}_{0}}\frac{\phi(V_{r})}{\Phi(V_{r})}X_{rj}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Optimal consumption
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+v(y,I,\xi)=\max_{k}\left\{ E_{Q_{k}}\left[\underbrace{\max_{c}u(c(Q_{k}))-C(I'(Q_{k}))+\omega(k,y)+\beta E[v(y',I',\xi')}_{V^{c}(y,I;k)}\right]+\xi_{k}\right\} 
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $V^{c}(s_{t};k)$
+\end_inset
+
+ denote the value function of choice 
+\begin_inset Formula $k$
+\end_inset
+
+ at state 
+\begin_inset Formula $s_{t}$
+\end_inset
+
+, defined as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+V^{c}(y,I;k) & =\max_{c}u(c)-C(I')+\omega(k,y)+\beta E_{y',I',\xi'}\left[v(y',I',\xi'|y,I,\nu,k,c)\right]\\
+ & =\max_{c}u(c)-C(I')+\omega(k,y)+\beta E_{y',I',\xi'}\left[\max_{j}\left\{ E_{Q_{j}}\left[V^{c}(y',I';j\right]+\xi'_{j}\right\} \right]\\
+ & =\max_{c}u(c)-C(I')+\omega(k,y)+\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}V^{c}(y',I';j)dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+First order condition (FOC) 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial u}{\partial c}-\frac{\partial C(I')}{\partial I'}\frac{\partial I'}{\partial c}+\beta\frac{\partial I'}{\partial c}\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)=0
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Envelop condition (EC) with respect to state 
+\begin_inset Formula $I$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial V^{c}(y,I;k)}{\partial I}=-\frac{\partial C(I')}{\partial I'}\frac{\partial I'}{\partial I}+\beta\frac{\partial I'}{\partial I}\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since the state transition 
+\begin_inset Formula $I'=I+Q_{k}-c$
+\end_inset
+
+, then 
+\begin_inset Formula $\frac{\partial I'}{\partial I}=1$
+\end_inset
+
+ and 
+\begin_inset Formula $\frac{\partial I'}{\partial c}=-1$
+\end_inset
+
+.
+ We can rewrite the two conditions above as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{cases}
+\text{FOC} & \frac{\partial u}{\partial c}+\frac{\partial C(I')}{\partial I'}-\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)=0\\
+\text{EC} & \frac{\partial V^{c}(y,I;k)}{\partial I}=-\frac{\partial C(I')}{\partial I'}+\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\frac{\partial V^{c}(y',I';j)}{\partial I'}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then two conditions give
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\frac{\partial V^{c}(y,I;k)}{\partial I}=\frac{\partial u}{\partial c}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The form of our utility function is quadratic and the transition is linear,
+ so 
+\begin_inset Formula $V^{c}$
+\end_inset
+
+ is of a linear form in the state variable.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+V^{c}(y,I;k)=\kappa_{1}I+\kappa_{2}y
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+From the linear form, we have 
+\begin_inset Formula $\frac{\partial V^{c}(y',I';j)}{\partial I'}=\kappa_{1}$
+\end_inset
+
+.
+ Substitute it into FOC euqation, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & \frac{\partial u}{\partial c}+\frac{\partial C(I')}{\partial I'}-\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \int_{Q_{j}'}\kappa_{1}dFQ_{j}'+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)=0\\
+\Rightarrow & \frac{\partial u}{\partial c}+\frac{\partial C(I')}{\partial I'}-\beta\int_{y',I',\xi'}\left[\max_{j}\left\{ \kappa_{1}+\xi'_{j}\right\} \right]dF\xi'dFy'dF(I'|I,k,c,\nu)=0\\
+\Rightarrow & \frac{\partial u}{\partial c}+\frac{\partial C(I')}{\partial I'}-\beta\int_{y',I'}\left[\log\left(\sum_{k=1}^{K}\exp(\kappa_{1})\right)\right]dFy'dF(I'|I,k,c,\nu)=0\\
+\Rightarrow & \frac{\partial u}{\partial c}+\frac{\partial C(I')}{\partial I'}-\beta\log\left(\sum_{k=1}^{K}\exp(\kappa_{1})\right)=0\\
+\Rightarrow & 2\lambda_{2}c+\lambda_{1}+\tau_{1}+2\tau_{2}I'-\beta\log(K)-\beta\kappa_{1}=0\\
+\Rightarrow & \kappa_{1}=\frac{1}{\beta}\left[2\lambda_{2}c+\lambda_{1}+\tau_{1}+2\tau_{2}(I+Q_{k}-c)-\beta\log(K)\right]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then we can substitute 
+\begin_inset Formula $\kappa_{1}$
+\end_inset
+
+ back to the joint optimal condition 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & \kappa_{1}=\frac{\partial u}{\partial c}\\
+\Rightarrow & \frac{1}{\beta}\left[2\lambda_{2}c+\lambda_{1}+\tau_{1}+2\tau_{2}(I+Q_{k}-c)-\beta\log(K)\right]=2\lambda_{2}c+\lambda_{1}\\
+\Rightarrow & c=\frac{\tau_{1}+2\tau_{2}(I+Q_{k})-\beta\log(K)+(1-\beta)\lambda_{1}}{2\tau_{2}-2\lambda_{2}(1-\beta)}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The optimal consumption is bounded by 0 and the current inventory level,
+ therefore, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+c^{*}=\min\left(\max\left(\frac{\tau_{1}+2\tau_{2}(I+Q_{k})-\beta\log(K)+(1-\beta)\lambda_{1}}{2\tau_{2}-2\lambda_{2}(1-\beta)},0\right),I+Q_{k}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Value function solution 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+v(y,I,\xi)=\max_{k}\left\{ E_{Q_{k}}\left[\max_{c}u(c,\nu)-C(I')+\omega(k,y)+\beta E_{y',I',\xi'}[v(y',I',\xi')]\right]+\xi_{k}\right\} 
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $W(I,y)$
+\end_inset
+
+ denote the integrated Bellman equation over 
+\begin_inset Formula $\xi$
+\end_inset
+
+, that is,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+W(I,y) & =E_{\xi}\left[v(y,I,\xi)\right]\\
+ & =\log\left[\sum_{k=1}^{K}\exp\left\{ E_{Q_{k}}\left[\max_{c}u(c)-C(I')+\omega(k,y)+\beta E_{y',I',\xi'}[v(y',I',\xi')]\right]\right\} \right]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let choice-speicif value function be 
+\begin_inset Formula $W_{k}(I,y)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+W_{k}(I,y) & =E_{Q_{k}}\left[\max_{c}u(c)-C(I')+\omega(k,y)+\beta E_{y',I',\xi'}[v(y',I',\xi')]\right]\\
+ & =E_{Q_{k}}\left[u(c^{*})-C(I+Q_{k}-c^{*})+\omega(k,y)+\beta E_{y',I',\xi'}[v(y',I',\xi')]\right]\\
+ & =\omega(k,y)+E_{Q_{k}}\left[u(c^{*})\right]+E_{Q_{k}}\left[C(I')\right]+\beta E_{Q_{k},y',I',\xi'}[v(y',I',\xi')]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now we derive the expectation for each component.
+ For the following, we assume that 
+\begin_inset Formula $Q_{k}\sim N(\mu_{Q_{k}},\sigma_{Q_{k}})$
+\end_inset
+
+.
+ Let 
+\begin_inset Formula $\tilde{Q}=I+Q_{k}\sim N(\mu_{k},\sigma_{k})$
+\end_inset
+
+, with 
+\begin_inset Formula $\mu_{k}=I+\mu_{Q_{k}}$
+\end_inset
+
+.
+ Then we write optimal consumption as a linear function of 
+\begin_inset Formula $\tilde{Q}$
+\end_inset
+
+, that is, 
+\begin_inset Formula $c=m+n\tilde{Q}$
+\end_inset
+
+, with
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+m=\frac{\tau_{1}-\beta\log(K)+(1-\beta)\lambda_{1}}{2\tau_{2}-2\lambda_{2}(1-\beta)},n=\frac{2\tau_{2}}{2\tau_{2}-2\lambda_{2}(1-\beta)}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+First consider the expected consumption and its variance.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+E(c^{*}) & =E(0|c\leq0)+E(\tilde{Q}|c\geq\tilde{Q})+E(c|0<c<\tilde{Q})\\
+ & =0+E(\tilde{Q}|(n-1)\tilde{Q}\geq-m)+E(m+n\tilde{Q}|n\tilde{Q}>-m\&(n-1)\tilde{Q}<-m)\\
+ & =E(\tilde{Q}|upper)+E(c|lower<\tilde{Q}<upper)\\
+E(c^{*2}) & =E(\tilde{Q^{2}}|upper)+E(c^{2}|lower<\tilde{Q}<upper)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $c=m+n\tilde{Q}$
+\end_inset
+
+, then we have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+E(c|lower<\tilde{Q}<upper) & =m\left[\Phi(b_{0})-\Phi(a_{0})\right]+nE(\tilde{Q}|lower<\tilde{Q}<upper)\\
+E(c^{2}|lower<\tilde{Q}<upper) & =m^{2}\left[\Phi(b_{0})-\Phi(a_{0})\right]+2mnE(\tilde{Q}|lower<\tilde{Q}<upper)+n^{2}E(\tilde{Q}^{2}|lower<\tilde{Q}<upper)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $I'=I+Q_{k}-c^{*}$
+\end_inset
+
+, then we have
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+E(I') & =E(0|c\geq\tilde{Q})+E(I+Q_{k}|c<0)+E(\tilde{Q}-c|0<c<\tilde{Q})\\
+ & =E(\tilde{Q}|n\tilde{Q}<-m)+E(-m-(n-1)\tilde{Q}|n\tilde{Q}>-m\&(n-1)\tilde{Q}<-m)\\
+ & =E(\tilde{Q}|lower)+E\left[I'|lower<\tilde{Q}<upper\right]\\
+E(I'^{2}) & =E(0|c\geq\tilde{Q})+E(\tilde{Q}^{2}|c<0)+E(I'^{2}|0<c<\tilde{Q})\\
+ & =E(\tilde{Q}^{2}|lower)+E(I'^{2}|lower<\tilde{Q}<upper)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the equation above, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+E(I'|lower<\tilde{Q}<upper) & =-m\left[\Phi(b_{0})-\Phi(a_{0})\right]-(n-1)E(\tilde{Q}|lower<\tilde{Q}<upper)\\
+E(I^{'2}|lower<\tilde{Q}<upper) & =m^{2}\left[\Phi(b_{0})-\Phi(a_{0})\right]+2m(n-1)E(\tilde{Q}|lower<\tilde{Q}<upper)+(n-1)^{2}E(\tilde{Q}^{2}|lower<\tilde{Q}<upper)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+From the properties of truncated normal distribution, we have,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+a_{0}=\frac{-\frac{m}{n}-\mu_{k}}{\sigma_{k}}, & b_{0}=\frac{-\frac{m}{n-1}-\mu_{k}}{\sigma_{k}}\\
+E(\tilde{Q}|lower) & =\mu_{k}-\sigma_{k}\frac{\phi(a_{0})}{\Phi(a_{0})}\\
+E(\tilde{Q}^{2}|lower) & =\mu_{k}^{2}-2\mu_{k}\sigma_{k}\frac{\phi(a_{0})}{\Phi(a_{0})}+\sigma_{k}^{2}\left[1+\frac{a_{0}\phi(a_{0})}{\Phi(a_{0})}\right]\\
+E(\tilde{Q}|upper) & =\mu_{k}+\sigma_{k}\frac{\phi(b_{0})}{1-\Phi(b_{0})}\\
+E(\tilde{Q}^{2}|upper) & =\mu_{k}^{2}+2\mu_{k}\sigma_{k}\frac{\phi(b_{0})}{1-\Phi(b_{0})}+\sigma_{k}^{2}\left[1+\frac{b_{0}\phi(b_{0})}{1-\Phi(b_{0})}\right]\\
+E(\tilde{Q}|lower<\tilde{Q}<upper) & =\mu_{k}-\sigma_{k}\frac{\phi(b_{0})-\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}\\
+E(\tilde{Q}^{2}|lower<\tilde{Q}<upper) & =\mu_{k}^{2}-2\mu_{k}\sigma_{k}\frac{\phi(b_{0})-\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}+\sigma_{k}^{2}\left[1-\frac{b_{0}\phi(b_{0})-a_{0}\phi(a_{0})}{\Phi(b_{0})-\Phi(a_{0})}\right]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The expected flow utility can be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+ & \omega(k,y)+E_{Q_{k}}\left[u(c^{*2})\right]-E_{Q_{k}}\left[C(I')\right]\\
+= & \omega(k,y)+\lambda_{1}E(c^{*})+\lambda_{2}E(c^{*2})-\tau_{1}E(I')-\tau_{2}E(I'^{2})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now let's turn to the continuation value.
+ First, we use Chebychev polynomial to approximate the value function 
+\begin_inset Formula $W(I,y)$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+W(I,y)=\sum_{l=0}^{N_{CB}}\theta_{l}t_{l}(I,y)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We use Gaussian-Hermite quadrature to compute the integral.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+E_{Q_{k},y',I',\xi'}[v(y',I',\xi')] & =E_{Q_{k},y'}\left[W(I',y')\right]\\
+ & =\int_{Q_{k}}\int_{y'}W(I',y')f(y')f(Q_{k})dy'dQ_{k}\\
+ & =\int_{Q_{k}}\int_{y'}\sum_{l=0}^{N_{CB}}\theta_{l}t_{l}(I'(Q_{k}),y')f(y')f(Q_{k})dy'dQ_{k}\\
+ & =\sum_{l=0}^{N_{CB}}\theta_{l}\int_{Q_{k}}\int_{y'}t_{l}(I'(Q_{k}),y')f(y')f(Q_{k})dy'dQ_{k}\\
+ & =\frac{1}{\pi}\sum_{l=0}^{N_{CB}}\theta_{l}\sum_{i=1}^{N_{GH}}\sum_{j=1}^{N_{GH}}t_{l}\left(I'(\mu_{k}+\sqrt{2}\sigma_{Q_{k}}x_{i}^{Q}),\mu_{y}+\sqrt{2}\sigma_{y}x_{j}^{y}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+newpage
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

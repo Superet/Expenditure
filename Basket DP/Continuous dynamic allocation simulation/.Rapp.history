@@ -1,0 +1,1430 @@
+#------------------------------------------------------##
+# Income transition #
+hh_exp$income_real	<- as.numeric(as.character(hh_exp$income_real))#
+n_Inc		<- 8#
+sel			<-  hh_exp$income_real >= 27#
+hh_exp[sel,"income_real"] <- 27#
+tmp			<- recode(hh_exp$income_real, hh_exp$income_midvalue, n_Inc)#
+Inc_nodes	<- sort(unique(tmp[,2]))#
+hh_exp$income_nodes <- tmp[,1]#
+#
+# Lag income by 1 year#
+tmp		<- data.table(hh_exp)#
+tmp.lab	<- c("Under 25k", "25k-29,999", "30k-39,999","40k-49,999","50k-59,999","60k-69,999","70k-99,999","100k+")#
+tmp$income_nodes	<- factor(tmp$income_nodes, levels=1:n_Inc, labels=tmp.lab)#
+tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(household_code, recession, year)]#
+tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(household_code)]#
+#
+# Transition table: replace 0 diagal with 1 if nobody belongs to some income level.#
+sel 	<- tmp$recession == 1#
+tmp.tab	<- rbind(mytransition(tmp[!sel,income_nodes], tmp[!sel,income_forward] ), #
+				 mytransition(tmp[sel,income_nodes], tmp[sel,income_forward]))#
+#
+ggtmp	<- rbind(data.frame(melt(tmp.tab[1:n_Inc,]), recession = 0), #
+				 data.frame(melt(tmp.tab[-(1:n_Inc),]), recession = 1))				 #
+# ggplot(ggtmp, aes(Var2, value, fill = factor(recession))) + geom_bar(stat = "identity", position=position_dodge(width = .5)) + #
+# 		facet_grid(Var1 ~ .) + labs(x = "Future income")#
+tmpn	<- nrow(tmp.tab)/2#
+ord		<- c(rbind(1:tmpn, 1:tmpn + tmpn))#
+tmp.tab	<- tmp.tab[ord,]#
+cat("Transition probability of income process:\n"); print(tmp.tab); cat("\n")#
+#
+sel1	<- tmp$year == 2007#
+sel2	<- tmp$year == 2008#
+tmp.tab1<- rbind(mytransition(tmp[sel1,income_nodes], tmp[sel1,income_forward]), #
+				 mytransition(tmp[sel2,income_nodes], tmp[sel2,income_forward]))#
+tmp.tab1<- tmp.tab1[ord,]#
+cat("Transition probability of income process (2007 vs 2008):\n"); print(tmp.tab); cat("\n")
+head(tmp)
+# Lag income by 1 year#
+tmp		<- data.table(hh_exp)#
+tmp.lab	<- c("Under 25k", "25k-29,999", "30k-39,999","40k-49,999","50k-59,999","60k-69,999","70k-99,999","100k+")#
+tmp$income_nodes	<- factor(tmp$income_nodes, levels=1:n_Inc, labels=tmp.lab)#
+tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(first_income, household_code, recession, year)]#
+tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(first_income, household_code)]
+# Expectation and variance#
+tmp		<- data.table(hh_exp)#
+tmp.lab	<- c("Under 25k", "25k-29,999", "30k-39,999","40k-49,999","50k-59,999","60k-69,999","70k-99,999","100k+")#
+tmp$income_nodes	<- factor(tmp$income_nodes, levels=1:n_Inc, labels=tmp.lab)#
+tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(first_income, household_code, year)]
+head(tmp)
+setkeyv(tmp, c("first_income","household_code","year"))
+tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(first_income, household_code)]
+head(tmp)
+tmp[1:10,]
+?split
+tmp1	<- split(tmp, paste(tmp$first_income, tmp$household_year, sep="*"))
+str(tmp1)
+tmp$seg	<- paste(tmp$first_income, tmp$year, sep="-")
+head(tmp)
+tmp1	<- split(tmp, tmp$seg)
+length(tmp1)
+str(tmp1[[1]])
+tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$forward))
+# Expectation and variance#
+tmp		<- data.table(hh_exp)#
+tmp.lab	<- c("Under 25k", "25k-29,999", "30k-39,999","40k-49,999","50k-59,999","60k-69,999","70k-99,999","100k+")#
+tmp$income_nodes	<- factor(tmp$income_nodes, levels=1:n_Inc, labels=tmp.lab)#
+tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(first_income, household_code, year)]#
+setkeyv(tmp, c("first_income","household_code","year"))#
+tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(first_income, household_code)]#
+tmp$income_forward	<- factor(tmp$income_forward, levels = 1:n_Inc, labels=tmp.lab)#
+tmp$seg	<- paste(tmp$first_income, tmp$year, sep="-")#
+tmp1	<- split(tmp, tmp$seg)
+str(tmp1[[1]])
+tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$forward))
+tmp		<- data.frame(tmp)#
+sel		<- tmp$year != 2010#
+tmp1	<- split(tmp[sel,], tmp[sel,"seg"])
+tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$forward))
+mytransition(tmp1[[1]]$income_nodes, tmp1[[1]]$income_forward)
+tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$income_forward))
+str(tmp2)
+tmp.mat	<- rep(1, n_Inc) %*% t(Inc_nodes)
+tmp.mat
+tmp2	<- sapply(tmp2, function(p) rowSums(p*tmp.mat^2) - rowSums(p*tmp.mat)^2)
+str(tmp2)
+tmp2
+tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$income_forward))
+tmp2[[1]]
+table(tmp[sel,"seg"])
+length(tmp1)
+length(tmp2)
+sel		<- tmp$year != 2010#
+tmp1	<- split(tmp[sel,], tmp[sel,"seg"])#
+tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$income_forward))#
+tmp.mat	<- rep(1, n_Inc) %*% t(Inc_nodes)
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames(names(tmp1), c("Expectation", "Variance")))
+names(tmp1)
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "Variance")))
+tmp3
+i <- 1
+tmp2[[i]]*tmp.mat
+ee	<- rowSums(tmp2[[i]]*tmp.mat)#
+	vv	<- rowSums(tmp2[[i]]*tmp.mat^2) - ee^2
+ee
+vv
+str(tmp1[[1]])
+table(tmp1[[i]]$income_nodes)
+table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])
+sum(tmp.wt * ee)
+tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])
+sum(tmp.wt * ee)
+vv
+tmp_wt
+tmp.wt
+tmp.wt^2 * vv
+sum(tmp.wt^2 * vv)
+sd(sum(tmp.wt^2 * vv))
+sqrt(sum(tmp.wt^2 * vv))
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "Variance")))#
+for(i in 1:length(tmp2)){#
+	ee			<- rowSums(tmp2[[i]]*tmp.mat)#
+	vv			<- rowSums(tmp2[[i]]*tmp.mat^2) - ee^2#
+	tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])#
+	tmp3[i,1]	<- sum(tmp.wt * ee)#
+	tmp3[i,2]	<- sqrt(sum(tmp.wt^2 * vv))#
+}
+tmp3
+cpi
+Inc_nodes
+names(tmp2)
+cpi
+i%%6 + 1
+i
+i <- 6
+i%%6 + 1
+cpi[(i%%6 + 1)]
+i
+cpi[(i%%6 + 1),"cpi"]
+i
+cpi[(c(1:24)%%6 + 1),"cpi"]
+1%%6
+cpi[(c(1:24)%%6 ),"cpi"]
+names(tmp1)
+cpi
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "SD")))#
+for(i in 1:length(tmp2)){#
+	tmp_mat1	<- tmp.mat/cpi[(i%%6),"cpi"]#
+	ee			<- rowSums(tmp2[[i]]*tmp.mat1)#
+	vv			<- rowSums(tmp2[[i]]*tmp.mat1^2) - ee^2#
+	tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])#
+	tmp3[i,1]	<- sum(tmp.wt * ee)#
+	tmp3[i,2]	<- sqrt(sum(tmp.wt^2 * vv))#
+}
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "SD")))#
+for(i in 1:length(tmp2)){#
+	tmp.mat1	<- tmp.mat/cpi[(i%%6),"cpi"]#
+	ee			<- rowSums(tmp2[[i]]*tmp.mat1)#
+	vv			<- rowSums(tmp2[[i]]*tmp.mat1^2) - ee^2#
+	tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])#
+	tmp3[i,1]	<- sum(tmp.wt * ee)#
+	tmp3[i,2]	<- sqrt(sum(tmp.wt^2 * vv))#
+}
+i
+i%%6
+names(tmp1)
+7%%6
+sel			<- ifelse(i%%6==0, 1, i%%6)
+sel
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "SD")))#
+for(i in 1:length(tmp2)){#
+	sel			<- ifelse(i%%6==0, 1, i%%6)#
+	tmp.mat1	<- tmp.mat/cpi[sel,"cpi"]#
+	ee			<- rowSums(tmp2[[i]]*tmp.mat1)#
+	vv			<- rowSums(tmp2[[i]]*tmp.mat1^2) - ee^2#
+	tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])#
+	tmp3[i,1]	<- sum(tmp.wt * ee)#
+	tmp3[i,2]	<- sqrt(sum(tmp.wt^2 * vv))#
+}
+tmp3
+5e01
+5e00
+load("/Users/chaoqunchen/Desktop/6_est_seg4_v1.rdata")
+library(ggplot2)#
+library(reshape2)#
+library(data.table)#
+library(plm)#
+library(gridExtra)#
+library(scales)
+#############################
+# Construct data variables # #
+#############################
+fmt_name 	<- as.character(sort(unique(fmt_attr$channel_type)))#
+R			<- length(fmt_name)#
+sel			<- paste("DOLP_", gsub("\\s", "_", fmt_name), sep="")#
+hh_exp$y 	<- rowSums(hh_exp[,sel])#
+hh_exp$income_real <- factor(hh_exp$income_real)#
+sel1		<- gsub("DOLP", "SHR", sel)#
+for(i in 1:length(fmt_name)){#
+	hh_exp[,sel1[i]] <- hh_exp[,sel[i]]/hh_exp$y#
+}#
+hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))#
+hh_exp$income_group <- factor(hh_exp$income_group, levels=paste("Qt",1:4,sep=""))#
+hh_exp$famsize		<- factor(hh_exp$famsize, levels = c("Single","Two", "Three+"))#
+hh_exp$Q			<- hh_exp$food_quant + hh_exp$nonedible_quant#
+mycut 				<- c(0,1,2,3,5,14) + .5#
+hh_exp$d			<- as.numeric(cut(hh_exp$num_day, mycut, labels=1:5))#
+hh_exp[is.na(hh_exp$d),"d"] <- 0#
+hh_exp[is.na(hh_exp$y),"y"] <- 0#
+hh_exp[is.na(hh_exp$dol_purchases),"dol_purchases"] <- 0#
+hh_exp[is.na(hh_exp$num_day),"num_day"] <- 0#
+cpi 				<- unique(price_dat[,c("year","cpi")])
+###########################
+# Simply summary statics # #
+###########################
+# Segment households #
+panelist	<- data.table(hh_exp)#
+setkeyv(panelist, c("household_code","year","biweek"))#
+panelist	<- panelist[,list(first_income = income_group[1], first_famsize = famsize[1]), by=list(household_code)]#
+table(panelist$first_income, panelist$first_famsize)#
+seg_index	<- 1:(length(levels(panelist$first_income))*length(levels(panelist$first_famsize)))#
+names(seg_index) <- paste(rep(levels(panelist$first_income), length(levels(panelist$first_famsize))), #
+						  rep(levels(panelist$first_famsize), each=length(levels(panelist$first_income)) ), sep="-")#
+tmp			<- paste(panelist$first_income, panelist$first_famsize, sep="-")#
+panelist$segment <- seg_index[tmp]#
+hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "segment","first_income")], by="household_code", all.x = TRUE)
+###################
+# Income pattern # #
+###################
+pan_yr		<- data.table(hh_exp)#
+pan_yr		<- pan_yr[,list(Income = unique(income_midvalue)), by = list(first_income, household_code, year)]#
+pan_yr		<- merge(pan_yr, cpi, by="year", all.x=T)#
+pan_yr$Income	 <- pan_yr$Income / pan_yr$cpi#
+pan_yr$ln_income <- log(pan_yr$Income)#
+pan_yr$recession <- 1 * (pan_yr$year >= 2008)#
+pan_yr		<- data.frame(pan_yr)
+plots		<- list(NULL)#
+plots[[1]]	<- ggplot(pan_yr, aes(year, Income, linetype = first_income)) + geom_smooth(method=lm, formula = y ~ x + I(x^2) + I(x^3)) + #
+					guides(linetype = guide_legend(title = "Segment"))#
+#
+pan_yr$year <- factor(pan_yr$year)#
+summary(lm(Income ~ year*first_income, data = pan_yr))#
+myfit 		<- plm(Income ~ first_income*year, data=pan_yr, index = c("household_code","year"), model="within")#
+tmp			<- summary(myfit)#
+cat("Income trend regression:\n"); print(tmp); cat("\n")#
+#
+myfit1		<- plm(Income ~ first_income*recession, data=pan_yr, index = c("household_code","year"), model="within")#
+tmp1		<- summary(myfit1)#
+cat("Income trend regression:\n"); print(tmp1); cat("\n")
+tmp			<- unique(pan_yr[,c("first_income","year")])#
+tmp$year	<- factor(tmp$year)#
+tmpx		<- model.matrix(~first_income*year, data = tmp)[,-1]#
+selcol		<- setdiff(1:ncol(tmpx), which(substr(colnames(tmpx), 1, 12) == "first_income"))#
+tmpx		<- tmpx[,selcol]#
+identical(colnames(tmpx), names(coef(myfit)))#
+ggtmp		<- tmpx %*% coef(myfit)#
+ggtmp		<- cbind(tmp, ggtmp)#
+sel 		<- pan_yr$year == 2004#
+tmp			<- tapply(pan_yr[sel,"Income"], pan_yr[sel,"first_income"], mean)#
+ggtmp$Income<- (ggtmp$ggtmp + tmp[ggtmp$first_income])/100#
+ggtmp$year	<- as.numeric(as.character(ggtmp$year))#
+plots[[2]]	<- ggplot(ggtmp, aes(year, Income, linetype = first_income)) + geom_line() + #
+			    		labs(x = "Year", y = "Income($1000)") + #
+						guides(linetype = guide_legend(title = "Segment"))
+plots[[1]]
+head(tmp)
+tmp			<- unique(pan_yr[,c("first_income","year")])#
+tmp$year	<- factor(tmp$year)#
+tmpx		<- model.matrix(~first_income*year, data = tmp)[,-1]
+colnames(tmpx)
+names(coef(myfit))
+which(substr(colnames(tmpx), 1, 12) == "first_income")
+tmpx		<- model.matrix(~first_income*year, data = tmp)[,-4]
+colnames(tmpx)
+tmpx		<- model.matrix(~first_income*year, data = tmp)[,-(1:4)]
+colnames(tmpx)
+identical(colnames(tmpx), names(coef(myfit)))
+ggtmp		<- tmpx %*% coef(myfit)#
+ggtmp		<- cbind(tmp, ggtmp)#
+sel 		<- pan_yr$year == 2004
+tmp			<- tapply(pan_yr[sel,"Income"], pan_yr[sel,"first_income"], mean)
+ggtmp$Income<- (ggtmp$ggtmp + tmp[ggtmp$first_income])/1000#
+ggtmp$year	<- as.numeric(as.character(ggtmp$year))
+ggplot(ggtmp, aes(year, Income, linetype = first_income)) + geom_line() + #
+			    		labs(x = "Year", y = "Income($1000)") + #
+						guides(linetype = guide_legend(title = "Segment"))
+plot.wd
+ww
+getwd()
+plot.wd 	<- getwd()#
+ww			<- 6.5#
+ww1			<- 8#
+ar 			<- .6
+pdf(paste(plot.wd,"/graph_income_within.pdf",sep=""), width = ww, height = ww*ar)#
+	print(plots[[2]])#
+	dev.off()
+plots[[2]]	<- ggplot(ggtmp, aes(year, Income, linetype = first_income)) + geom_line() + #
+			    		labs(x = "Year", y = "Income($1000)") + #
+						guides(linetype = guide_legend(title = "Segment"))
+pdf(paste(plot.wd,"/graph_income_within.pdf",sep=""), width = ww, height = ww*ar)#
+	print(plots[[2]])#
+	dev.off()
+#------------------------------------------------------##
+# Income transition #
+hh_exp$income_real	<- as.numeric(as.character(hh_exp$income_real))#
+n_Inc		<- 8#
+sel			<-  hh_exp$income_real >= 27#
+hh_exp[sel,"income_real"] <- 27#
+tmp			<- recode(hh_exp$income_real, hh_exp$income_midvalue, n_Inc)#
+Inc_nodes	<- sort(unique(tmp[,2]))#
+hh_exp$income_nodes <- tmp[,1]#
+#
+# Lag income by 1 year#
+tmp		<- data.table(hh_exp)#
+tmp.lab	<- c("Under 25k", "25k-29,999", "30k-39,999","40k-49,999","50k-59,999","60k-69,999","70k-99,999","100k+")#
+tmp$income_nodes	<- factor(tmp$income_nodes, levels=1:n_Inc, labels=tmp.lab)#
+tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(first_income, household_code, recession, year)]#
+setkeyv(tmp, c("first_income","household_code","year"))#
+tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(first_income, household_code)]#
+#
+# Transition table: replace 0 diagal with 1 if nobody belongs to some income level.#
+sel 	<- tmp$recession == 1#
+tmp.tab	<- rbind(mytransition(tmp[!sel,income_nodes], tmp[!sel,income_forward] ), #
+				 mytransition(tmp[sel,income_nodes], tmp[sel,income_forward]))#
+#
+ggtmp	<- rbind(data.frame(melt(tmp.tab[1:n_Inc,]), recession = 0), #
+				 data.frame(melt(tmp.tab[-(1:n_Inc),]), recession = 1))				 #
+# ggplot(ggtmp, aes(Var2, value, fill = factor(recession))) + geom_bar(stat = "identity", position=position_dodge(width = .5)) + #
+# 		facet_grid(Var1 ~ .) + labs(x = "Future income")#
+tmpn	<- nrow(tmp.tab)/2#
+ord		<- c(rbind(1:tmpn, 1:tmpn + tmpn))#
+tmp.tab	<- tmp.tab[ord,]#
+cat("Transition probability of income process:\n"); print(tmp.tab); cat("\n")#
+#
+sel1	<- tmp$year == 2007#
+sel2	<- tmp$year == 2008#
+tmp.tab1<- rbind(mytransition(tmp[sel1,income_nodes], tmp[sel1,income_forward]), #
+				 mytransition(tmp[sel2,income_nodes], tmp[sel2,income_forward]))#
+tmp.tab1<- tmp.tab1[ord,]#
+cat("Transition probability of income process (2007 vs 2008):\n"); print(tmp.tab); cat("\n")
+# Expectation and variance#
+tmp		<- data.table(hh_exp)#
+tmp.lab	<- c("Under 25k", "25k-29,999", "30k-39,999","40k-49,999","50k-59,999","60k-69,999","70k-99,999","100k+")#
+tmp$income_nodes	<- factor(tmp$income_nodes, levels=1:n_Inc, labels=tmp.lab)#
+tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(first_income, household_code, year)]#
+setkeyv(tmp, c("first_income","household_code","year"))#
+tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(first_income, household_code)]#
+tmp$income_forward	<- factor(tmp$income_forward, levels = 1:n_Inc, labels=tmp.lab)#
+tmp$seg	<- paste(tmp$first_income, tmp$year, sep="-")#
+#
+tmp		<- data.frame(tmp)#
+sel		<- tmp$year != 2010#
+tmp1	<- split(tmp[sel,], tmp[sel,"seg"])#
+tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$income_forward))#
+tmp.mat	<- rep(1, n_Inc) %*% t(Inc_nodes/cpi[])#
+#
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "SD")))#
+for(i in 1:length(tmp2)){#
+	sel			<- ifelse(i%%6==0, 1, i%%6)#
+	tmp.mat1	<- tmp.mat/cpi[sel,"cpi"]#
+	ee			<- rowSums(tmp2[[i]]*tmp.mat1)#
+	vv			<- rowSums(tmp2[[i]]*tmp.mat1^2) - ee^2#
+	tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])#
+	tmp3[i,1]	<- sum(tmp.wt * ee)#
+	tmp3[i,2]	<- sqrt(sum(tmp.wt^2 * vv))#
+}
+tmp.mat	<- rep(1, n_Inc) %*% t(Inc_nodes/cpi)
+Inc_nodes
+tmp.mat	<- rep(1, n_Inc) %*% t(Inc_nodes)
+tmp.mat
+tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "SD")))#
+for(i in 1:length(tmp2)){#
+	sel			<- ifelse(i%%6==0, 1, i%%6)#
+	tmp.mat1	<- tmp.mat/cpi[sel,"cpi"]#
+	ee			<- rowSums(tmp2[[i]]*tmp.mat1)#
+	vv			<- rowSums(tmp2[[i]]*tmp.mat1^2) - ee^2#
+	tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])#
+	tmp3[i,1]	<- sum(tmp.wt * ee)#
+	tmp3[i,2]	<- sqrt(sum(tmp.wt^2 * vv))#
+}
+tmp3
+tmpn	<- length(2004:2009)
+tmpn
+strsplit(rownames(tmp3))
+rownames(tmp3)
+strsplit(rownames(tmp3),"-")
+do.call(cbind, strsplit(rownames(tmp3),"-"))
+do.call(rbind, strsplit(rownames(tmp3),"-"))
+tmps	<- do.call(rbind, strsplit(rownames(tmp3),"-"))#
+tmp		<- split(tmp3, tmps[,1])
+str(tmp)
+tmp[[1]]
+tmp		<- split(data.frame(tmp3), tmps[,1])
+str(tmp)
+heaD(tmp[[1]])
+head(tmp[[1]])
+tmp.tab	<- do.call(cbind, tmp)
+tmp.tab
+tmpcsv
+tmpcsv		<- paste(plot.wd,"/4_nielsen_regtab_larger.csv", sep="")
+f		<- file(tmpcsv, "w")#
+	writeLines("Output from 1_nielsen_4_sumstat.r\n", f)#
+	close(f)
+if(write2csv){#
+	f			<- file(tmpcsv, "at")#
+	writeLines("Expectation and sd of future income:", f)#
+	write.csv(tmp.tab, f)#
+	close(f)#
+}
+f			<- file(tmpcsv, "at")#
+	writeLines("Expectation and sd of future income:", f)#
+	write.csv(tmp.tab, f)#
+	close(f)
+##############################
+# Expenditure share pattern # #
+##############################
+# Raw data pattern#
+ggtmp		<- data.table(hh_exp)#
+ggtmp		<- subset(ggtmp, !is.na(first_income))#
+ggtmp		<- ggtmp[,list(DOLP_Convenience_Store = sum(DOLP_Convenience_Store), DOLP_Discount_Store = sum(DOLP_Discount_Store), #
+							DOLP_Dollar_Store = sum(DOLP_Dollar_Store), DOLP_Drug_Store = sum(DOLP_Drug_Store), #
+							DOLP_Grocery = sum(DOLP_Grocery), DOLP_Warehouse_Club = sum(DOLP_Warehouse_Club), y = sum(y)), #
+					by = list(first_income, biweek)]#
+ggtmp		<- data.frame(ggtmp)#
+ggtmp[,3:(2+R)]	<- ggtmp[,3:(2+R)]/ggtmp$y#
+ggtmp		<- melt(ggtmp[,-ncol(ggtmp)], id.vars=c("first_income", "biweek"))#
+ggtmp		<- subset(ggtmp, !is.na(variable))#
+tmp			<- tapply(ggtmp$value, ggtmp$variable, mean)#
+tmp			<- names(tmp)[order(tmp,decreasing=T)]#
+tmp1		<- gsub("_", " ", gsub("DOLP_","",tmp))#
+ggtmp$variable	<- factor(as.character(ggtmp$variable), levels=tmp, labels=tmp1)#
+Rc_t		<- min(hh_exp[hh_exp$recession == 1, "biweek"])
+head(ggtmp)
+#######################
+# Mediation analysis ##
+#######################
+# Plot conditional expenditure share. #
+seq_y 	<- seq(10, 500, 10)#
+selcol	<- paste("SHR_", gsub("\\s","_", fmt_name),sep="")#
+tmp		<- subset(hh_exp[,c("first_income", "dol_purchases", "d", selcol)], dol_purchases > 0)#
+#
+tmp$ybin<- cut(tmp$dol_purchases, c(0,seq_y), include.lowest = T, label=seq_y)#
+tmp[is.na(tmp$ybin), "ybin"] <- max(seq_y)#
+tmp		<- data.table(melt(tmp[,c("d","ybin",selcol)], id.vars=c("ybin","d")))#
+tmp		<- tmp[,list(value = mean(value)), by = list(ybin, d, variable)]#
+tmp$variable <- factor(tmp$variable, levels = selcol, labels=fmt_name)#
+tmp$d	<- factor(tmp$d, levels=1:5, labels=c("1", "2", "3","4-5","6+"))
+tmp1	<- seq(10, 500, 90)
+print(ggplot(tmp, aes(ybin, value, fill = variable)) + geom_bar(stat ="identity") + #
+				facet_wrap(~d) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+head(tmp)
+tmp1	<- tapply(tmp$value, tmp$variable, mean)
+tmp1
+ord		<- names(tmp1)[order(tmp1)]
+ord
+selcol
+ord		<- order(tmp1)
+ord
+fmt_name[ord]
+tmp$variable <- factor(tmp$variable, levels = selcol[ord], labels=fmt_name[ord])
+tmp1	<- seq(10, 500, 90)
+print(ggplot(tmp, aes(ybin, value, fill = variable)) + geom_bar(stat ="identity") + #
+				facet_wrap(~d) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+head(tmp)
+#######################
+# Mediation analysis ##
+#######################
+# Plot conditional expenditure share. #
+seq_y 	<- seq(10, 500, 10)#
+selcol	<- paste("SHR_", gsub("\\s","_", fmt_name),sep="")#
+tmp		<- subset(hh_exp[,c("first_income", "dol_purchases", "d", selcol)], dol_purchases > 0)#
+#
+tmp$ybin<- cut(tmp$dol_purchases, c(0,seq_y), include.lowest = T, label=seq_y)#
+tmp[is.na(tmp$ybin), "ybin"] <- max(seq_y)#
+tmp		<- data.table(melt(tmp[,c("d","ybin",selcol)], id.vars=c("ybin","d")))#
+tmp		<- tmp[,list(value = mean(value)), by = list(ybin, d, variable)]#
+tmp$d	<- factor(tmp$d, levels=1:5, labels=c("1", "2", "3","4-5","6+"))#
+tmp1	<- tapply(tmp$value, tmp$variable, mean)#
+ord		<- order(tmp1)#
+tmp$variable <- factor(tmp$variable, levels = selcol[ord], labels=fmt_name[ord])
+head(tmp)
+tmp1	<- seq(10, 500, 90)
+print(ggplot(tmp, aes(ybin, value, fill = variable)) + geom_bar(stat ="identity") + #
+				facet_wrap(~d) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+tmp1	<- tapply(tmp$value, tmp$variable, mean)#
+ord		<- order(tmp1, decreasing = T)#
+tmp$variable <- factor(tmp$variable, levels = selcol[ord], labels=fmt_name[ord])
+head(tmp)
+#######################
+# Mediation analysis ##
+#######################
+# Plot conditional expenditure share. #
+seq_y 	<- seq(10, 500, 10)#
+selcol	<- paste("SHR_", gsub("\\s","_", fmt_name),sep="")#
+tmp		<- subset(hh_exp[,c("first_income", "dol_purchases", "d", selcol)], dol_purchases > 0)#
+#
+tmp$ybin<- cut(tmp$dol_purchases, c(0,seq_y), include.lowest = T, label=seq_y)#
+tmp[is.na(tmp$ybin), "ybin"] <- max(seq_y)#
+tmp		<- data.table(melt(tmp[,c("d","ybin",selcol)], id.vars=c("ybin","d")))#
+tmp		<- tmp[,list(value = mean(value)), by = list(ybin, d, variable)]#
+tmp$d	<- factor(tmp$d, levels=1:5, labels=c("1", "2", "3","4-5","6+"))#
+tmp1	<- tapply(tmp$value, tmp$variable, mean)#
+ord		<- order(tmp1, decreasing = T)#
+tmp$variable <- factor(tmp$variable, levels = selcol[ord], labels=fmt_name[ord])
+tmp1	<- seq(10, 500, 90)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+?scale_fill_brewer
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer(trans = "reverse") + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+#######################
+# Mediation analysis ##
+#######################
+# Plot conditional expenditure share. #
+seq_y 	<- seq(10, 500, 10)#
+selcol	<- paste("SHR_", gsub("\\s","_", fmt_name),sep="")#
+tmp		<- subset(hh_exp[,c("first_income", "dol_purchases", "d", selcol)], dol_purchases > 0)#
+#
+tmp$ybin<- cut(tmp$dol_purchases, c(0,seq_y), include.lowest = T, label=seq_y)#
+tmp[is.na(tmp$ybin), "ybin"] <- max(seq_y)#
+tmp		<- data.table(melt(tmp[,c("d","ybin",selcol)], id.vars=c("ybin","d")))#
+tmp		<- tmp[,list(value = mean(value)), by = list(ybin, d, variable)]#
+tmp$d	<- factor(tmp$d, levels=1:5, labels=c("1", "2", "3","4-5","6+"))#
+tmp1	<- tapply(tmp$value, tmp$variable, mean)#
+ord		<- order(tmp1)#
+tmp$variable <- factor(tmp$variable, levels = selcol[ord], labels=fmt_name[ord])
+tmp1	<- seq(10, 500, 90)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+unique(tmp$ybin)
+levels(tmp$ybin)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme(legend.position = "bottom") + #
+				theme_bw() #
+		)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme(legend.position = "top") + #
+				theme_bw() #
+		)
+tmp1	<- c(10, 250, 500)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme(legend.position = "top") + #
+				theme_bw() #
+		)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				theme(legend.position = "bottom") + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) + #
+				theme_bw() #
+		)
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				theme(legend.position = "bottom") + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) #
+		)
+pdf(paste(plot.wd, "/graph_conditional_share.pdf",sep=""), width =ww, height = ww*ar)#
+	print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				theme(legend.position = "bottom") + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE)) #
+				# theme_bw() #
+		) #
+	dev.off()
+print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				theme(legend.position = "bottom") + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE, nrow=2)) #
+				# theme_bw() #
+		)
+tmp1	<- c(10, 250, 500)#
+	pdf(paste(plot.wd, "/graph_conditional_share.pdf",sep=""), width =ww, height = ww*ar)#
+	print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				theme(legend.position = "bottom") + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE, nrow=2)) #
+				# theme_bw() #
+		) #
+	dev.off()
+tmp1	<- c(10, 250, 500)#
+	pdf(paste(plot.wd, "/graph_conditional_share.pdf",sep=""), width =ww1, height = ww1*ar)#
+	print(ggplot(tmp, aes(ybin, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat ="identity") + #
+				facet_wrap(~d, nrow = 1) + #
+				scale_x_discrete(breaks = tmp1) + #
+				scale_y_continuous(labels=percent) + #
+				labs(x = "Expenditure", y = "Expenditure share") + #
+				scale_fill_brewer() + #
+				theme(legend.position = "bottom") + #
+				guides(fill = guide_legend(title = "Retail format", reverse = TRUE, nrow=2)) #
+				# theme_bw() #
+		) #
+	dev.off()
+load("/Users/chaoqunchen/Desktop/7_effect_aggr.rdata")
+library(ggplot2)#
+library(reshape2)#
+library(RColorBrewer)#
+library(Rcpp)#
+library(RcppArmadillo)#
+library(maxLik)#
+library(evd)#
+library(data.table)#
+library(scales)#
+library(gridExtra)
+ls()
+seq_y		<- unique(marg_y_all$y)
+seq_y		<- unique(marg_y$y)
+#----------------------------------------------------------# #
+# Elasticty of retail attributes#
+tmpdata		<- merge(cond_marg_all, mkt_wt[,c("scantrack_market_descr","mkt_wt")], by.x="mktyr", by.y="scantrack_market_descr", all.x=T)#
+tmp			<- melt(yd_wt)#
+names(tmp)	<- c("seg_id","y","d","yd_wt")#
+tmp[,"y"]	<- seq_y[tmp$y]#
+tmpdata		<- merge(tmpdata, tmp, by=c("seg_id","y","d"), all.x=T)#
+tmp			<- c(seg_wt)#
+tmpdata$seg_wt	<- tmp[tmpdata$seg_id]
+# Overall elasticity#
+tmp.dt		<- data.table(tmpdata)#
+tmp.dt		<- tmp.dt[,list(e1 = sum(e.s1.1*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.1))*mkt_wt*yd_wt*seg_wt), #
+							e2 = sum(e.s1.2*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.2))*mkt_wt*yd_wt*seg_wt),#
+							e3 = sum(e.s1.3*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.3))*mkt_wt*yd_wt*seg_wt), #
+							e4 = sum(e.s1.4*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.4))*mkt_wt*yd_wt*seg_wt),#
+							e5 = sum(e.s1.5*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.5))*mkt_wt*yd_wt*seg_wt), #
+							e6 = sum(e.s1.6*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.6))*mkt_wt*yd_wt*seg_wt)), #
+						by = list(Var, X)]#
+tmp.dt		<- tmp.dt[order(tmp.dt$Var, tmp.dt$X)]#
+cat("Aggregated elasticity matrix:\n"); print(tmp.dt); cat("\n")
+# Compute elasticity conditional on positive s0#
+mys_min		<- 1e-4#
+sel0		<- paste("s0.", 1:R, sep="")#
+sel1		<- paste("s1.", 1:R, sep="")#
+tmp0		<- tmpdata[,sel0]#
+summary(tmp0)#
+tmp0[tmp0<mys_min]	<- NA#
+#
+tmp.e		<- as.matrix(((tmpdata[,sel1] - tmp0)/tmp0)/(mychange/.01) * 100)#
+summary(tmp.e)#
+myalpha		<- .2#
+tmp			<- apply(tmp.e, 2, quantile, c(.5*myalpha, 1 - .5*myalpha), na.rm=T)#
+for(i in 1:ncol(tmp.e)){#
+	sel		<- tmp.e[,i] < tmp[1,i] | tmp.e[,i] > tmp[2,i]#
+	tmp.e[sel,i] <- NA#
+}#
+summary(tmp.e)#
+tmpdata		<- cbind(tmpdata, e = tmp.e)
+mychange <- .1
+tmp.e		<- as.matrix(((tmpdata[,sel1] - tmp0)/tmp0)/(mychange/.01) * 100)#
+summary(tmp.e)#
+myalpha		<- .2#
+tmp			<- apply(tmp.e, 2, quantile, c(.5*myalpha, 1 - .5*myalpha), na.rm=T)#
+for(i in 1:ncol(tmp.e)){#
+	sel		<- tmp.e[,i] < tmp[1,i] | tmp.e[,i] > tmp[2,i]#
+	tmp.e[sel,i] <- NA#
+}#
+summary(tmp.e)#
+tmpdata		<- cbind(tmpdata, e = tmp.e)
+# Overall elasticity#
+tmp.dt		<- data.table(tmpdata)#
+tmp.dt		<- tmp.dt[,list(e1 = sum(e.s1.1*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.1))*mkt_wt*yd_wt*seg_wt), #
+							e2 = sum(e.s1.2*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.2))*mkt_wt*yd_wt*seg_wt),#
+							e3 = sum(e.s1.3*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.3))*mkt_wt*yd_wt*seg_wt), #
+							e4 = sum(e.s1.4*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.4))*mkt_wt*yd_wt*seg_wt),#
+							e5 = sum(e.s1.5*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.5))*mkt_wt*yd_wt*seg_wt), #
+							e6 = sum(e.s1.6*mkt_wt*yd_wt*seg_wt, na.rm=T)/sum(1*(!is.na(e.s1.6))*mkt_wt*yd_wt*seg_wt)), #
+						by = list(Var, X)]#
+tmp.dt		<- tmp.dt[order(tmp.dt$Var, tmp.dt$X)]#
+cat("Aggregated elasticity matrix:\n"); print(tmp.dt); cat("\n")
+tmpcsv
+getwd()
+plot.wd <- getwd()
+tmpcsv		<- paste(plot.wd,"/7_marginal_effect.csv", sep="")
+ww			<- 8#
+ar 			<- .6
+f 		<- file(tmpcsv, "w")#
+	writeLines("Marginal effects of MDCEV.\n", f)#
+	close(f)
+# Elasticity by income group#
+tmp			<- c(seg_wt/rowSums(seg_wt))#
+tmpdata$Qt_wt	<- tmp[tmpdata$seg_id]#
+tmp			<- substr(names(seg_index), 1, 3)#
+tmpdata$Qt	<- tmp[tmpdata$seg_id]#
+tmp.dt1		<- data.table(tmpdata)#
+tmp.dt1		<- tmp.dt1[,list(e1 = sum(e.s1.1*mkt_wt*yd_wt*Qt_wt, na.rm=T)/sum(1*(!is.na(e.s1.1))*mkt_wt*yd_wt*Qt_wt), #
+							 e2 = sum(e.s1.2*mkt_wt*yd_wt*Qt_wt, na.rm=T)/sum(1*(!is.na(e.s1.2))*mkt_wt*yd_wt*Qt_wt),#
+							 e3 = sum(e.s1.3*mkt_wt*yd_wt*Qt_wt, na.rm=T)/sum(1*(!is.na(e.s1.3))*mkt_wt*yd_wt*Qt_wt), #
+							 e4 = sum(e.s1.4*mkt_wt*yd_wt*Qt_wt, na.rm=T)/sum(1*(!is.na(e.s1.4))*mkt_wt*yd_wt*Qt_wt),#
+							 e5 = sum(e.s1.5*mkt_wt*yd_wt*Qt_wt, na.rm=T)/sum(1*(!is.na(e.s1.5))*mkt_wt*yd_wt*Qt_wt), #
+							 e6 = sum(e.s1.6*mkt_wt*yd_wt*Qt_wt, na.rm=T)/sum(1*(!is.na(e.s1.6))*mkt_wt*yd_wt*Qt_wt)), #
+						by = list(Var, Qt, X)]#
+setkeyv(tmp.dt1, c("Var","Qt","X"))#
+cat("Aggregated elasticity matrix by segment:\n"); print(tmp.dt1); cat("\n")
+f		<- file(tmpcsv, "at")#
+	writeLines("Expected elasticity:\n", f)#
+	write.csv(tmp.dt, f)
+close(f)
+marg_y <- data.table(marg_y)
+marg_y1	<- marg_y[,list(s.1 = sum(s.1*seg_wt), s.2 = sum(s.2*seg_wt), s.3 = sum(s.3*seg_wt), #
+						s.4 = sum(s.4*seg_wt), s.5 = sum(s.5*seg_wt), s.6 = sum(s.6*seg_wt)), #
+					by = list(d,y)]
+marg_y	<- data.frame(marg_y)	#
+marg_y1	<- data.frame(marg_y1)				#
+#
+plots	<- list(NULL)#
+ggtmp	<- melt(marg_y1, id.vars=c("d","y"))#
+ggtmp$variable <- factor(ggtmp$variable, levels = paste("s.", 1:R, sep=""), labels=fmt_name)#
+plots[[1]] <- ggplot(ggtmp, aes(y, value, fill = variable)) + geom_bar(stat ="identity") + #
+					facet_wrap(~d)
+plots[[1]]
+load("/Users/chaoqunchen/Desktop/6_est_seg3_v1.rdata")
+par_est
+par_est1
+par_est2
+param
+sol$value
+library(ggplot2)#
+library(reshape2)#
+library(scatterplot3d)#
+library(Rcpp)#
+library(RcppGSL)#
+library(plm)#
+library(zoo)#
+library(data.table)#
+library(VGAM)
+sourceCpp("~/Documents/Research/Store switching/Exercise/main/1_CDAMT_functions.cpp")
+param_save <- param
+param <- c(108.9781185 ,  1.0158047,  -1.2481867,  -0.3657484,   1.2962285,  -3.3480204 )
+DP_list	<- list(state 	= state,#
+				value_fn= .1*Inc_nodes[state[,2]]/(1-beta) + 20* log(state[,1] + 1), #
+				param  	= param, #
+				beta 	= beta,#
+				# omega	= list(omega_y = as.numeric(colnames(omega_nodraw)), omega = omega_nodraw), #
+				omega	= list(omega_y = unique(omega_draw_mean$y), omega = omega_arr), #
+				Q_coef	= Q_coef,#
+				Inc_kernel = Inc_kernel,#
+				Iteration = 0, #
+				status = 1, #
+				D		= D#
+				)#
+control_list <- list(	max_iter 		= 30,#
+						tol				= 1e-4,#
+						display_freq	= 20,#
+						inner_max		= 50, #
+						inner_tol		= 1e-5,#
+						NM_sizetol		= 1e-6, #
+						NM_startsize 	= .05, #
+						NM_iter			= 500, #
+						NM_stop			= 15,#
+						brent_tol 		= 1e-6, #
+						brent_iter		= 200, #
+						bound_eps		= 1e-4, #
+						lnzero			= -30#
+				)				#
+system.time(tmpsol	<- policy_iterC(DP_list, control_list, print_level = 1))
+make_plot <- TRUE
+# ------------------------------ # #
+# Check DP solution #
+if(make_plot){#
+	# 2D value function along I#
+	ggtmp <- data.frame(state, v=tmpsol$value_fn)#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, v, linetype = factor(Rc)) ) + geom_point() + geom_line() + #
+			facet_wrap(~ Inc) + #
+			labs(title = "Value function in I\n facet by Inc")#
+	)#
+	# Plot policy function y and c#
+	ggtmp 			<- data.frame(state,d =tmpsol$policy[,1], y = tmpsol$policy[,2], c = tmpsol$policy[,3])#
+	ggtmp$Q			<- Q_fn(ggtmp$y)#
+	ggtmp$c_rat		<- with(ggtmp, c/(I+Q))#
+	ggtmp			<- melt(ggtmp, id.var=c("I","Inc","Rc"))#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, value, linetype = factor(Rc))) + geom_point() + geom_line() + #
+			facet_grid(variable ~ Inc, scales="free_y") + #
+			# geom_abline(aes(intercept = Q, slope = 1), linetype=2) + #
+			labs(title = paste("Policy function",sep=""))#
+	)#
+	# Plot simulation process#
+	sel 		<- state[,1] == 4 & state[,2]==3 & state[,3] == 1 #
+	tmp_init 	<- matrix(state[sel,], nrow=1)	# Initial state#
+	tmp_TT			<- as.vector(300)				# The length of simulating time series#
+	tmp_choice	<- matrix(-999, tmp_TT, 3)#
+	tmp.DataState	<- matrix(NA, tmp_TT, 3)#
+	tmp.DataState[,3]<- tmp_init[3]#
+	tmpRc			<- tmp_init[3]#
+	tmp.DataState[1,] <- tmp_init#
+	for(j in 2:tmp_TT){#
+		tmp.DataState[j,2] <- sample(Inc_index, 1, prob = Inc_weight[n_Inc*tmpRc + tmp.DataState[(j-1),2],])#
+	}#
+#
+	# No randomness in the consumption function #
+	set.seed(666) #
+	tmp <- sim_hhseqC(1, tmp_TT, tmp_init, tmp.DataState, tmp_choice, tmpsol, control_list, 0, simidx=3, logit_random=TRUE)#
+	tmp_data	<- data.frame(t = 1:tmp_TT, tmp$DataState, tmp$choice_seq)#
+	names(tmp_data)	<- c("t", "I", "Inc", "Rc", "d", "y", "c")#
+#
+	# Plot the simulation#
+	ggtmp 	<- tmp_data#
+	ggtmp$Q <-  Q_fn(ggtmp$y)#
+	ggtmp$c_inventory <- with(ggtmp, c/(I+Q))#
+	ggtmp1 <- melt(data.frame(ggtmp[,c("t","I","Inc","d","y", "c","c_inventory")]), id="t") #
+	quartz()#
+	ggplot(ggtmp1,aes(t, value)) + geom_point() + geom_line() + #
+			facet_grid(variable ~ ., scales="free_y") + #
+			labs(title = "Simulated sequence")#
+}
+control_list
+control_list <- list(	max_iter 		= 30,#
+						tol				= 1e-4,#
+						display_freq	= 20,#
+						inner_max		= 50, #
+						inner_tol		= 1e-5,#
+						NM_sizetol		= 1e-6, #
+						NM_startsize 	= .1, #
+						NM_iter			= 500, #
+						NM_stop			= 15,#
+						brent_tol 		= 1e-6, #
+						brent_iter		= 200, #
+						bound_eps		= 1e-4, #
+						lnzero			= -30#
+				)				#
+system.time(tmpsol	<- policy_iterC(DP_list, control_list, print_level = 1))#
+#
+# ------------------------------ # #
+# Check DP solution #
+if(make_plot){#
+	# 2D value function along I#
+	ggtmp <- data.frame(state, v=tmpsol$value_fn)#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, v, linetype = factor(Rc)) ) + geom_point() + geom_line() + #
+			facet_wrap(~ Inc) + #
+			labs(title = "Value function in I\n facet by Inc")#
+	)#
+	# Plot policy function y and c#
+	ggtmp 			<- data.frame(state,d =tmpsol$policy[,1], y = tmpsol$policy[,2], c = tmpsol$policy[,3])#
+	ggtmp$Q			<- Q_fn(ggtmp$y)#
+	ggtmp$c_rat		<- with(ggtmp, c/(I+Q))#
+	ggtmp			<- melt(ggtmp, id.var=c("I","Inc","Rc"))#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, value, linetype = factor(Rc))) + geom_point() + geom_line() + #
+			facet_grid(variable ~ Inc, scales="free_y") + #
+			# geom_abline(aes(intercept = Q, slope = 1), linetype=2) + #
+			labs(title = paste("Policy function",sep=""))#
+	)#
+	# Plot simulation process#
+	sel 		<- state[,1] == 4 & state[,2]==3 & state[,3] == 1 #
+	tmp_init 	<- matrix(state[sel,], nrow=1)	# Initial state#
+	tmp_TT			<- as.vector(300)				# The length of simulating time series#
+	tmp_choice	<- matrix(-999, tmp_TT, 3)#
+	tmp.DataState	<- matrix(NA, tmp_TT, 3)#
+	tmp.DataState[,3]<- tmp_init[3]#
+	tmpRc			<- tmp_init[3]#
+	tmp.DataState[1,] <- tmp_init#
+	for(j in 2:tmp_TT){#
+		tmp.DataState[j,2] <- sample(Inc_index, 1, prob = Inc_weight[n_Inc*tmpRc + tmp.DataState[(j-1),2],])#
+	}#
+#
+	# No randomness in the consumption function #
+	set.seed(666) #
+	tmp <- sim_hhseqC(1, tmp_TT, tmp_init, tmp.DataState, tmp_choice, tmpsol, control_list, 0, simidx=3, logit_random=TRUE)#
+	tmp_data	<- data.frame(t = 1:tmp_TT, tmp$DataState, tmp$choice_seq)#
+	names(tmp_data)	<- c("t", "I", "Inc", "Rc", "d", "y", "c")#
+#
+	# Plot the simulation#
+	ggtmp 	<- tmp_data#
+	ggtmp$Q <-  Q_fn(ggtmp$y)#
+	ggtmp$c_inventory <- with(ggtmp, c/(I+Q))#
+	ggtmp1 <- melt(data.frame(ggtmp[,c("t","I","Inc","d","y", "c","c_inventory")]), id="t") #
+	quartz()#
+	ggplot(ggtmp1,aes(t, value)) + geom_point() + geom_line() + #
+			facet_grid(variable ~ ., scales="free_y") + #
+			labs(title = "Simulated sequence")#
+}
+param <- c(15.0,     1.6,     -1.5,     -0.1,      1.3,     -3.0)
+DP_list	<- list(state 	= state,#
+				value_fn= .1*Inc_nodes[state[,2]]/(1-beta) + 20* log(state[,1] + 1), #
+				param  	= param, #
+				beta 	= beta,#
+				# omega	= list(omega_y = as.numeric(colnames(omega_nodraw)), omega = omega_nodraw), #
+				omega	= list(omega_y = unique(omega_draw_mean$y), omega = omega_arr), #
+				Q_coef	= Q_coef,#
+				Inc_kernel = Inc_kernel,#
+				Iteration = 0, #
+				status = 1, #
+				D		= D#
+				)#
+control_list <- list(	max_iter 		= 30,#
+						tol				= 1e-4,#
+						display_freq	= 20,#
+						inner_max		= 50, #
+						inner_tol		= 1e-5,#
+						NM_sizetol		= 1e-6, #
+						NM_startsize 	= .05, #
+						NM_iter			= 500, #
+						NM_stop			= 15,#
+						brent_tol 		= 1e-6, #
+						brent_iter		= 200, #
+						bound_eps		= 1e-4, #
+						lnzero			= -30#
+				)				#
+system.time(tmpsol	<- policy_iterC(DP_list, control_list, print_level = 1))
+# ------------------------------ # #
+# Check DP solution #
+if(make_plot){#
+	# 2D value function along I#
+	ggtmp <- data.frame(state, v=tmpsol$value_fn)#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, v, linetype = factor(Rc)) ) + geom_point() + geom_line() + #
+			facet_wrap(~ Inc) + #
+			labs(title = "Value function in I\n facet by Inc")#
+	)#
+	# Plot policy function y and c#
+	ggtmp 			<- data.frame(state,d =tmpsol$policy[,1], y = tmpsol$policy[,2], c = tmpsol$policy[,3])#
+	ggtmp$Q			<- Q_fn(ggtmp$y)#
+	ggtmp$c_rat		<- with(ggtmp, c/(I+Q))#
+	ggtmp			<- melt(ggtmp, id.var=c("I","Inc","Rc"))#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, value, linetype = factor(Rc))) + geom_point() + geom_line() + #
+			facet_grid(variable ~ Inc, scales="free_y") + #
+			# geom_abline(aes(intercept = Q, slope = 1), linetype=2) + #
+			labs(title = paste("Policy function",sep=""))#
+	)#
+	# Plot simulation process#
+	sel 		<- state[,1] == 4 & state[,2]==3 & state[,3] == 1 #
+	tmp_init 	<- matrix(state[sel,], nrow=1)	# Initial state#
+	tmp_TT			<- as.vector(300)				# The length of simulating time series#
+	tmp_choice	<- matrix(-999, tmp_TT, 3)#
+	tmp.DataState	<- matrix(NA, tmp_TT, 3)#
+	tmp.DataState[,3]<- tmp_init[3]#
+	tmpRc			<- tmp_init[3]#
+	tmp.DataState[1,] <- tmp_init#
+	for(j in 2:tmp_TT){#
+		tmp.DataState[j,2] <- sample(Inc_index, 1, prob = Inc_weight[n_Inc*tmpRc + tmp.DataState[(j-1),2],])#
+	}#
+#
+	# No randomness in the consumption function #
+	set.seed(666) #
+	tmp <- sim_hhseqC(1, tmp_TT, tmp_init, tmp.DataState, tmp_choice, tmpsol, control_list, 0, simidx=3, logit_random=TRUE)#
+	tmp_data	<- data.frame(t = 1:tmp_TT, tmp$DataState, tmp$choice_seq)#
+	names(tmp_data)	<- c("t", "I", "Inc", "Rc", "d", "y", "c")#
+#
+	# Plot the simulation#
+	ggtmp 	<- tmp_data#
+	ggtmp$Q <-  Q_fn(ggtmp$y)#
+	ggtmp$c_inventory <- with(ggtmp, c/(I+Q))#
+	ggtmp1 <- melt(data.frame(ggtmp[,c("t","I","Inc","d","y", "c","c_inventory")]), id="t") #
+	quartz()#
+	ggplot(ggtmp1,aes(t, value)) + geom_point() + geom_line() + #
+			facet_grid(variable ~ ., scales="free_y") + #
+			labs(title = "Simulated sequence")#
+}
+?optim
+library(ggplot2)#
+library(reshape2)#
+library(scatterplot3d)#
+library(glmmML)#
+library(data.table)#
+library(Rcpp)#
+library(RcppGSL)#
+library(maxLik)#
+library(VGAM)
+setwd("~/Documents/Research/Store switching/Exercise/Basket DP/Continuous dynamic allocation simulation")
+sourceCpp("1_CDAMT_functions.cpp")
+control_list <- list(	max_iter 		= 30,#
+						tol				= 1e-3,#
+						display_freq	= 20,#
+						inner_max		= 30, #
+						inner_tol		= 1e-5,#
+						NM_sizetol		= 1e-6, #
+						NM_startsize 	= .3, #
+						NM_iter			= 500,#
+						NM_stop			= 12, #
+						brent_tol 		= 1e-6, #
+						brent_iter		= 200, #
+						bound_eps		= 1e-4, #
+						lnzero			= -30#
+				)#
+make_plot <- FALSE
+control_list <- list(	max_iter 		= 30,#
+						tol				= 1e-3,#
+						display_freq	= 20,#
+						inner_max		= 30, #
+						inner_tol		= 1e-5,#
+						NM_sizetol		= 1e-6, #
+						NM_startsize 	= .3, #
+						NM_iter			= 500,#
+						NM_stop			= 12, #
+						brent_tol 		= 1e-6, #
+						brent_iter		= 200, #
+						bound_eps		= 1e-4, #
+						lnzero			= -30#
+				)#
+make_plot <- TRUE
+##############
+# Functions ##
+##############
+matrix_expand <- function(mat, vec){#
+	n1	<- nrow(mat)#
+	n2	<- length(vec)#
+	sel	<- rep(1:n1, n2)#
+	mat_new <- cbind(mat[sel,], rep(vec, each=n1))#
+	return(mat_new)#
+}#
+#
+logit_pred <- function(DataState, d){#
+	sel 	<- d!=0#
+	mydata	<- data.frame(d = d, I=DataState[,1], Inc=factor(DataState[,2]), Rc=factor(DataState[,3]), lnZ=DataState[,4])#
+	myfit 	<- try(vglm(d ~ I+Inc+Rc+lnZ+I(I^2), family = "multinomial", mydata[sel,]), TRUE )#
+	if(class(myfit)!="try-error"){#
+		phat 	<- try(predict(myfit), TRUE)#
+	}#
+	if(class(myfit)=="try-error" | class(phat)=="try-error"){#
+		p	<- rep(1, length(sel)) %*% t(as.vector(table(d[sel])/length(sel)) )#
+		phat<- apply(p[sel,-ncol(p)], 2, function(x) x/p[sel,ncol(p)])#
+	}#
+	out 	<- matrix(0, length(d), ncol(phat))#
+	out[sel,] <- phat#
+	return(out)#
+}#
+#
+######################
+# Simulation set up ##
+######################
+# Parameter #
+param 		<- c(lambda = 4, tau1 = .1, tau2 = .05, tau3 = .1, tau4 = .5, lambda_o = 1)#
+beta		<- .95#
+n_Inc		<- 4#
+mu_z		<- -2#
+sigma_z		<- .6#
+#
+# Kernel of exogenous shock Z#
+gh_num_nodes <- 6#
+lnZ_weight	<- ghq(gh_num_nodes, modified = F)$weights#
+lnZ_nodes 	<- ghq(gh_num_nodes, modified = F)$zeros#
+lnZ_nodes_adj	<- sqrt(2)*sigma_z*lnZ_nodes + mu_z#
+lnZ_kernel	<- list(weight = lnZ_weight, nodes = lnZ_nodes_adj)#
+#
+# Markov probability of income transition#
+# Inc_weight		<- diag(n_Inc)#
+Inc_weight 	<- rbind(diag(n_Inc), diag(n_Inc))#
+Inc_weight[1,]	<- c(.75, .25,	0,	0)#
+Inc_weight[2,]	<- c(.15, 	.8,	.05,0)#
+Inc_weight[3,]	<- c(.1,		.1,	.7,	.1)#
+Inc_weight[4,]	<- c(0,		.1,	.2,	.7)#
+Inc_weight[5,]	<- c(.7, 	.1,	.1,	.1)#
+Inc_weight[6,]	<- c(.2, 	.7,	.05,.05)#
+Inc_weight[7,]	<- c(.1,	.2,	.6,	.1)#
+Inc_weight[8,]	<- c(.05,	.15,	.2,	.6)#
+Inc_nodes		<- 2*(1:n_Inc)#
+Inc_index		<- 1:n_Inc#
+Inc_kernel		<- list(weight = Inc_weight, nodes = Inc_nodes)#
+#
+# Initiate states#
+my_grid <- list(I = c(0, .5, 1, 2.5, 4, 4.5, 5 ), #
+				Inc	= Inc_index, #
+				Rc	= c(0,1), #
+				lnZ = log(c(.001, .05, .1, .2, .5, 1.2, 5)))	#
+state	<- as.matrix(my_grid[[1]], ncol=1) #
+for(i in 2:length(my_grid)){#
+	state <- matrix_expand(state, my_grid[[i]])#
+}#
+colnames(state) <- c("I","Inc","Rc","lnZ")#
+summary(state)#
+#
+# Omega function#
+omega_fn 	<- function(y, d){#
+		-.015*d*y^2 + .2*d*y#
+}#
+Qk 	<- .1#
+Q_fn <- function(y){#
+	Qk*y#
+}#
+#
+# Derivative of the two functions #
+omega_j	<- function(y,d){#
+	-0.03*d*y + .15*d#
+}#
+Q_j		<- function(y){#
+	rep(Qk, length(y))#
+}#
+#
+tmp <- seq(0, 6, .1)#
+ggtmp <- data.frame(NULL)#
+for(i in 1:3){#
+	ggtmp	<- rbind(ggtmp, data.frame(x=tmp, y=omega_fn(tmp, i), d=i))#
+}#
+if(make_plot){#
+	ggplot(ggtmp, aes(x,y,col=factor(d))) + geom_point() + geom_line()#
+}#
+#
+#####################
+# Dynamic solution ##
+#####################
+# DP structure #
+DP_list	<- list(state 	= state,#
+value_fn= 2 * log(state[,1] + 1), #
+# 				value_fn= 0, #
+				param  	= param, #
+				beta 	= beta,#
+				omega	= omega_fn, #
+				Q_fn 	= Q_fn, #
+				k		= Qk, #
+				omega_j	= omega_j,#
+				Q_j		= Q_j, #
+				lnZ_kernel = lnZ_kernel,#
+				Inc_kernel = Inc_kernel,#
+				Iteration = 0, #
+				status = 1, #
+				D		= 3#
+				)#
+#
+system.time(sol	<- policy_iterC(DP_list, control_list, print_level = 1))#
+DP_list <- sol
+# ------------------------------ # #
+# Check DP solution #
+if(make_plot){#
+	# Plot value function #
+	sel		<- DP_list$state[,3] == 1 & DP_list$state[,2] == state[1,2]#
+	scatterplot3d(DP_list$state[sel,1], DP_list$state[sel,4], DP_list$value_fn[sel], xlab = "I", ylab="lnZ", zlab="value", #
+				main="Value funciton", angle = 60)#
+#
+	# 2D value function along I#
+	ggtmp <- data.frame(state, v=DP_list$value_fn)#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, v, col=factor(Inc), linetype = factor(Rc)) ) + geom_point() + geom_line() + #
+			facet_wrap(~ lnZ) + #
+			labs(title = "Value function in I\n facet by Z")#
+	)#
+	# Plot policy function y and c#
+	ggtmp 			<- data.frame(state, y = DP_list$policy[,2], c = DP_list$policy[,3])#
+	ggtmp$Q			<- Q_fn(ggtmp$y)#
+	ggtmp$c_rat		<- with(ggtmp, c/(I+Q))#
+	ggtmp			<- melt(ggtmp, id.var=c("I","Inc","Rc","lnZ","Q"))#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, value, col=factor(Inc), linetype = factor(Rc), alpha=.3 )) + geom_point() + geom_line() + #
+			facet_grid(variable ~ lnZ, scales="free_y") + #
+			# geom_abline(aes(intercept = Q, slope = 1), linetype=2) + #
+			labs(title = paste("Policy function",sep=""))#
+	)#
+	# Shape of objective function along c#
+	c_grid 		<- seq(.1, 4, .1)#
+	plot_state 	<- which(state[,1]<2 & state[,2] ==3 & state[,4]==unique(state[,4])[1])#
+	state[plot_state,]#
+	tmp			<- plotvalueC(plot_state, c_grid, DP_list, control_list)#
+	tmp[tmp==0] <- NA#
+	dimnames(tmp) <- list(plot_state, c(c_grid, NA))#
+	tmp_cstar	<- DP_list$policy[plot_state, 3]#
+	ggtmp 		<- melt(tmp)#
+	names(ggtmp) <- c("s_index","c","value")#
+	sel 		<- is.na(ggtmp$c)#
+	ggtmp[sel,"c"] <- tmp_cstar#
+	ggtmp$max_pnt <- 0#
+	ggtmp[sel,"max_pnt"] <- 1#
+	ggtmp$I		<- state[ggtmp$s_index, 1]#
+	ggtmp$Inc	<- state[ggtmp$s_index, 2]#
+	ggtmp$Rc	<- state[ggtmp$s_index, 3]#
+	ggtmp$lnZ	<- state[ggtmp$s_index, 4]#
+	quartz()#
+	print(ggplot(ggtmp, aes(c, value, linetype = factor(Inc), shape = factor(Rc))) + geom_point(aes(col=factor(max_pnt))) + #
+				geom_line() + #
+				facet_grid(I ~ lnZ, labeller = "label_both") + #
+				scale_color_manual(values=c("black","red")) + #
+				guides(color=FALSE)#
+	)#
+}
+control_list <- list(	max_iter 		= 30,#
+						tol				= 1e-3,#
+						display_freq	= 20,#
+						inner_max		= 30, #
+						inner_tol		= 1e-5,#
+						NM_sizetol		= 1e-6, #
+						NM_startsize 	= 1, #
+						NM_iter			= 500,#
+						NM_stop			= 12, #
+						brent_tol 		= 1e-6, #
+						brent_iter		= 200, #
+						bound_eps		= 1e-4, #
+						lnzero			= -30#
+				)
+# DP structure #
+DP_list	<- list(state 	= state,#
+value_fn= 2 * log(state[,1] + 1), #
+# 				value_fn= 0, #
+				param  	= param, #
+				beta 	= beta,#
+				omega	= omega_fn, #
+				Q_fn 	= Q_fn, #
+				k		= Qk, #
+				omega_j	= omega_j,#
+				Q_j		= Q_j, #
+				lnZ_kernel = lnZ_kernel,#
+				Inc_kernel = Inc_kernel,#
+				Iteration = 0, #
+				status = 1, #
+				D		= 3#
+				)#
+#
+system.time(sol	<- policy_iterC(DP_list, control_list, print_level = 1))#
+DP_list <- sol
+# ------------------------------ # #
+# Check DP solution #
+if(make_plot){#
+	# Plot value function #
+	sel		<- DP_list$state[,3] == 1 & DP_list$state[,2] == state[1,2]#
+	scatterplot3d(DP_list$state[sel,1], DP_list$state[sel,4], DP_list$value_fn[sel], xlab = "I", ylab="lnZ", zlab="value", #
+				main="Value funciton", angle = 60)#
+#
+	# 2D value function along I#
+	ggtmp <- data.frame(state, v=DP_list$value_fn)#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, v, col=factor(Inc), linetype = factor(Rc)) ) + geom_point() + geom_line() + #
+			facet_wrap(~ lnZ) + #
+			labs(title = "Value function in I\n facet by Z")#
+	)#
+	# Plot policy function y and c#
+	ggtmp 			<- data.frame(state, y = DP_list$policy[,2], c = DP_list$policy[,3])#
+	ggtmp$Q			<- Q_fn(ggtmp$y)#
+	ggtmp$c_rat		<- with(ggtmp, c/(I+Q))#
+	ggtmp			<- melt(ggtmp, id.var=c("I","Inc","Rc","lnZ","Q"))#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, value, col=factor(Inc), linetype = factor(Rc), alpha=.3 )) + geom_point() + geom_line() + #
+			facet_grid(variable ~ lnZ, scales="free_y") + #
+			# geom_abline(aes(intercept = Q, slope = 1), linetype=2) + #
+			labs(title = paste("Policy function",sep=""))#
+	)#
+	# Shape of objective function along c#
+	c_grid 		<- seq(.1, 4, .1)#
+	plot_state 	<- which(state[,1]<2 & state[,2] ==3 & state[,4]==unique(state[,4])[1])#
+	state[plot_state,]#
+	tmp			<- plotvalueC(plot_state, c_grid, DP_list, control_list)#
+	tmp[tmp==0] <- NA#
+	dimnames(tmp) <- list(plot_state, c(c_grid, NA))#
+	tmp_cstar	<- DP_list$policy[plot_state, 3]#
+	ggtmp 		<- melt(tmp)#
+	names(ggtmp) <- c("s_index","c","value")#
+	sel 		<- is.na(ggtmp$c)#
+	ggtmp[sel,"c"] <- tmp_cstar#
+	ggtmp$max_pnt <- 0#
+	ggtmp[sel,"max_pnt"] <- 1#
+	ggtmp$I		<- state[ggtmp$s_index, 1]#
+	ggtmp$Inc	<- state[ggtmp$s_index, 2]#
+	ggtmp$Rc	<- state[ggtmp$s_index, 3]#
+	ggtmp$lnZ	<- state[ggtmp$s_index, 4]#
+	quartz()#
+	print(ggplot(ggtmp, aes(c, value, linetype = factor(Inc), shape = factor(Rc))) + geom_point(aes(col=factor(max_pnt))) + #
+				geom_line() + #
+				facet_grid(I ~ lnZ, labeller = "label_both") + #
+				scale_color_manual(values=c("black","red")) + #
+				guides(color=FALSE)#
+	)#
+}
+sourceCpp("1_CDAMT_functions.cpp")
+#####################
+# Dynamic solution ##
+#####################
+# DP structure #
+DP_list	<- list(state 	= state,#
+value_fn= 2 * log(state[,1] + 1), #
+# 				value_fn= 0, #
+				param  	= param, #
+				beta 	= beta,#
+				omega	= omega_fn, #
+				Q_fn 	= Q_fn, #
+				k		= Qk, #
+				omega_j	= omega_j,#
+				Q_j		= Q_j, #
+				lnZ_kernel = lnZ_kernel,#
+				Inc_kernel = Inc_kernel,#
+				Iteration = 0, #
+				status = 1, #
+				D		= 3#
+				)#
+#
+system.time(sol	<- policy_iterC(DP_list, control_list, print_level = 1))#
+DP_list <- sol#
+# ------------------------------ # #
+# Check DP solution #
+if(make_plot){#
+	# Plot value function #
+	sel		<- DP_list$state[,3] == 1 & DP_list$state[,2] == state[1,2]#
+	scatterplot3d(DP_list$state[sel,1], DP_list$state[sel,4], DP_list$value_fn[sel], xlab = "I", ylab="lnZ", zlab="value", #
+				main="Value funciton", angle = 60)#
+#
+	# 2D value function along I#
+	ggtmp <- data.frame(state, v=DP_list$value_fn)#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, v, col=factor(Inc), linetype = factor(Rc)) ) + geom_point() + geom_line() + #
+			facet_wrap(~ lnZ) + #
+			labs(title = "Value function in I\n facet by Z")#
+	)#
+	# Plot policy function y and c#
+	ggtmp 			<- data.frame(state, y = DP_list$policy[,2], c = DP_list$policy[,3])#
+	ggtmp$Q			<- Q_fn(ggtmp$y)#
+	ggtmp$c_rat		<- with(ggtmp, c/(I+Q))#
+	ggtmp			<- melt(ggtmp, id.var=c("I","Inc","Rc","lnZ","Q"))#
+	quartz()#
+	print(ggplot(ggtmp, aes(I, value, col=factor(Inc), linetype = factor(Rc), alpha=.3 )) + geom_point() + geom_line() + #
+			facet_grid(variable ~ lnZ, scales="free_y") + #
+			# geom_abline(aes(intercept = Q, slope = 1), linetype=2) + #
+			labs(title = paste("Policy function",sep=""))#
+	)#
+	# Shape of objective function along c#
+	c_grid 		<- seq(.1, 4, .1)#
+	plot_state 	<- which(state[,1]<2 & state[,2] ==3 & state[,4]==unique(state[,4])[1])#
+	state[plot_state,]#
+	tmp			<- plotvalueC(plot_state, c_grid, DP_list, control_list)#
+	tmp[tmp==0] <- NA#
+	dimnames(tmp) <- list(plot_state, c(c_grid, NA))#
+	tmp_cstar	<- DP_list$policy[plot_state, 3]#
+	ggtmp 		<- melt(tmp)#
+	names(ggtmp) <- c("s_index","c","value")#
+	sel 		<- is.na(ggtmp$c)#
+	ggtmp[sel,"c"] <- tmp_cstar#
+	ggtmp$max_pnt <- 0#
+	ggtmp[sel,"max_pnt"] <- 1#
+	ggtmp$I		<- state[ggtmp$s_index, 1]#
+	ggtmp$Inc	<- state[ggtmp$s_index, 2]#
+	ggtmp$Rc	<- state[ggtmp$s_index, 3]#
+	ggtmp$lnZ	<- state[ggtmp$s_index, 4]#
+	quartz()#
+	print(ggplot(ggtmp, aes(c, value, linetype = factor(Inc), shape = factor(Rc))) + geom_point(aes(col=factor(max_pnt))) + #
+				geom_line() + #
+				facet_grid(I ~ lnZ, labeller = "label_both") + #
+				scale_color_manual(values=c("black","red")) + #
+				guides(color=FALSE)#
+	)#
+}

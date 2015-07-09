@@ -18,8 +18,8 @@ if(length(args)>0){
 }
 # vid_save 	<- vid
 # run_id_save <- run_id
-vid_save	<- vid	<- 2
-run_id_save	<- run_id <- 5
+vid_save	<- vid	<- 1
+run_id_save	<- run_id <- 1
 seg_id 		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 
 # setwd("~/Documents/Research/Store switching/processed data/Estimation")
@@ -28,7 +28,7 @@ seg_id 		<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 setwd("/sscc/home/c/ccv103/Exercise/run")
 
-sourceCpp("1_CDAMT_functions.cpp")
+sourceCpp("1_DAM_functions.cpp")
 model_name 	<- "MDCEV_a1b1"
 make_plot	<- FALSE
 
@@ -361,7 +361,7 @@ control_list <- list(	max_iter 		= 30,
 						inner_max		= 50, 
 						inner_tol		= 1e-5,
 						NM_sizetol		= 1e-6, 
-						NM_startsize 	= .5, 
+						NM_startsize 	= 1.5, 
 						NM_iter			= 500, 
 						NM_stop			= 15,
 						brent_tol 		= 1e-6, 
@@ -480,7 +480,7 @@ summary(t(par_draw)); cat("\n")
 par_dat 	<- matrix(NA, ncol(par_draw), 21, dimnames = list(1:ncol(par_draw), 
 					c("lambda", "lambda_o","tau1","tau2","tau3", "tau4", "status","value","obj",paste("M", 1:n_M, sep=""))))
 for(i in 1:ncol(par_draw)){
-	cat("Parameter draw", i,"\n"); print(par_draw[,i]); cat("\n")
+	# cat("Parameter draw", i,"\n"); print(par_draw[,i]); cat("\n")
 	tmp		<- GMM_wrapper(par_draw[,i])
 	par_dat[i,]	<- c(par_draw[,i], status = tmp$status, value = mean(tmp$value), obj=tmp$obj, tmp$Mbar)
 	# cat("obs =", tmp$obj,"\n")

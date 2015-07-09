@@ -21,8 +21,8 @@ ar 			<- .6
 
 write2csv	<- TRUE
 make_plot	<- TRUE
-outfile		<- paste(plot.wd, "/2_income_effect.rdata", sep="")
-outxls		<- paste(plot.wd, "/2_het_income_effect.xlsx", sep="")
+outfile		<- paste(plot.wd, "/2_income_effect_", gsub("-", "", as.character(Sys.Date())), ".rdata", sep="")
+outxls		<- paste(plot.wd, "/2_het_income_effect_", gsub("-", "", as.character(Sys.Date())), ".xlsx", sep="")
 mywb		<- createWorkbook()
 sht1		<- createSheet(mywb, "Sheet1")
 sht2		<- createSheet(mywb, "Regression")
@@ -88,7 +88,6 @@ mytransition <- function(x1, x2){
 	return(out/rowSums(out))
 }
 
-
 #######################################
 # Organize data and create covariates # 
 #######################################
@@ -104,6 +103,8 @@ sel1		<- gsub("DOLP", "SHR", sel)
 for(i in 1:length(fmt_name)){
 	hh_exp[,sel1[i]] <- hh_exp[,sel[i]]/hh_exp$y
 }
+sel			<- which(names(hh_exp) == "i")
+hh_exp		<- hh_exp[,-sel]
 
 # Conver some date and factor variables
 hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))
@@ -130,19 +131,29 @@ hh_exp$income_nodes <- tmp[,1]
 # Segment households based on their initial income level 
 panelist	<- data.table(hh_exp)
 setkeyv(panelist, c("household_code","year","biweek"))
-panelist	<- panelist[,list(first_income = income_group[1], first_famsize = famsize[1]), by=list(household_code)]
+# panelist	<- panelist[,list(first_income = income_group[1], income = income_real[1], first_famsize = famsize[1]), by=list(household_code)]
+panelist	<- panelist[,list(income = income_real[1], first_famsize = famsize[1]), by=list(household_code)]
+tmp			<- quantile(panelist$income, c(0, .33, .67, 1))
+num_grp		<- 3
+panelist	<- panelist[, first_income := cut(panelist$income, tmp, labels = paste("T", 1:num_grp, sep=""), include.lowest = T)]
 hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "first_income")], by="household_code", all.x = TRUE)
+cat("Table of initial income distribution:\n"); print(table(panelist$first_income)); cat("\n")
+cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_income)); cat("\n")
 
 ###############################
 # Characterize income changes # 
 ###############################
 # The within-household trend of cpi-adjusted income 
 pan_yr		<- data.table(hh_exp)
-pan_yr		<- pan_yr[,list(Income = unique(income_midvalue)), by = list(first_income, household_code, year)]
+pan_yr		<- pan_yr[,list(Income = unique(income_midvalue), Inc = unique(income_real)), by = list(first_income, household_code, year)]
 pan_yr		<- merge(pan_yr, cpi, by="year", all.x=T)
 pan_yr$Income	 <- pan_yr$Income / pan_yr$cpi
 pan_yr$ln_income <- log(pan_yr$Income)
 pan_yr$recession <- 1 * (pan_yr$year >= 2008)
+setkeyv(pan_yr, c("household_code", "year"))
+pan_yr    <- pan_yr[,':='(year_id= year - year[1] + 1, tenure = length(year), 
+                          move = 1*(!all(Inc==Inc[1]))) 
+                    , by = list(household_code)]
 pan_yr		<- data.frame(pan_yr)
 
 # Within-household regression: income ~ year/recession
@@ -167,7 +178,7 @@ if(write2csv){
 # Plot the income trend 
 tmp			<- unique(pan_yr[,c("first_income","year")])
 tmp$year	<- factor(tmp$year)
-tmpx		<- model.matrix(~first_income*year, data = tmp)[,-(1:4)]
+tmpx		<- model.matrix(~first_income*year, data = tmp)[,-(1:num_grp)]
 identical(colnames(tmpx), names(coef(myfit)))
 ggtmp		<- tmpx %*% coef(myfit)
 ggtmp		<- cbind(tmp, ggtmp)
@@ -189,6 +200,65 @@ if(make_plot){
 	print(plots[[2]])
 	dev.off()	
 }
+
+#------------------------------------------------------#
+# Income transition within households; 
+ggtmp <- dcast(pan_yr, first_income + tenure + move + household_code ~ year_id, value.var = "Inc")
+names(ggtmp)[-(1:4)] <- paste("yr", names(ggtmp)[-(1:4)], sep="")
+tmp   <- rowSums(!is.na(ggtmp[,-(1:4)]))
+cat("Table of data tenure of households:\n"); table(tmp); cat("\n")
+tmpn    <- ncol(ggtmp) - 4
+
+# Plot of income transition from year 1
+tmp     <- lapply(2:tmpn, function(i) cbind(melt(table(ggtmp$yr1, ggtmp[,paste("yr",i,sep="")])), year = i))
+ggtmp1  <- do.call("rbind", tmp)
+names(ggtmp1) <- c("x", "y", "Freq", "year")
+ggtmp1        <- data.table(ggtmp1)
+ggtmp1        <- ggtmp1[, Prop:= Freq/sum(Freq)*100, by = list(year)]
+ggplot(ggtmp1, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+        geom_point(position= "jitter", pch = 21) + 
+        geom_abline(xintercept = 0, slope = 1, size = .25, linetype = 2) + 
+        scale_size_area(max_size = 15) + 
+        guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+        labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from 1st year")
+
+ggplot(ggtmp1, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+  geom_point(position= "jitter", pch = 21) + 
+  geom_abline(xintercept = 0, slope = 1, size = .25, linetype = 2) + 
+  scale_size_area(max_size = 15) + 
+  facet_wrap( ~ year) + 
+  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+  labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from 1st year")
+
+# Year to year transition
+tmp     <- lapply(2:tmpn, function(i) cbind(melt(table(ggtmp[,paste("yr",i-1,sep="")], ggtmp[,paste("yr",i,sep="")])), year = i-1))
+ggtmp2  <- do.call("rbind", tmp)
+names(ggtmp2) <- c("x", "y", "Freq", "year")
+ggtmp2  <- data.table(ggtmp2)
+ggtmp2  <- ggtmp2[, Prop:=Freq/sum(Freq)*100, by = list(year)]
+quartz()
+ggplot(ggtmp2, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+  geom_point(position= "jitter") + 
+  scale_size_area(max_size = 15) + 
+  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+  labs(x = "Income in focal year n", y = "Income in the following year", title = "Income transition from year to year")
+
+# Year to year transition by panel 
+ggplot(ggtmp2, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+  geom_point(position= "jitter") + 
+  scale_size_area(max_size = 15) + 
+  facet_wrap(~ year) + 
+  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+  labs(x = "Income in focal year n", y = "Income in the following year", title = "Income transition from year to year")
+
+# Path of income for tenure = 7
+ggplot(subset(pan_yr, tenure == 7 & move == 1), aes(year, Inc, group = household_code)) + 
+      geom_line() + 
+      facet_wrap(~ first_income)
+
+
+ggtmp1 <- melt(subset(ggtmp, tenure > 1), id.vars = c("first_income","tenure","move", "household_code","yr1"))
+
 
 #------------------------------------------------------#
 # Expectation and variance
@@ -235,11 +305,14 @@ if(write2csv){
 #---------------------------------------#
 # Construct regression data 
 mydata 	<- hh_exp
+
+# Adjust income by cpi 
+# mydata		<- merge(mydata, cpi, by="year", all.x=T)
 tmp_dv		<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")
 for(i in tmp_dv){
 	mydata[,i] <- mydata[,i]*100
 }
-mydata$ln_income	<- log(mydata$income_midvalue)
+mydata$ln_income	<- log(mydata$income_midvalue/mydata$cpi)
 mydata$month		<- factor(mydata$month)
 mydata$ln_dolpurchases <- log(mydata$dol_purchases)
 mydata$recession 	<- factor(mydata$recession)
@@ -291,7 +364,7 @@ myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + year + month"),
 				Assymetry		= as.formula("y ~ ln_income*income_increase + year + month"),
 				Het_Asy			= as.formula("y ~ ln_income*first_income*income_increase + year + month"),
 				Expectation		= as.formula("y ~ ln_income + p_low + p_high + year + month"),
-				Het_expc		= as.formula("y ~ ln_income + p_low*first_income + p_high*first_income + year + month")
+				Het_expc		= as.formula("y ~ ln_income*first_income + p_low*first_income + p_high*first_income + year + month")
 				)
 
 # Run regressions
@@ -300,6 +373,9 @@ for(i in 1:length(dv_vec)){
 	prc 		<- proc.time()
 	for(j in 1:length(myfml)){
 		tmp 	<- as.formula(substitute(y ~ x, list(y = as.name(dv_vec[i]), x = terms(myfml[[j]])[[3]])) )
+		if(dv_vec[i] != "ln_dolpurchases"){
+			tmp		<- update(tmp, . ~ . + y)
+		}
 		myfit	<- plm(tmp, data = mydata, index = c("household_code","biweek"), model="within")
 		tmp2	<- summary(myfit)
 		tmp3	<- data.frame(model = names(myfml)[j], DV = dv_vec[i], tmp2$coefficients)
@@ -313,11 +389,11 @@ for(i in 1:length(dv_vec)){
 
 # Print regression results 
 tmp			<- subset(regrs, substr(regrs$Var, 1, 5) != "month" & substr(regrs$Var, 1, 4) != "year")
-tmpls		<- vector("list", length(dv_vec))
-names(tmpls)<- dv_vec
-for(i in 1:length(dv_vec)){
-	tmp1	<- subset(tmp, DV == dv_vec[i])
-	model_list	<- split(tmp1, tmp1$model)
+tmpls		<- vector("list", length(myfml))
+names(tmpls)<- names(myfml)
+for(i in 1:length(myfml)){
+	tmp1	<- subset(tmp, model == names(myfml)[i])
+	model_list	<- split(tmp1, tmp1$DV)
 	tmp.tab	<- model_outreg(model_list, p.given = TRUE, head.name = c("Estimate","Std..Error","Pr...t..","Var"), digits = 4)
 	tmpls[[i]]	<- tmp.tab
 }
@@ -346,7 +422,7 @@ myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + year + month + PRC_Disc
 				Assymetry		= as.formula("y ~ ln_income*income_increase + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"),
 				Het_Asy			= as.formula("y ~ ln_income*first_income*income_increase + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"),
 				Expectation		= as.formula("y ~ ln_income + p_low + p_high + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"),
-				Het_expc		= as.formula("y ~ ln_income + p_low*first_income + p_high*first_income + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club")
+				Het_expc		= as.formula("y ~ ln_income*first_income + p_low*first_income + p_high*first_income + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club")
 				)
 
 # Run regressions
@@ -355,6 +431,9 @@ for(i in 1:length(dv_vec)){
 	prc 		<- proc.time()
 	for(j in 1:length(myfml)){
 		tmp 	<- as.formula(substitute(y ~ x, list(y = as.name(dv_vec[i]), x = terms(myfml[[j]])[[3]])) )
+		if(dv_vec[i] != "ln_dolpurchases"){
+			tmp		<- update(tmp, . ~ . + y)
+		}
 		myfit	<- plm(tmp, data = mydata, index = c("household_code","biweek"), model="within")
 		tmp2	<- summary(myfit)
 		tmp3	<- data.frame(model = names(myfml)[j], DV = dv_vec[i], tmp2$coefficients)
@@ -368,11 +447,11 @@ for(i in 1:length(dv_vec)){
 
 # Print regression results 
 tmp			<- subset(regrs1, substr(regrs1$Var, 1, 5) != "month" & substr(regrs1$Var, 1, 4) != "year")
-tmpls		<- vector("list", length(dv_vec))
-names(tmpls)<- dv_vec
-for(i in 1:length(dv_vec)){
-	tmp1	<- subset(tmp, DV == dv_vec[i])
-	model_list	<- split(tmp1, tmp1$model)
+tmpls		<- vector("list", length(myfml))
+names(tmpls)<- names(myfml)
+for(i in 1:length(myfml)){
+	tmp1	<- subset(tmp, model == names(myfml)[i])
+	model_list	<- split(tmp1, tmp1$DV)
 	tmp.tab	<- model_outreg(model_list, p.given = TRUE, head.name = c("Estimate","Std..Error","Pr...t..","Var"), digits = 4)
 	tmpls[[i]]	<- tmp.tab
 }
