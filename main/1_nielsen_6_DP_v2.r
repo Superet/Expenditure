@@ -511,7 +511,9 @@ for(i in 1:length(mygrid)){
 }
 
 cat("The accpetance rates along the grid are:\n"); sapply(scale_ls, function(x) x$accept); cat("\n")
-sel			<- which.min(abs(sapply(scale_ls, function(x) x$accept) - .25 ))
+tmp			<- sapply(scale_ls, function(x) x$accept)
+sel			<- which(tmp > .3)
+sel			<- if(length(sel)>0, sel[which.min(tmp[sel])], which.max(tmp))
 cat("The scale paramter closest to .25 acceptance is", mygrid[sel],"\n")
 
 mcmc.scale 	<- mygrid[sel]

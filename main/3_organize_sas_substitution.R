@@ -1,9 +1,9 @@
 library(r2excel)
 library(data.table)
 
-setwd("~/Documents/Research/Store switching/processed data/Estimation/Other")
+setwd("~/Documents/Research/Store switching/processed data/Estimation")
 source('~/Documents/Research/Store switching/Exercise/main/outreg function.R')
-res 	<- read.csv("substitution_test_03jul2015.csv")
+res 	<- read.csv("substitution_test_09sep2015.csv")
 res$Pvalue	<- as.numeric(gsub("<", "",as.character(res$Probt)))
 
 # Initiate results excel

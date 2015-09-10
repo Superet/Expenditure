@@ -1,0 +1,9 @@
+#!/bin/bash
+#PBS -J 1-30
+#PBS -j oe
+#PBS -l walltime=80:00:00
+#PBS -l mem=2gb
+#PBS -l ncpus=1
+
+cd /sscc/home/c/ccv103/Exercise/run
+R CMD BATCH 2_het_income_effect_glmm.R glmm_sub${PBS_ARRAY_INDEX}.log

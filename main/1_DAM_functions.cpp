@@ -962,7 +962,7 @@ List policy_iterC(List DP_list, List control_list, int print_level=0, int init_V
 	}
 	if(mean(c_pos) < 1){
 		DP_listout["status"] = 4;
-		Rcout<<"Policy function iteration generates zero consumption.\n";
+// 		Rcout<<"Policy function iteration generates zero consumption.\n";
 	} 
 	
 	for(int i=0; i<D; i++){

@@ -5,33 +5,36 @@ library(plm)
 library(gridExtra)
 library(scales)
 library(r2excel)
+library(systemfit)
 
 options(error = quote({dump.frames(to.file = TRUE)}))
 
 # setwd("~/Documents/Research/Store switching/processed data")
-# plot.wd	<- '~/Desktop'
+# plot.wd	<- '/home/chaoqunchen/Desktop'
 # source("../Exercise/main/outreg function.R")
 # setwd("/home/brgordon/ccv103/Exercise/run")
 setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 plot.wd 	<- getwd()
 ww			<- 6.5
-ww1			<- 8
+ww1			<- 12
 ar 			<- .6
 
 write2csv	<- TRUE
 make_plot	<- TRUE
-outfile		<- paste(plot.wd, "/2_income_effect_", gsub("-", "", as.character(Sys.Date())), ".rdata", sep="")
-outxls		<- paste(plot.wd, "/2_het_income_effect_", gsub("-", "", as.character(Sys.Date())), ".xlsx", sep="")
+outfile		<- paste(plot.wd, "/2_cpiincome_effect_", gsub("-", "", as.character(Sys.Date())), ".rdata", sep="")
+outxls		<- paste(plot.wd, "/2_het_cpiincome_effect_", gsub("-", "", as.character(Sys.Date())), ".xlsx", sep="")
 mywb		<- createWorkbook()
 sht1		<- createSheet(mywb, "Sheet1")
 sht2		<- createSheet(mywb, "Regression")
-sht3		<- createSheet(mywb, "Regression w price")
+sht3		<- createSheet(mywb, "SUR")
 
 # Read data 
-hh_exp		<- read.csv("2_hh_biweek_exp_merge_larger.csv")
-fmt_attr 	<- read.csv("1_format_year_attr.csv")
-price_dat	<- read.csv("1_format_biweek_price.csv")
+# hh_exp		<- read.csv("2_hh_biweek_exp_merge_larger.csv")
+# fmt_attr 	<- read.csv("1_format_year_attr.csv")
+# price_dat	<- read.csv("1_format_biweek_price.csv")
+load("hh_biweek_exp.rdata")
+codebook	<- read.csv("code_book.csv")
 source("outreg function.R")
 
 # Extract 5% random sample
@@ -47,34 +50,9 @@ my_forward 	<- function(x){
 	return(c(x[-1], NA))
 }
 
-recode <- function(old.idx, old.value, new.n){
-	old.level 	<- sort(unique(old.idx))
-	old.n		<- length(old.level)
-	tab			<- sort(table(old.idx), decreasing=T)
-	sort.x		<- as.numeric(names(tab))
-	
-	loop.n 		<- new.n 
-	loop.x		<- old.idx
-	loop.sx		<- sort.x
-	mycut		<- NULL
-	for(i in new.n:1){
-		qt 		<- quantile(loop.x, c(0:loop.n)/loop.n)
-		if(length(unique(qt))==loop.n+1){
-			mycut <- c(mycut, qt)
-			break
-		}
-		mycut	<- c(mycut, loop.sx[1])
-		loop.x	<- loop.x[loop.x!=loop.sx[1]]
-		loop.n	<- loop.n - 1
-		loop.sx <- loop.sx[-1]
-	}
-	new.idx 	<- cut(old.idx, mycut, include.lowest=T, labels=1:new.n)
-	new.level	<- tapply(old.value, new.idx, mean, na.rm=T)
-	new.value	<- new.level[new.idx]
-	cat("Table of original categorical variable vs recoded categorical variable:\n")
-	print(table(old.idx, new.idx))
-	return(cbind(new.idx, new.value) )
-} 
+my_lag		<- function(x){
+	return(c(NA, x[-length(x)]))
+}
 
 mytransition <- function(x1, x2){
 	if(class(x1)!="factor" | class(x2) != "factor"){
@@ -96,73 +74,53 @@ fmt_name 	<- as.character(sort(unique(fmt_attr$channel_type)))
 R			<- length(fmt_name)
 
 # Compute expenditure share
-sel			<- paste("DOLP_", gsub("\\s", "_", fmt_name), sep="")
-hh_exp$y 	<- rowSums(hh_exp[,sel])
-hh_exp$income_real <- factor(hh_exp$income_real)
-sel1		<- gsub("DOLP", "SHR", sel)
+sel			<- paste("DOL_", gsub("\\s", "_", fmt_name), sep="")
+sel1		<- gsub("DOL", "SHR", sel)
 for(i in 1:length(fmt_name)){
-	hh_exp[,sel1[i]] <- hh_exp[,sel[i]]/hh_exp$y
+	hh_exp[,sel1[i]] <- hh_exp[,sel[i]]/hh_exp$dol
 }
-sel			<- which(names(hh_exp) == "i")
-hh_exp		<- hh_exp[,-sel]
 
 # Conver some date and factor variables
 hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))
-hh_exp$income_group <- factor(hh_exp$income_group, levels=paste("Qt",1:4,sep=""))
 hh_exp$famsize		<- factor(hh_exp$famsize, levels = c("Single","Two", "Three+"))
-hh_exp$Q			<- hh_exp$food_quant + hh_exp$nonedible_quant
-mycut 				<- c(0,1,2,3,5,14) + .5
-hh_exp$d			<- as.numeric(cut(hh_exp$num_day, mycut, labels=1:5))
-hh_exp[is.na(hh_exp$d),"d"] <- 0
-hh_exp[is.na(hh_exp$y),"y"] <- 0
-hh_exp[is.na(hh_exp$dol_purchases),"dol_purchases"] <- 0
-hh_exp[is.na(hh_exp$num_day),"num_day"] <- 0
-cpi 				<- unique(price_dat[,c("year","cpi")])
-
-# Recode inocme 
-hh_exp$income_real	<- as.numeric(as.character(hh_exp$income_real))
-n_Inc		<- 8
-sel			<-  hh_exp$income_real >= 27
-hh_exp[sel,"income_real"] <- 27
-tmp			<- recode(hh_exp$income_real, hh_exp$income_midvalue, n_Inc)
-Inc_nodes	<- sort(unique(tmp[,2]))
-hh_exp$income_nodes <- tmp[,1]
 
 # Segment households based on their initial income level 
 panelist	<- data.table(hh_exp)
 setkeyv(panelist, c("household_code","year","biweek"))
-# panelist	<- panelist[,list(first_income = income_group[1], income = income_real[1], first_famsize = famsize[1]), by=list(household_code)]
-panelist	<- panelist[,list(income = income_real[1], first_famsize = famsize[1]), by=list(household_code)]
+panelist	<- panelist[,list(income = first_income[1], first_famsize = famsize[1]), by=list(household_code)]
 tmp			<- quantile(panelist$income, c(0, .33, .67, 1))
 num_grp		<- 3
-panelist	<- panelist[, first_income := cut(panelist$income, tmp, labels = paste("T", 1:num_grp, sep=""), include.lowest = T)]
-hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "first_income")], by="household_code", all.x = TRUE)
-cat("Table of initial income distribution:\n"); print(table(panelist$first_income)); cat("\n")
-cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_income)); cat("\n")
+panelist	<- panelist[, first_incomeg := cut(panelist$income, tmp, labels = paste("T", 1:num_grp, sep=""), include.lowest = T)]
+hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "first_incomeg")], by = "household_code", all.x=T )
+hh_exp$first_incomeg	<- factor(hh_exp$first_incomeg, levels = c("T2", "T1", "T3"))
+# hh_exp$first_incomeg	<- cut(hh_exp$first_income, c(0, 17, 23, 30), labels = c("T1", "T2", "T3"))
+cat("Table of initial income distribution:\n"); print(table(panelist$first_incomeg)); cat("\n")
+cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_incomeg)); cat("\n")
 
 ###############################
 # Characterize income changes # 
 ###############################
 # The within-household trend of cpi-adjusted income 
 pan_yr		<- data.table(hh_exp)
-pan_yr		<- pan_yr[,list(Income = unique(income_midvalue), Inc = unique(income_real)), by = list(first_income, household_code, year)]
-pan_yr		<- merge(pan_yr, cpi, by="year", all.x=T)
-pan_yr$Income	 <- pan_yr$Income / pan_yr$cpi
+pan_yr		<- pan_yr[,list(Income = unique(income_midvalue), Inc = unique(income_real)), by = list(famsize, first_incomeg, first_income, household_code, year)]
+# pan_yr		<- merge(pan_yr, cpi, by="year", all.x=T)
+# pan_yr$Income	 <- pan_yr$Income / pan_yr$cpi
 pan_yr$ln_income <- log(pan_yr$Income)
 pan_yr$recession <- 1 * (pan_yr$year >= 2008)
 setkeyv(pan_yr, c("household_code", "year"))
-pan_yr    <- pan_yr[,':='(year_id= year - year[1] + 1, tenure = length(year), 
-                          move = 1*(!all(Inc==Inc[1]))) 
+pan_yr    <- pan_yr[,':='(year_id= year - year[1] + 1, tenure = length(year), move = c(0, 1*(diff(Inc)!=0)))
+                          	# move = 1*(!all(Inc==Inc[1]))) 
                     , by = list(household_code)]
+pan_yr		<- pan_yr[,move_all := sum(move), by = list(household_code)]
 pan_yr		<- data.frame(pan_yr)
 
 # Within-household regression: income ~ year/recession
 pan_yr$year <- factor(pan_yr$year)
-summary(lm(Income ~ year*first_income, data = pan_yr))
-myfit 		<- plm(Income ~ first_income*year, data=pan_yr, index = c("household_code","year"), model="within")
+summary(lm(Income ~ year*first_incomeg, data = pan_yr))
+myfit 		<- plm(Income ~ first_incomeg*year, data=pan_yr, index = c("household_code","year"), model="within")
 tmp			<- summary(myfit)
 cat("Income trend regression:\n"); print(tmp); cat("\n")
-myfit1		<- plm(Income ~ first_income*recession, data=pan_yr, index = c("household_code","year"), model="within")
+myfit1		<- plm(Income ~ first_incomeg*recession, data=pan_yr, index = c("household_code","year"), model="within")
 tmp1		<- summary(myfit1)
 cat("Income trend regression:\n"); print(tmp1); cat("\n")
 
@@ -176,22 +134,22 @@ if(write2csv){
 }
 
 # Plot the income trend 
-tmp			<- unique(pan_yr[,c("first_income","year")])
+tmp			<- unique(pan_yr[,c("first_incomeg","year")])
 tmp$year	<- factor(tmp$year)
-tmpx		<- model.matrix(~first_income*year, data = tmp)[,-(1:num_grp)]
+tmpx		<- model.matrix(~first_incomeg*year, data = tmp)[,-1]
 identical(colnames(tmpx), names(coef(myfit)))
 ggtmp		<- tmpx %*% coef(myfit)
 ggtmp		<- cbind(tmp, ggtmp)
 sel 		<- pan_yr$year == 2004
-tmp			<- tapply(pan_yr[sel,"Income"], pan_yr[sel,"first_income"], mean)
-ggtmp$Income<- (ggtmp$ggtmp + tmp[ggtmp$first_income])/1000
+tmp			<- tapply(pan_yr[sel,"Income"], pan_yr[sel,"first_incomeg"], mean)
+ggtmp$Income<- (ggtmp$ggtmp + tmp[ggtmp$first_incomeg])/1000
 ggtmp$year	<- as.numeric(as.character(ggtmp$year))
 
 plots		<- list(NULL)
-plots[[1]]	<- ggplot(pan_yr, aes(as.numeric(year), Income, linetype = first_income)) + geom_smooth(method=lm, formula = y ~ x + I(x^2) + I(x^3)) + 
+plots[[1]]	<- ggplot(pan_yr, aes(as.numeric(year), y = Income/1000, linetype = first_incomeg)) + geom_smooth(method=lm, formula = y ~ x + I(x^2) + I(x^3)) + 
 					guides(linetype = guide_legend(title = "Segment")) + 
-					labs(tilte = "Smoothing line of raw data")
-plots[[2]]	<- ggplot(ggtmp, aes(year, Income, linetype = first_income)) + geom_line() + 
+					labs(x = "Year", y = "Income($1000)", title = "Smoothing line of raw data")
+plots[[2]]	<- ggplot(ggtmp, aes(year, Income, linetype = first_incomeg)) + geom_line() + 
 			    		labs(x = "Year", y = "Income($1000)", title = "Smoothing line from within-model prediction") + 
 						guides(linetype = guide_legend(title = "Segment"))
 if(make_plot){
@@ -203,11 +161,38 @@ if(make_plot){
 
 #------------------------------------------------------#
 # Income transition within households; 
-ggtmp <- dcast(pan_yr, first_income + tenure + move + household_code ~ year_id, value.var = "Inc")
+ggtmp <- dcast(pan_yr, first_incomeg + tenure + move_all + household_code ~ year_id, value.var = "Inc")
 names(ggtmp)[-(1:4)] <- paste("yr", names(ggtmp)[-(1:4)], sep="")
+selcol 	<- grep("yr", names(ggtmp))
+sel		<- codebook$code_value <= 27					# 27 is the highest value in early years
+for(i in selcol){
+	ggtmp[,i]	<- factor(ggtmp[,i], levels = codebook[sel,"code_value"], labels = codebook[sel,"description"])
+}
+
+# Check household tenure
 tmp   <- rowSums(!is.na(ggtmp[,-(1:4)]))
-cat("Table of data tenure of households:\n"); table(tmp); cat("\n")
+tmp.tab <- table(tmp)
+tmp.tab	<- t(rbind(tmp.tab, tmp.tab/sum(tmp.tab)*100))
+colnames(tmp.tab)	<- c("Frequency", "Proportion")
+tmp.tab	<- data.frame(Tenure = rownames(tmp.tab), tmp.tab)
+cat("Table of data tenure of households:\n"); tmp.tab; cat("\n")
 tmpn    <- ncol(ggtmp) - 4
+
+# How many people never change income 
+sel		<- ggtmp$tenure > 1
+tmp.tab1 <- table(ggtmp[sel,"move_all"])
+tmp.tab1	<- t(rbind(tmp.tab1, tmp.tab1/sum(tmp.tab1)*100))
+colnames(tmp.tab1)	<- c("Frequency", "Proportion")
+tmp.tab1	<- data.frame(Num.Changes = rownames(tmp.tab1), tmp.tab1)
+cat("Table of number of income changes for households with tenure greater than 1:\n"); tmp.tab1; cat("\n")
+
+# Export tenure
+if(write2csv){
+	xlsx.addHeader(mywb, sht1, value = "Table of data tenure of households", level = 2)
+	xlsx.addTable(mywb, sht1, tmp.tab, row.names=FALSE)
+	xlsx.addHeader(mywb, sht1, value = "Table of number of income changes for households with tenure greater than 1", level = 2)
+	xlsx.addTable(mywb, sht1, tmp.tab1, row.names=FALSE)
+}
 
 # Plot of income transition from year 1
 tmp     <- lapply(2:tmpn, function(i) cbind(melt(table(ggtmp$yr1, ggtmp[,paste("yr",i,sep="")])), year = i))
@@ -215,20 +200,30 @@ ggtmp1  <- do.call("rbind", tmp)
 names(ggtmp1) <- c("x", "y", "Freq", "year")
 ggtmp1        <- data.table(ggtmp1)
 ggtmp1        <- ggtmp1[, Prop:= Freq/sum(Freq)*100, by = list(year)]
-ggplot(ggtmp1, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
-        geom_point(position= "jitter", pch = 21) + 
-        geom_abline(xintercept = 0, slope = 1, size = .25, linetype = 2) + 
-        scale_size_area(max_size = 15) + 
-        guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
-        labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from 1st year")
-
-ggplot(ggtmp1, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
-  geom_point(position= "jitter", pch = 21) + 
-  geom_abline(xintercept = 0, slope = 1, size = .25, linetype = 2) + 
-  scale_size_area(max_size = 15) + 
-  facet_wrap( ~ year) + 
-  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
-  labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from 1st year")
+plots		<- list(NULL)
+plots[[1]]	<- ggplot(ggtmp1, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+				  geom_point(position= "jitter", pch = 21) + 
+				  geom_abline(xintercept = 0, slope = 1, size = .25, linetype = 2) + 
+				  scale_size_area(max_size = 15) + 
+				  facet_wrap( ~ year) + 
+				  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+				  labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from 1st year") + 
+				  theme_bw() + 
+				  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+plots[[2]] 	<- ggplot(ggtmp1, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+		        geom_point(position= "jitter", pch = 21) + 
+		        geom_abline(xintercept = 0, slope = 1, size = .25, linetype = 2) + 
+		        scale_size_area(max_size = 15) + 
+		        guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+		        labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from 1st year") + 
+			  	theme_bw() + 
+			  	theme(axis.text.x = element_text(angle = 45, hjust = 1))
+if(make_plot){
+	pdf(paste(plot.wd,"/graph_income_1styear_base.pdf",sep=""), width = ww1, height = ww1*ar)
+	print(plots[[1]])
+	print(plots[[2]])
+	dev.off()
+}
 
 # Year to year transition
 tmp     <- lapply(2:tmpn, function(i) cbind(melt(table(ggtmp[,paste("yr",i-1,sep="")], ggtmp[,paste("yr",i,sep="")])), year = i-1))
@@ -236,57 +231,90 @@ ggtmp2  <- do.call("rbind", tmp)
 names(ggtmp2) <- c("x", "y", "Freq", "year")
 ggtmp2  <- data.table(ggtmp2)
 ggtmp2  <- ggtmp2[, Prop:=Freq/sum(Freq)*100, by = list(year)]
-quartz()
-ggplot(ggtmp2, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
-  geom_point(position= "jitter") + 
-  scale_size_area(max_size = 15) + 
-  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
-  labs(x = "Income in focal year n", y = "Income in the following year", title = "Income transition from year to year")
+plots 	<- list(NULL)
+plots[[1]]	<- ggplot(ggtmp2, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+					geom_point(position= "jitter", pch = 21) + 
+					scale_size_area(max_size = 15) + 
+					facet_wrap(~ year) + 
+					guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+					labs(x = "Income in focal year n", y = "Income in the following year", title = "Income transition from year to year")
+plots[[2]]	<- ggplot(ggtmp2, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+					geom_point(position= "jitter", pch = 21) + 
+					scale_size_area(max_size = 15) + 
+					guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+					labs(x = "Income in focal year n", y = "Income in the following year", title = "Income transition from year to year")
 
-# Year to year transition by panel 
-ggplot(ggtmp2, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
-  geom_point(position= "jitter") + 
-  scale_size_area(max_size = 15) + 
-  facet_wrap(~ year) + 
-  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
-  labs(x = "Income in focal year n", y = "Income in the following year", title = "Income transition from year to year")
+if(make_plot){
+	pdf(paste(plot.wd,"/graph_income_cont_transition.pdf",sep=""), width = ww1, height = ww1*ar)
+	print(plots[[1]])
+	print(plots[[2]])
+	dev.off()
+}
 
-# Path of income for tenure = 7
-ggplot(subset(pan_yr, tenure == 7 & move == 1), aes(year, Inc, group = household_code)) + 
-      geom_line() + 
-      facet_wrap(~ first_income)
+# Plot of income transition from year 1, by famsize
+ggtmp 	<- dcast(pan_yr, famsize + first_incomeg + tenure + move + household_code ~ year_id, value.var = "Inc")
+tmp1	<- 5
+names(ggtmp)[-(1:tmp1)] <- paste("yr", names(ggtmp)[-(1:tmp1)], sep="")
+tmp   	<- rowSums(!is.na(ggtmp[,-(1:tmp1)]))
+cat("Table of data tenure of households:\n"); table(tmp); cat("\n")
+cat("Table of data tenure by family size\n"); table(ggtmp$famsize, ggtmp$tenure); cat("\n")
+tmpn    <- ncol(ggtmp) - tmp1
+tmp1	<- unique(ggtmp$famsize)
 
+plots	<- list(NULL)
+for(i in 1:length(tmp1)){
+	sel		<- ggtmp$famsize == tmp1[i]
+	tmp     <- lapply(2:tmpn, function(j) cbind(melt(table(ggtmp[sel,"yr1"], ggtmp[sel,paste("yr",j,sep="")])), year = j ))
+	ggtmp1  <- do.call("rbind", tmp)
+	names(ggtmp1) <- c("x", "y", "Freq", "year")
+	ggtmp1        <- data.table(ggtmp1)
+	ggtmp1        <- ggtmp1[, Prop:= Freq/sum(Freq)*100, by = list(year)]
+	plots[[i]]	<- ggplot(ggtmp1, aes(x, y, size = Prop, col= factor(year), alpha = .8)) + 
+					  geom_point(position= "jitter", pch = 21) + 
+					  geom_abline(xintercept = 0, slope = 1, size = .25, linetype = 2) + 
+					  scale_size_area(max_size = 12, breaks = c(0, 2, 4, 8, 12)) + 
+					  facet_wrap( ~ year) + 
+					  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n")) + 
+					  labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from 1st year")
+}
 
-ggtmp1 <- melt(subset(ggtmp, tenure > 1), id.vars = c("first_income","tenure","move", "household_code","yr1"))
-
+if(make_plot){
+	pdf(paste(plot.wd,"/graph_income_1styear_famsize.pdf",sep=""), width = ww1, height = ww1*ar)
+	for(i in 1:length(plots)){
+		print(plots[[i]])
+	}
+	dev.off()
+}
 
 #------------------------------------------------------#
 # Expectation and variance
 # Data of current income and next-year income
-tmp		<- data.table(hh_exp)
-tmp.lab	<- c("Under 25k", "25k-29,999", "30k-39,999","40k-49,999","50k-59,999","60k-69,999","70k-99,999","100k+")
-tmp$income_nodes	<- factor(tmp$income_nodes, levels=1:n_Inc, labels=tmp.lab)
-tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(first_income, household_code, year)]
-setkeyv(tmp, c("first_income","household_code","year"))
-tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(first_income, household_code)]
-tmp$income_forward	<- factor(tmp$income_forward, levels = 1:n_Inc, labels=tmp.lab)
-tmp$seg	<- paste(tmp$first_income, tmp$year, sep="-")
+tmp		<- data.table(pan_yr)
+sel		<- tmp$Inc > 27
+tmp[sel,"Inc"]	<- 27
+tmp		<- tmp[, income_forward := my_forward(Inc), by=list(first_incomeg, household_code)]
+tmp1	<- sort(unique(tmp$Inc))
+tmp$Inc <- factor(tmp$Inc, levels = tmp1)
+tmp$income_forward <- factor(tmp$income_forward, levels = tmp1)
+tmp$seg	<- paste(tmp$first_incomeg, tmp$year, sep="-")
 
 # Compute the transition matrix of income for each segment
 tmp		<- data.frame(tmp)
 sel		<- tmp$year != 2010
 tmp1	<- split(tmp[sel,], tmp[sel,"seg"])
-tmp2	<- lapply(tmp1, function(x) mytransition(x$income_nodes, x$income_forward))
-tmp.mat	<- rep(1, n_Inc) %*% t(Inc_nodes)
+tmp2	<- lapply(tmp1, function(x) mytransition(x$Inc, x$income_forward))
+sel		<- codebook$code_value <= 27
+tmp.mat	<- rep(1, length(unique(tmp$Inc))) %*% t(as.vector(codebook[sel,"mid_range"]))
 
 # Compute expected future income and uncertainty
 tmp3	<- matrix(NA, length(tmp2), 2, dimnames = list(names(tmp1), c("Expectation", "SD")))
 for(i in 1:length(tmp2)){
-	sel			<- ifelse(i%%6==0, 1, i%%6)
-	tmp.mat1	<- tmp.mat/cpi[sel,"cpi"]
+	# sel			<- ifelse(i%%6==0, 1, i%%6)
+	# tmp.mat1	<- tmp.mat/cpi[sel,"cpi"]
+	tmp.mat1	<- tmp.mat
 	ee			<- rowSums(tmp2[[i]]*tmp.mat1)
 	vv			<- rowSums(tmp2[[i]]*tmp.mat1^2) - ee^2
-	tmp.wt		<- table(tmp1[[i]]$income_nodes)/nrow(tmp1[[i]])
+	tmp.wt		<- table(tmp1[[i]]$Inc)/nrow(tmp1[[i]])
 	tmp3[i,1]	<- sum(tmp.wt * ee)
 	tmp3[i,2]	<- sqrt(sum(tmp.wt^2 * vv))
 }
@@ -299,72 +327,106 @@ if(write2csv){
 	xlsx.addTable(mywb, sht1, tmp.tab, row.names = F)
 }
 
+######################################
+# Plot share trend from the raw data #
+######################################
+# Aggregate pattern of market share
+ggtmp		<- data.table(hh_exp)
+ggtmp		<- ggtmp[,list(DOL_Convenience_Store = sum(DOL_Convenience_Store), DOL_Discount_Store = sum(DOL_Discount_Store), 
+							DOL_Dollar_Store = sum(DOL_Dollar_Store), DOL_Drug_Store = sum(DOL_Drug_Store), 
+							DOL_Grocery = sum(DOL_Grocery), DOL_Warehouse_Club = sum(DOL_Warehouse_Club), y = sum(dol)), 
+					by = list(first_incomeg, biweek)]
+ggtmp		<- data.frame(ggtmp)
+ggtmp[,3:(2+R)]	<- ggtmp[,3:(2+R)]/ggtmp$y
+ggtmp		<- melt(ggtmp[,-ncol(ggtmp)], id.vars=c("first_incomeg", "biweek"))
+ggtmp		<- subset(ggtmp, !is.na(variable))
+tmp			<- tapply(ggtmp$value, ggtmp$variable, mean)
+tmp			<- names(tmp)[order(tmp,decreasing=T)]
+tmp1		<- gsub("_", " ", gsub("DOL_","",tmp))
+ggtmp$variable	<- factor(as.character(ggtmp$variable), levels=tmp, labels=tmp1)
+Rc_t		<- min(hh_exp[hh_exp$recession == 1, "biweek"])
+
+if(make_plot){
+	pdf(paste(plot.wd, "/graph_raw_share.pdf",sep=""), width=ww1, height = ww1*ar)
+	print(
+		ggplot(ggtmp, aes(biweek, value, fill = variable, order = as.numeric(variable))) + geom_bar(stat="identity") + 
+				facet_wrap( ~ first_incomeg) + 
+				labs(x = "Biweek", y = "Expenditure share") + 
+				scale_y_continuous(labels=percent) + 
+				scale_fill_grey() + 
+				guides(fill = guide_legend(reverse = TRUE, title="Retail format")) + 
+				theme_bw()
+	)
+	dev.off()
+}
+
+# Raw data pattern of expenditure share
+tmp_dv		<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")
+ggtmp 		<- melt(hh_exp[,c("first_incomeg","biweek",tmp_dv)], id.vars=c("first_incomeg","biweek"))
+ggtmp$variable <- factor(ggtmp$variable, levels = tmp_dv, labels = fmt_name)
+if(make_plot){
+	pdf(paste(plot.wd,"/graph_raw_share_gam.pdf",sep=""), width = ww, height = ww*.8)
+	print(ggplot(ggtmp, aes(biweek, value, linetype = first_incomeg)) + stat_smooth() + 
+			facet_wrap(~ variable, ncol = 2, scales = "free_y") + 
+			scale_y_continuous(labels=percent) + 
+			labs(x = "Biweek", y = "Expenditure share") + 
+			guides(linetype = guide_legend(title = "Segment")) + 
+			theme_bw()
+		)
+	dev.off()
+}
+
 #########################################
 # Regressions to explore income effects # 
 #########################################
 #---------------------------------------#
 # Construct regression data 
 mydata 	<- hh_exp
-
-# Adjust income by cpi 
+# Not adjust income by cpi 
 # mydata		<- merge(mydata, cpi, by="year", all.x=T)
+
+# Add price 
+tmp		<- dcast(price_dat, scantrack_market_descr+biweek ~ channel_type, value.var = "bsk_price_paid")
+colnames(tmp)	<- c("scantrack_market_descr", "biweek", paste("PRC_", gsub(" ", "_", fmt_name), sep=""))
+mydata 	<- merge(mydata, tmp, by = c("scantrack_market_descr", "biweek"), all.x = T)
+
+# Shopping incidence
 tmp_dv		<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")
 for(i in tmp_dv){
 	mydata[,i] <- mydata[,i]*100
 }
-mydata$ln_income	<- log(mydata$income_midvalue/mydata$cpi)
-mydata$month		<- factor(mydata$month)
-mydata$ln_dolpurchases <- log(mydata$dol_purchases)
-mydata$recession 	<- factor(mydata$recession)
-
-# Add income uncertainty
-tmp		<- data.table(hh_exp)
-tmp$income_nodes	<- factor(tmp$income_nodes)
-tmp		<- tmp[, list(income_nodes = unique(income_nodes)), by=list(first_income, household_code, year)]
-tmp$recession <- ifelse(tmp$year >= 2008, 1, 0)
-tmp		<- tmp[, income_forward := my_forward(income_nodes), by=list(household_code)]
-tmp		<- data.frame(tmp)
-tmp$income_forward <- as.factor(tmp$income_forward)
-
-# Transition table: replace 0 diagal with 1 if nobody belongs to some income level.
-tmp1	<- sort(unique(hh_exp$first_income))
-tmpn	<- max(hh_exp$income_nodes)
-trans.dat<- data.frame()
-for(i in 1:length(tmp1)){
-	for(j in 2004:2009){
-		sel		<- tmp$first_income == tmp1[i] & tmp$year ==j
-		tmp.tab	<- mytransition(tmp[sel,"income_nodes"], tmp[sel,"income_forward"])
-		for(k in as.numeric(rownames(tmp.tab))){
-			ss	<- ifelse(k==1, 1, k-1)
-			ee	<- ifelse(k==tmpn, tmpn, k+1)
-			trans.dat <- rbind(trans.dat, data.frame(first_income = tmp1[i], year = j, income_nodes = k, 
-								p_low = sum(tmp.tab[as.character(k),1:ss]), p_high = sum(tmp.tab[as.character(k), ee:tmpn])))
-		}
-	}
+sel			<- paste("DOL_", gsub("\\s", "_", fmt_name), sep="")
+sel1		<- gsub("DOL", "IC", sel)
+for(i in 1:length(fmt_name)){
+	mydata[,sel1[i]] <- 1*(mydata[,sel[i]]>0)
 }
-mydata	<- merge(mydata, trans.dat, by = c("first_income","year","income_nodes"), all.x=T)
 
+mydata$ln_income	<- log(mydata$income_midvalue/mydata$cpi)
+sum(mydata$dol == 0 )/nrow(mydata)
+mydata				<- subset(mydata, dol > 0)
+# mydata$ln_income	<- log(mydata$income_midvalue)
+mydata$month		<- factor(mydata$month)
+mydata$ln_dol 		<- log(mydata$dol)
+mydata$recession 	<- factor(mydata$recession)
+mydata$year			<- as.factor(mydata$year)
 
-# Add the direction of income changes: increase or decrease compared with previous year
-tmp		<- data.table(pan_yr)
-setkeyv(tmp, c("household_code","year"))
-tmp		<- tmp[, last_income:=c(NA, Income[-length(Income)]), by = list(household_code)]
-tmp		<- tmp[, income_increase := 1*(Income - last_income>0)]
-
-mydata	<- merge(mydata, data.frame(tmp)[,c("household_code","year","income_increase")], by=c("household_code","year"), all.x=T)
-mydata$income_increase	<- factor(mydata$income_increase)
-table(mydata$income_increase)
-mydata$year	<- as.factor(mydata$year)
+# Add lagged purchases
+mydata	<- data.table(mydata)
+mydata	<- mydata[,lag_dol := my_lag(dol), by = list(household_code)]
+mydata	<- data.frame(mydata)
+mydata	<- subset(mydata, !is.na(lag_dol))
+mydata$ln_incomeT1 <- 1*(mydata$first_incomeg == "T1")*mydata$ln_income
+mydata$ln_incomeT3 <- 1*(mydata$first_incomeg == "T3")*mydata$ln_income
 
 #---------------------------------------#
 # Set up DV and IV, regression models 
-dv_vec	<- c("ln_dolpurchases", paste("SHR_", gsub("\\s", "_", fmt_name), sep="") )
-myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + year + month"), 
-				Heterogeneity	= as.formula("y ~ ln_income*first_income + year + month"),
-				Assymetry		= as.formula("y ~ ln_income*income_increase + year + month"),
-				Het_Asy			= as.formula("y ~ ln_income*first_income*income_increase + year + month"),
-				Expectation		= as.formula("y ~ ln_income + p_low + p_high + year + month"),
-				Het_expc		= as.formula("y ~ ln_income*first_income + p_low*first_income + p_high*first_income + year + month")
+dv_vec	<- c("ln_dol", paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), paste("IC_", gsub("\\s", "_", fmt_name), sep="") )
+myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + month"), 
+				Heterogeneity	= as.formula("y ~ ln_income*first_incomeg + month"), 
+				Year			= as.formula("y ~ ln_income*first_incomeg + year + month"), 
+				Price			= as.formula("y ~ ln_income*first_incomeg + 
+											PRC_Convenience_Store + PRC_Discount_Store + PRC_Dollar_Store + 
+											PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club + month")
 				)
 
 # Run regressions
@@ -372,9 +434,10 @@ regrs	<- data.frame()
 for(i in 1:length(dv_vec)){
 	prc 		<- proc.time()
 	for(j in 1:length(myfml)){
+		rm(list = "myfit")
 		tmp 	<- as.formula(substitute(y ~ x, list(y = as.name(dv_vec[i]), x = terms(myfml[[j]])[[3]])) )
-		if(dv_vec[i] != "ln_dolpurchases"){
-			tmp		<- update(tmp, . ~ . + y)
+		if(dv_vec[i] != "ln_dol"){
+			tmp		<- update(tmp, . ~ . + lag_dol)
 		}
 		myfit	<- plm(tmp, data = mydata, index = c("household_code","biweek"), model="within")
 		tmp2	<- summary(myfit)
@@ -405,44 +468,108 @@ if(write2csv){
 	}
 }
 
-#################################
-# Add prices to the regressions # 
-#################################
-# Append price data to the regression data 
-tmp		<- data.table(price_dat)
-tmp		<- tmp[,list(bsk_price_paid_2004 = mean(bsk_price_paid_2004)), by = list(scantrack_market_descr, biweek, channel_type)] 
-tmp		<- dcast(data.frame(tmp), scantrack_market_descr + biweek ~ channel_type, value.var = "bsk_price_paid_2004")
-names(tmp)[-(1:2)]	<- paste("PRC_", names(tmp)[-(1:2)], sep="")
-names(tmp)	<- gsub("\\s", "_", names(tmp))
-mydata	<- merge(mydata, tmp, by = c("scantrack_market_descr","biweek"), all.x=T)
-
-# Re estimate the regressions with price controls 
-myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"), 
-				Heterogeneity	= as.formula("y ~ ln_income*first_income + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"),
-				Assymetry		= as.formula("y ~ ln_income*income_increase + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"),
-				Het_Asy			= as.formula("y ~ ln_income*first_income*income_increase + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"),
-				Expectation		= as.formula("y ~ ln_income + p_low + p_high + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club"),
-				Het_expc		= as.formula("y ~ ln_income*first_income + p_low*first_income + p_high*first_income + year + month + PRC_Discount_Store + PRC_Grocery + PRC_Warehouse_Club")
-				)
-
-# Run regressions
-regrs1	<- data.frame()
-for(i in 1:length(dv_vec)){
-	prc 		<- proc.time()
-	for(j in 1:length(myfml)){
-		tmp 	<- as.formula(substitute(y ~ x, list(y = as.name(dv_vec[i]), x = terms(myfml[[j]])[[3]])) )
-		if(dv_vec[i] != "ln_dolpurchases"){
-			tmp		<- update(tmp, . ~ . + y)
-		}
-		myfit	<- plm(tmp, data = mydata, index = c("household_code","biweek"), model="within")
-		tmp2	<- summary(myfit)
-		tmp3	<- data.frame(model = names(myfml)[j], DV = dv_vec[i], tmp2$coefficients)
-		tmp3$Var<- rownames(tmp3)
-		rownames(tmp3) <- NULL
-		regrs1	<- rbind(regrs1, tmp3)
+#####################################
+# SUR regression with fixed effects #
+#####################################
+my.SURFE <- function(syseq, data, panid, ...){
+# This function fits system equations SUR with fixed effects. 
+# It requires that independent variables are the same. 
+	mfr		<- model.frame(syseq[[1]], data = data, weights = eval(as.name(panid)))
+	X		<- model.matrix(syseq[[1]], data = data)
+	X 		<- X[,-which(colnames(X)=="(Intercept)")]
+	y		<- sapply(syseq, function(x) model.extract(model.frame(x, data), "response") )
+	mydata	<- data.table(cbind(y, X))
+	varvec	<- colnames(mydata)
+	mydata$id	<- model.extract(mfr, "weights")
+	
+	# Substract group mean
+	for(i in 1:length(varvec)){
+		var		<- as.name(varvec[i])
+		mydata 	<- mydata[,eval(var):=eval(var) - mean(eval(var), na.rm=T), by = list(id)]
 	}
-	use.time 	<- proc.time() - prc
-	cat("Regressions for", dv_vec[i], "finishes, using", use.time[3]/60, "min.\n")
+	mydata	<- data.frame(mydata)
+	
+	# Correct the system of formula
+	syseq_new	<- syseq
+	Xname		<- setdiff(colnames(mydata), c("id", colnames(y)))
+	for(i in 1:length(syseq)){
+		syseq_new[[i]]	<- as.formula( paste(colnames(y)[i], "~", paste(Xname, collapse = "+"), "-1", sep="") )
+	}
+	
+	# Fit SUR
+	myfit 	<- systemfit(syseq_new, data = mydata, method = "SUR", control = systemfit.control( ... ))
+	print(summary(myfit))
+	coeftab <- data.frame(summary(myfit)$coefficients)
+	coeftab$df			<- myfit$df.residual/length(syseq)
+	coeftab$adj_df		<- coeftab$df - length(unique(data[,panid]))
+	coeftab$adj_StdErr	<- with(coeftab, Std..Error*sqrt(df/adj_df))
+	coeftab$adj_t		<- with(coeftab, Estimate/adj_StdErr)
+	coeftab$adj_p		<- with(coeftab, pt(-abs(adj_t), adj_df)*2)
+	
+	return(coeftab)
+}
+
+# Fit SUR with fixed effects 
+dv_mat	<- cbind(paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), paste("IC_", gsub("\\s", "_", fmt_name), sep=""))
+dv_mat	<- dv_mat[-1,]
+myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + month + lag_dol"), 
+				Heterogeneity	= as.formula("y ~ ln_income + ln_incomeT1 + ln_incomeT3 + month + lag_dol"), 
+				Year 			= as.formula("y ~ ln_income + ln_incomeT1 + ln_incomeT3 + year + month + lag_dol"), 
+				Price 			= as.formula("y ~ ln_income + ln_incomeT1 + ln_incomeT3 + lag_dol + month + 
+													PRC_Convenience_Store + PRC_Discount_Store + PRC_Dollar_Store + 
+													PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club")
+				)
+				
+regrs1 	<- data.frame()
+panid	<- "household_code"
+fmln	<- c("Homogeneity", "T1", "T2", "T3")
+for(i in 1:ncol(dv_mat)){
+	# for(j in 1:4){
+	# 	prc 		<- proc.time()
+	# 	syseq	<- lapply(dv_mat[,i], function(yn) 
+	# 				as.formula(substitute(y ~ x, list(y = as.name(yn), x = terms(myfml[[1]])[[3]])) ) )
+	# 	names(syseq)	<- gsub("_", ".", dv_mat[,i])
+	# 	if(j == 1){
+	# 		tmp		<- try(my.SURFE(syseq, mydata, panid = "household_code", maxiter = 2, residCovWeighted = TRUE, model = FALSE))
+	# 	}else{
+	# 		tmp		<- try(my.SURFE(syseq, subset(mydata, first_incomeg == fmln[j]), panid = "household_code"))
+	# 	}
+	# 
+	# 	if(class(tmp) != "try-error"){
+	# 		tmp1 	<- sapply(rownames(tmp), function(x) strsplit(x, "_")[[1]][1])
+	# 		tmp2	<- sapply(1:length(tmp1), function(i) gsub(paste(tmp1[i], "_", sep=""), "", rownames(tmp)[i]))
+	# 		tmp3	<- cbind(model = fmln[j], DV = tmp1, Var = tmp2, tmp)
+	# 		rownames(tmp3) <- NULL
+	# 		regrs1	<- rbind(regrs1, tmp3)
+	# 		use.time 	<- proc.time() - prc
+	# 		cat("Regressions for", ifelse(i==1, "share", "incidence"), "with", ifelse(j==1, "homogenous", "heterogenous"),
+	# 			"responses finishes, using", use.time[3]/60, "min.\n")
+	# 	}else{
+	# 		cat("Regressions for", ifelse(i==1, "share", "incidence"), "with", ifelse(j==1, "homogenous", "heterogenous"),
+	# 			"responses fails.\n")
+	# 	}
+	# }
+	for(j in 1:length(myfml)){
+		rm(list = "tmp")
+		prc 		<- proc.time()
+		syseq	<- lapply(dv_mat[,i], function(yn) 
+					as.formula(substitute(y ~ x, list(y = as.name(yn), x = terms(myfml[[j]])[[3]])) ) )
+		names(syseq)	<- gsub("_", ".", dv_mat[,i])
+		tmp		<- try(my.SURFE(syseq, mydata, panid = "household_code", maxiter = 2, residCovWeighted = TRUE, model = FALSE))
+		if(class(tmp) != "try-error"){
+			tmp1 	<- sapply(rownames(tmp), function(x) strsplit(x, "_")[[1]][1])
+			tmp2	<- sapply(1:length(tmp1), function(i) gsub(paste(tmp1[i], "_", sep=""), "", rownames(tmp)[i]))
+			tmp3	<- cbind(model = names(myfml)[j], DV = tmp1, Var = tmp2, tmp)
+			rownames(tmp3) <- NULL
+			regrs1	<- rbind(regrs1, tmp3)
+			use.time 	<- proc.time() - prc
+			cat("Regressions for", ifelse(i==1, "share", "incidence"), "with", names(myfml)[j],
+				"responses finishes, using", use.time[3]/60, "min.\n")
+		}else{
+			cat("Regressions for", ifelse(i==1, "share", "incidence"), "with", names(myfml)[j],
+				"responses fails.\n")
+		}
+	}
 }
 
 # Print regression results 
@@ -451,10 +578,14 @@ tmpls		<- vector("list", length(myfml))
 names(tmpls)<- names(myfml)
 for(i in 1:length(myfml)){
 	tmp1	<- subset(tmp, model == names(myfml)[i])
-	model_list	<- split(tmp1, tmp1$DV)
-	tmp.tab	<- model_outreg(model_list, p.given = TRUE, head.name = c("Estimate","Std..Error","Pr...t..","Var"), digits = 4)
-	tmpls[[i]]	<- tmp.tab
+	if(nrow(tmp1) !=0 ){
+		model_list	<- split(tmp1, tmp1$DV)
+		tmp.tab	<- model_outreg(model_list, p.given = TRUE, head.name = c("Estimate","adj_StdErr","adj_p","Var"), digits = 4)
+		tmpls[[i]]	<- tmp.tab
+	}
 }
+sel 	<- sapply(tmpls, is.null)
+tmpls	<- tmpls[!sel]
 
 if(write2csv){
 	for(i in 1:length(tmpls)){

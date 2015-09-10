@@ -11,6 +11,7 @@ PROC IMPORT OUT= WORK.orig_products
 			GUESSINGROWS=5000;
 RUN;
 
+* Subset products to the focal category; 
 data myprod; 
 	set orig_products;
 	where product_module_descr in ("YOGURT-REFRIGERATED");
@@ -19,6 +20,7 @@ run;
 
 * Read UPC-level purchase data;
 %macro read_groc_fun;
+* This is macro function that reads the data by looping over year; 
 	%do i=2004 %to 2012;
 		* Import trip data;
 		%let fpath = &dirname\&i\Annual_Files\trips_&i..tsv;

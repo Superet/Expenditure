@@ -1,3 +1,13 @@
+LIBNAME mysqllib OLEDB
+OLEDB_SERVICES=NO
+Datasource="kdc01\kdwh02"
+PROVIDER=SQLOLEDB.1
+Properties=('Initial Catalog'=USRDB_ccv103
+                  'Integrated Security'=SSPI)
+SCHEMA=DBO
+BULKLOAD=YES
+bl_options='ROWS_PER_BATCH = 500000';
+
 libname mylib "E:\Users\ccv103\Documents\Research\Store switching\SAS_temp\Nielsen";
 libname mysel "E:\Users\ccv103\Documents\Research\Store switching\SAS_temp\Nielsen\Work";
 libname mainex "E:\Users\ccv103\Documents\Research\Store switching\SAS_temp\Nielsen\Work\main";
@@ -69,7 +79,7 @@ run;
 
 * Household demographics; 
 data demo_annual; 
-	set mylib.panelists(keep = household_code panel_year income_group income_real income_midvalue famsize scantrack_market_descr); 
+	set mylib.panelists(keep = household_code panel_year income_real income_midvalue famsize scantrack_market_descr); 
 run;
 
 *Select only 5% households to test the codes; 
@@ -105,23 +115,23 @@ run;
 
 * The distribution of intial income; 
 proc freq data = demo_init; table income_real; run; 
-data demo_init(drop = income_group);
+data demo_init;
 	set demo_init; 
 	first_income = 'T1'; 
-	if income_real >16 & income_real <=21 then first_income = 'T2'; 
-	if income_real >21 then first_income = 'T3'; 
+	if income_real >17 & income_real <=23 then first_income = 'T2'; 
+	if income_real >23 then first_income = 'T3'; 
 run; 
 
 *--------------------------------------------------------*; 
 * Compute percentile of outcome variables to hh_exp -- expenditure and share; 
 proc sql noprint;
 	create table tmp as 
-	select household_code, biweek, year, dol_purchases, 
-		DOLP_Convenience_Store, DOLP_Discount_Store, DOLP_Dollar_Store, 
-		DOLP_Drug_Store, DOLP_Grocery, DOLP_Warehouse_Club,
-		DOLP_Convenience_Store/dol_purchases as SHR_Convenience_Store, DOLP_Discount_Store/dol_purchases as SHR_Discount_Store, 
-		DOLP_Dollar_Store/dol_purchases as SHR_Dollar_Store, DOLP_Drug_Store/dol_purchases as SHR_Drug_Store, 
-		DOLP_Grocery/dol_purchases as SHR_Grocery, DOLP_Warehouse_Club/dol_purchases as SHR_Warehouse_Club,
+	select household_code, biweek, year, dol, 
+		DOL_Convenience_Store, DOL_Discount_Store, DOL_Dollar_Store, 
+		DOL_Drug_Store, DOL_Grocery, DOL_Warehouse_Club,
+		DOL_Convenience_Store/dol as SHR_Convenience_Store, DOL_Discount_Store/dol as SHR_Discount_Store, 
+		DOL_Dollar_Store/dol as SHR_Dollar_Store, DOL_Drug_Store/dol as SHR_Drug_Store, 
+		DOL_Grocery/dol as SHR_Grocery, DOL_Warehouse_Club/dol as SHR_Warehouse_Club,
 		num_day, num_trip, num_food_module, num_noned_module, food_quant, nonedible_quant, 
 		scantrack_market_descr, income_real, income_midvalue
 	from mylib.Hh_biweek_exp_merge
@@ -129,7 +139,7 @@ proc sql noprint;
 quit; 
 
 proc rank data=tmp out=tmp_rank ties=mean PERCENT;
-	var dol_purchases SHR_Convenience_Store SHR_Discount_Store SHR_Dollar_Store
+	var dol SHR_Convenience_Store SHR_Discount_Store SHR_Dollar_Store
 		SHR_Drug_Store SHR_Grocery SHR_Warehouse_Club;
 	ranks PCTL_DOL PCTL_Convenience_Store PCTL_Discount_Store PCTL_Dollar_Store
 		PCTL_Drug_Store PCTL_Grocery PCTL_Warehouse_Club;
@@ -154,11 +164,11 @@ data hh_exp;
 	first_date 	= mdy(1,1,2004) + (biweek-1)*14; 
 	month 		= month(first_date);
 	ymonth 		= cats(year, '-', month); 
-	dol_rt 		= dol_purchases/(income_cpi/26);
+	dol_rt 		= dol/(income_cpi/26);
 	quant 		= food_quant + nonedible_quant; 
 	num_mod		= num_food_module + num_noned_module; 
 	ln_y		= .; 
-	if dol_purchases > 0 then ln_y		= log(dol_purchases); 
+	if dol > 0 then ln_y		= log(dol); 
 	drop first_date;
 run; 
 
@@ -166,23 +176,30 @@ run;
 * Compute percentile of outcome variables in purchase data -- price tier and size tier; 
 data dict; 
 	set mylib.products(keep = upcv department_descr product_group_descr product_module_descr
-		 	brand_descr multi size size1_amount size_percentile ); 
+		 	brand_descr multi size size1_amount ); 
 run; 
 
 * Price tier of UPC within category; 
 proc sql noprint;
-	* Subset purchase data; 
-	create table tmp_purch as 
-	select household_code, year, purchase_date, month(purchase_date) as month, biweek, upcv, product_module_descr, 
-			size, quantity, price, price/size as unit_price
-	from (select * from mainex.purchases where household_code in (select household_code from demo_init))
-	order by product_module_descr; 
+	connect to oledb as mydb
+	(OLEDB_SERVICES=NO Datasource="kdc01\kdwh02" PROVIDER=SQLOLEDB.1 
+	Properties=('Initial Catalog'=USRDB_ccv103 'Integrated Security'=SSPI)
+	SCHEMA=DBO);
 
 	* Average unit price of UPC; 	
+	create table tmp1 as 
+	select * from connection to mydb (
+		select upcv, AVG(price) as price
+		from dbo.purchases
+		group by upcv
+	); 
+	disconnect from mydb;
+	
 	create table tmp as 
-	select product_module_descr, upcv, mean(unit_price) as unit_price, mean(size) as size 
-	from tmp_purch
-	group by product_module_descr, upcv;
+	select A.*, B.product_module_descr, B.size, price/size as unit_price
+	from tmp1 as A left join dict as B
+	on A.upcv = B.upcv
+	order by product_module_descr; 
 quit; 
 
 * Rank price within category; 
@@ -194,8 +211,14 @@ run;
 
 * Append price tier and household segment to purchase data; 
 proc sql noprint;
+	create table tmp_purch as 
+	select household_code, A.year, purchase_date, month(purchase_date) as month, A.biweek, upcv, quantity, price
+	from mainex.purchases as A 
+	inner join (select * from mainex.trips where household_code in (select household_code from demo_init)) as B
+	on A.trip_code_uc = B.trip_code_uc; 
+
 	create table tmp as 
-	select A.*, B.PCTL_UPRICE, B.PCTL_SIZE
+	select A.*, B.product_module_descr, B.size, B.unit_price, B.PCTL_UPRICE, B.PCTL_SIZE
 	from tmp_purch as A left join myprod as B
 	on A.upcv = B.upcv; 
 
@@ -218,14 +241,14 @@ proc sql noprint;
 	
 	* Append category weights;
 	create table tmp1 as 
-	select A.*, B.share_paid
-	from tmp as A left join (select product_module_descr, mean(share_paid) as share_paid from mylib.module_wallet group by product_module_descr) as B
+	select A.*, B.weight
+	from tmp as A left join mylib.basket as B
 	on A.product_module_descr = B.product_module_descr;
 	
 	* Compute weighted average of size/price tier during biweek; 
 	create table tmp2 as 
-	select household_code, biweek, sum(PCTL_UPRICE*share_paid)/sum(share_paid) as PCTL_UPRICE, 
-			sum(PCTL_SIZE*share_paid)/sum(share_paid) as PCTL_SIZE
+	select household_code, biweek, sum(PCTL_UPRICE*weight)/sum(weight) as PCTL_UPRICE, 
+			sum(PCTL_SIZE*weight)/sum(weight) as PCTL_SIZE
 	from tmp1 
 	group by household_code, biweek; 
 	
@@ -310,7 +333,7 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Pre-rec
 * The cost of substitution by segment *; 
 ***************************************;
 * The cost of moving expenditure percentile up -- expenditure to income ratio; 
-%run_FE(data=hh_exp, dv=dol_purchases, iv= first_income*PCTL_DOL famsize year, 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*PCTL_DOL famsize year, 
 		classvar = first_income famsize year, FEvar = month, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-expenditurePCT'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
@@ -338,7 +361,7 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-ex
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-expenditure'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
-%run_FE(data=hh_exp, dv=dol_purchases, iv= first_income*ln_y famsize year, 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*ln_y famsize year, 
 		classvar = first_income famsize year, FEvar = month, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-expenditure'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
@@ -361,7 +384,7 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-ex
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Discount_Store'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
-%run_FE(data=hh_exp, dv=dol_purchases, iv= first_income*SHR_Discount_Store famsize year, 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*SHR_Discount_Store famsize year, 
 		classvar = first_income famsize year, FEvar = month, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Discount_Store'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
@@ -384,7 +407,7 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Di
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Grocery'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
-%run_FE(data=hh_exp, dv=dol_purchases, iv= first_income*SHR_Grocery famsize year, 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*SHR_Grocery famsize year, 
 		classvar = first_income famsize year, FEvar = month, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Grocery'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
@@ -407,7 +430,7 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Gr
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Warehouse_Club'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
-%run_FE(data=hh_exp, dv=dol_purchases, iv= first_income*SHR_Warehouse_Club famsize year, 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*SHR_Warehouse_Club famsize year, 
 		classvar = first_income famsize year, FEvar = month, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-Warehouse_Club'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
@@ -435,7 +458,7 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-SI
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-SIZE'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
-%run_FE(data=hh_exp, dv=dol_purchases, iv= first_income*PCTL_SIZE famsize year, 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*PCTL_SIZE famsize year, 
 		classvar = first_income famsize year, FEvar = month, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-SIZE'; run; 
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
@@ -448,6 +471,70 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-SI
 %run_FE(data=hh_exp, dv=quant, iv= first_income*PCTL_SIZE famsize year, 
 		classvar = first_income famsize year, FEvar = month, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-SIZE'; run; 
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+******************************; 
+* In-recesssion substitution *; 
+******************************; 
+data hh_exp; 
+	set hh_exp; 
+	Rc = 1 * (year >= 2008); 
+proc sort; by household_code month descending Rc; run;
+
+data purchases; 
+	set purchases; 
+	Rc = 1 * (year >= 2008); 
+proc sort; by household_code product_module_descr month descending Rc; run; 
+
+* Within-household substitution of grocery expenditure; 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Expenditure'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+		
+* Within-household substitution of expenditure share; 
+%run_FE(data=hh_exp, dv=SHR_Discount_Store, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Discount_Store'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+%run_FE(data=hh_exp, dv=SHR_Dollar_Store, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Dollar_Store'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+%run_FE(data=hh_exp, dv=SHR_Grocery, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Grocery'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+%run_FE(data=hh_exp, dv=SHR_Warehouse_Club, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Warehouse_Club'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+* Within-household substitution of price-tier -- biweekly basket level;
+%run_FE(data=hh_exp, dv=PCTL_UPRICE, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Basket_Unit_price'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+* Within-household substitution of price-tier -- purchase level;
+%run_FE(data=purchase, dv=PCTL_UPRICE, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code product_module_descr, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Purchase_Unit_price'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+* Within-household substitution of size -- biweekly basket level;
+%run_FE(data=hh_exp, dv=PCTL_SIZE, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Basket_Size'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+* Within-household substitution of size -- purchase level;
+%run_FE(data=purchases, dv=PCTL_UPRICE, iv= first_income*Rc month, 
+		classvar = first_income month, FEvar = household_code product_module_descr, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Purchase_Size'; run; 		
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
 * Export regression results to excel; 
