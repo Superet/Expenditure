@@ -211,7 +211,7 @@ incl_value_fn <- function(param_est, base, X_list, y, Q, price, R, Ra, qz_cons =
 	
 	# Compute the parameters for allocation function 
 	if(is.null(eps_draw)){
-		eps_draw 	<- rep(1, Nobs) %*% t(rgev(R))				# matrix(rgev(Nobs*R), Nobs, R)
+		eps_draw 	<- rep(1, Nobs) %*% t(rgev(R)) * sigma				# matrix(rgev(Nobs*R), Nobs, R)
 	}
 	xbeta	<- sapply(1:R, function(i) X_list[[i]] %*% beta + beta0[i])
 	psi		<- exp(xbeta + eps_draw)
@@ -222,10 +222,15 @@ incl_value_fn <- function(param_est, base, X_list, y, Q, price, R, Ra, qz_cons =
 	omega 	<- rep(NA, Nobs) 
 	e		<- matrix(NA, Nobs, Ra)
 	for(i in 1:Nobs){
-		sol	<- Allocation_fn(y = y[i], psi=psi[i,], gamma=gamma, Q = Q, price=price[i,], 
-				R=R, Ra=Ra, qz_cons = qz_cons, exp_outside = exp_outside, quant_outside = quant_outside, inits=inits, ...)
-		omega[i]	<- sol$max
-		e[i,]		<- sol$e
+		if(y[i] < 1e-5){
+			omega[i]	<- 0 
+			e[i,]		<- 0
+		}else{
+			sol	<- Allocation_fn(y = y[i], psi=psi[i,], gamma=gamma, Q = Q, price=price[i,], 
+					R=R, Ra=Ra, qz_cons = qz_cons, exp_outside = exp_outside, quant_outside = quant_outside, inits=inits, ...)
+			omega[i]	<- sol$max
+			e[i,]		<- sol$e
+		}
 	}
 	
 	# Return results 

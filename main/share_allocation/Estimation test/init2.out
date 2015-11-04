@@ -1,0 +1,131 @@
+Loading required package: methods
+Loading required package: miscTools
+
+Please cite the 'maxLik' package as:
+Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihood estimation in R. Computational Statistics 26(3), 443-458. DOI 10.1007/s00180-010-0217-1.
+
+If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
+https://r-forge.r-project.org/projects/maxlik/
+[1] "seg_id = 2"
+Table of initial income distribution:
+
+  T1   T2   T3 
+8669 7572 6962 
+
+Table of segments in the expenditure data:
+
+    T1     T2     T3 
+814520 705673 592992 
+
+[1] 2
+[1] 2 2
+[1] "Convenience Store"
+   user  system elapsed 
+  0.847   0.000   0.847 
+The ll from these estimates are:
+[1] -1713432 -1713433 -1713432 -1713432
+
+The coefficient estimates are:
+                [,1]         [,2]        [,3]        [,4]
+beta_1   -0.87254963 -0.863640238 -0.87248381 -0.87205026
+beta_2   -0.03057594 -0.020035604 -0.03111832 -0.02966117
+beta_3    0.11074221  0.089519376  0.11211878  0.10785085
+beta_4   -0.77090161 -0.730918413 -0.76902662 -0.77212427
+beta_5    0.07949476  0.078710686  0.07948795  0.07944440
+beta_6    0.09990056  0.098837839  0.09995126  0.09982671
+beta_7   -0.01182698 -0.009724268 -0.01195217 -0.01157709
+beta_8    0.08619110  0.082077592  0.08601942  0.08633852
+beta0_1  -1.75184352 -1.750910234 -1.75178489 -1.75181969
+beta0_2  -1.09124651 -1.092362672 -1.09121228 -1.09115365
+beta0_3  -1.36684241 -1.368126334 -1.36676038 -1.36669713
+beta0_4  -0.58477142 -0.585090907 -0.58472650 -0.58471760
+beta0_6  -0.87913526 -0.882895021 -0.87903375 -0.87865473
+gamma_1   3.43664338  3.435900689  3.43668547  3.43753239
+gamma_2  15.33119481 15.343582487 15.33114797 15.33113693
+gamma_3   4.50571159  4.500487595  4.50551200  4.50561290
+gamma_4   3.97134304  3.971626386  3.97138803  3.97127031
+gamma_5   7.43970882  7.445152992  7.43990399  7.43937435
+gamma_6  37.49353739 37.404502935 37.49240164 37.49272774
+ln_sigma  0.00000000  0.000000000  0.00000000  0.00000000
+
+Warning messages:
+1: In sqrt(diag(vc)) : NaNs produced
+2: In sqrt(diag(vc)) : NaNs produced
+3: In sqrt(diag(vc)) : NaNs produced
+4: In sqrt(diag(vc)) : NaNs produced
+MDCEV estimation finishes with 227.174 min.
+--------------------------------------------
+Maximum Likelihood estimation
+BFGS maximisation, 314 iterations
+Return code 0: successful convergence 
+Log-Likelihood: -1713432 
+19  free parameters
+Estimates:
+          Estimate Std. error  t value  Pr(> t)    
+beta_1   -0.872550   0.017315  -50.393  < 2e-16 ***
+beta_2   -0.030576         NA       NA       NA    
+beta_3    0.110742         NA       NA       NA    
+beta_4   -0.770902   0.105918   -7.278 3.38e-13 ***
+beta_5    0.079495   0.001576   50.451  < 2e-16 ***
+beta_6    0.099901         NA       NA       NA    
+beta_7   -0.011827         NA       NA       NA    
+beta_8    0.086191   0.009788    8.806  < 2e-16 ***
+beta0_1  -1.751844   0.013432 -130.423  < 2e-16 ***
+beta0_2  -1.091247   0.004612 -236.596  < 2e-16 ***
+beta0_3  -1.366842   0.007124 -191.854  < 2e-16 ***
+beta0_4  -0.584771   0.005215 -112.140  < 2e-16 ***
+beta0_6  -0.879135   0.014190  -61.954  < 2e-16 ***
+gamma_1   3.436643   0.026113  131.607  < 2e-16 ***
+gamma_2  15.331195         NA       NA       NA    
+gamma_3   4.505712   0.017821  252.833  < 2e-16 ***
+gamma_4   3.971343   0.013700  289.872  < 2e-16 ***
+gamma_5   7.439709   0.030947  240.401  < 2e-16 ***
+gamma_6  37.493537   0.058842  637.195  < 2e-16 ***
+ln_sigma  0.000000   0.000000       NA       NA    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+--------------------------------------------
+Warning messages:
+1: In sqrt(diag(vc)) : NaNs produced
+2: In sqrt(diag(vc)) : NaNs produced
+--------------------------------------------------------
+The estimation with SANN finishes with 162.5021 min.
+--------------------------------------------
+Maximum Likelihood estimation
+SANN maximisation, 10000 iterations
+Return code 0: successful convergence 
+Log-Likelihood: -1713432 
+19  free parameters
+Estimates:
+          Estimate Std. error  t value  Pr(> t)    
+beta_1   -0.872550   0.017315  -50.393  < 2e-16 ***
+beta_2   -0.030576         NA       NA       NA    
+beta_3    0.110742         NA       NA       NA    
+beta_4   -0.770902   0.105918   -7.278 3.38e-13 ***
+beta_5    0.079495   0.001576   50.451  < 2e-16 ***
+beta_6    0.099901         NA       NA       NA    
+beta_7   -0.011827         NA       NA       NA    
+beta_8    0.086191   0.009788    8.806  < 2e-16 ***
+beta0_1  -1.751844   0.013432 -130.423  < 2e-16 ***
+beta0_2  -1.091247   0.004612 -236.596  < 2e-16 ***
+beta0_3  -1.366842   0.007124 -191.854  < 2e-16 ***
+beta0_4  -0.584771   0.005215 -112.140  < 2e-16 ***
+beta0_6  -0.879135   0.014190  -61.954  < 2e-16 ***
+gamma_1   3.436643   0.026113  131.607  < 2e-16 ***
+gamma_2  15.331195         NA       NA       NA    
+gamma_3   4.505712   0.017821  252.833  < 2e-16 ***
+gamma_4   3.971343   0.013700  289.872  < 2e-16 ***
+gamma_5   7.439709   0.030947  240.401  < 2e-16 ***
+gamma_6  37.493537   0.058842  637.195  < 2e-16 ***
+ln_sigma  0.000000   0.000000       NA       NA    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+--------------------------------------------
+Warning messages:
+1: In sqrt(diag(vc)) : NaNs produced
+2: In sqrt(diag(vc)) : NaNs produced
+
+null device 
+          1 
+There were 12 warnings (use warnings() to see them)
+This program is done. 

@@ -19,6 +19,9 @@ load("2_income_effect_glmm_20150813.rdata")
 source("outreg function.R")
 make_plot	<- TRUE
 plot.wd		<- getwd()
+ww			<- 4
+ar			<- .8
+incg.col<- c("red","grey30", "grey50")			# Color of low, median, high income bar
 
 # Make the table of coefficient estimates
 outxls		<- paste(plot.wd, "/2_het_income_effect_incidence", gsub("-", "", as.character(Sys.Date())), ".csv", sep="")
@@ -34,6 +37,7 @@ nbeta	<- 18
 nvcv	<- 42
 fmt_name <- c("Convenience_Store", "Discount_Store", "Dollar_Store", "Drug_Store", "Grocery", "Warehouse_Club")
 R		<- length(fmt_name)
+colnames(sim.ls[[1]]$Sol)[1:nbeta]
 beta	<- array(NA, c(nbeta, numsim, Nsec), 
 				dimnames = list(c(paste(fmt_name,":Intercept", sep=""), paste(fmt_name, ":", "ln_income", sep=""), paste(fmt_name,":", "lag_dol", sep = "")), NULL, NULL))
 vcv		<- array(NA, c(nvcv, numsim, Nsec),
@@ -135,6 +139,23 @@ write.csv(tmp.tab2, f)
 writeLines("\nCovariance matrix:", f)
 write.csv(round(tmp.tab3, 4), f)
 close(f)
+
+# Plot the estimates 
+sel		<- grep("ln_income", rownames(tmp.tab))
+ggtmp	<- data.frame(tmp.tab[sel,])
+ggtmp$Retail	<- gsub("_"," ", gsub(":ln_income", "",rownames(ggtmp)))
+ord		<- ggtmp[order(ggtmp$postior.mode),"Retail"]
+ggtmp$Retail	<- factor(ggtmp$Retail, levels = ord)
+if(make_plot){
+	pdf(paste(plot.wd, "/graph_income_inc_avg.pdf", sep=""), width = ww*ar, height = ww)
+	plots	<- ggplot(ggtmp, aes(Retail, postior.mode)) + 
+				geom_bar(stat = "identity", width = .9) + 
+				geom_errorbar(aes(ymin = lower, ymax = upper), width=0.25) + 
+				# geom_pointrange(aes(ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error)) +
+				xlab("Dependent variable") + ylab("Estimate")+ coord_flip()
+	print(plots)
+	dev.off()	
+}
 
 #############################
 # Heteogenous income effect # 
@@ -255,4 +276,43 @@ write.csv(tmp.tab2, f)
 writeLines("\nCovariance matrix:", f)
 write.csv(round(tmp.tab3, 4), f)
 close(f)
+
+# Plot the estimates 
+changelab	<- function(x, ord, lab){
+	y	<- rep(NA, length(x))
+	for(i in 1:length(ord)){
+		sel		<- x == ord[i]
+		y[sel]	<- lab[i]
+	}
+	y	<- factor(y, levels = lab)
+	return(y)
+}
+
+# Adjust the estimates: add the baseline coefficient to the differnce
+tmp			<- full.beta1
+colnames(tmp)	<- dimnames(beta)[[1]]
+sel			<- grep("ln_income", dimnames(beta)[[1]])
+tmp			<- tmp[,sel]
+tmp1		<- cbind(matrix(0,nrow(tmp), R), tmp[,1:R], tmp[,1:R])
+tmp			<- tmp + tmp1
+ggtmp		<- data.frame(cbind(HPDinterval(tmp), postior.mode = posterior.mode(tmp), sd = apply(tmp, 2, sd)))
+tmp			<- do.call(rbind, strsplit(rownames(ggtmp), ":"))
+ggtmp$Retail	<- gsub("_", " ", tmp[,1])
+ggtmp$Retail	<- factor(ggtmp$Retail, levels = ord)
+ggtmp$IncGrp	<- changelab(tmp[,2], paste("ln_income",c("-Low","","-High"),sep=""), c("Low", "Med", "High"))
+ggtmp$IncGrp	<- factor(ggtmp$IncGrp, levels = rev(levels(ggtmp$IncGrp)), ordered = TRUE)
+
+if(make_plot){
+	pdf(paste(plot.wd, "/graph_income_inc_het.pdf", sep=""), width = ww, height = ww)
+	plots	<- ggplot(ggtmp, aes(Retail, postior.mode, fill = IncGrp, col = IncGrp)) + 
+				geom_bar(stat = "identity", position = position_dodge(width=0.9)) + 
+				geom_errorbar(aes(ymin = lower, ymax = upper, col = IncGrp), position=position_dodge(width=0.9), width=0.25) + 
+				# geom_pointrange(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr), position=position_dodge(width=0.9)) +
+				scale_fill_manual(values = rev(incg.col)) + 
+				scale_color_manual(values = rev(incg.col)) + 
+				xlab("Dependent variable") + ylab("Estimate")+ coord_flip() + 
+				guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE))
+	print(plots)
+	dev.off()
+}
 

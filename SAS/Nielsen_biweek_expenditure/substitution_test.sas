@@ -138,7 +138,7 @@ proc sql noprint;
 	where household_code in (select household_code from demo_init); 
 quit; 
 
-proc rank data=tmp out=tmp_rank ties=mean PERCENT;
+proc rank data=tmp out=tmp_rank ties=low PERCENT;
 	var dol SHR_Convenience_Store SHR_Discount_Store SHR_Dollar_Store
 		SHR_Drug_Store SHR_Grocery SHR_Warehouse_Club;
 	ranks PCTL_DOL PCTL_Convenience_Store PCTL_Discount_Store PCTL_Dollar_Store
@@ -157,8 +157,11 @@ proc sql noprint;
 	from tmp as A left join cpi as B
 	on A.year = B.year
 	order by household_code, biweek; 
+	
+	drop table tmp_rank; 
 quit; 
 
+* NOTE: we use CPI adjusted income; 
 data hh_exp;
 	set hh_exp; 
 	first_date 	= mdy(1,1,2004) + (biweek-1)*14; 
@@ -169,6 +172,8 @@ data hh_exp;
 	num_mod		= num_food_module + num_noned_module; 
 	ln_y		= .; 
 	if dol > 0 then ln_y		= log(dol); 
+	Rc 			= 1 * (year >= 2008); 
+	ln_inc		= log(income_cpi); 
 	drop first_date;
 run; 
 
@@ -181,7 +186,7 @@ run;
 
 * Price tier of UPC within category; 
 proc sql noprint;
-	connect to oledb as mydb
+/*	connect to oledb as mydb
 	(OLEDB_SERVICES=NO Datasource="kdc01\kdwh02" PROVIDER=SQLOLEDB.1 
 	Properties=('Initial Catalog'=USRDB_ccv103 'Integrated Security'=SSPI)
 	SCHEMA=DBO);
@@ -193,7 +198,12 @@ proc sql noprint;
 		from dbo.purchases
 		group by upcv
 	); 
-	disconnect from mydb;
+	disconnect from mydb;*/
+	
+	create table tmp1 as 
+	select upcv, mean(price) as price
+	from mainex.purchases
+	group by upcv;
 	
 	create table tmp as 
 	select A.*, B.product_module_descr, B.size, price/size as unit_price
@@ -203,7 +213,7 @@ proc sql noprint;
 quit; 
 
 * Rank price within category; 
-proc rank data=tmp out=myprod ties=mean PERCENT;
+proc rank data=tmp out=myprod ties=low PERCENT;
 	by product_module_descr;
 	var unit_price size;
 	ranks PCTL_UPRICE PCTL_SIZE; 
@@ -211,23 +221,56 @@ run;
 
 * Append price tier and household segment to purchase data; 
 proc sql noprint;
+/*	connect to oledb as mydb
+	(OLEDB_SERVICES=NO Datasource="kdc01\kdwh02" PROVIDER=SQLOLEDB.1 
+	Properties=('Initial Catalog'=USRDB_ccv103 'Integrated Security'=SSPI)
+	SCHEMA=DBO);
+	
+	create table mysqllib.tmp as select * from demo_init; 
+	
 	create table tmp_purch as 
-	select household_code, A.year, purchase_date, month(purchase_date) as month, A.biweek, upcv, quantity, price
+	select * from connection to mydb (
+		select household_code, A.year, purchase_date, A.biweek, upcv, quantity, price
+		from dbo.purchases as A 
+		inner join (select * from dbo.trips where household_code in (select household_code from dbo.tmp)) as B
+		on A.trip_code_uc = B.trip_code_uc;
+	); 
+	
+	EXECUTE(
+	drop table dbo.tmp; 
+	) by mydb; 
+	
+	disconnect from mydb; */
+	
+	create table tmp_purch as 
+	select household_code, A.year, purchase_date, A.biweek, upcv, quantity, price
 	from mainex.purchases as A 
 	inner join (select * from mainex.trips where household_code in (select household_code from demo_init)) as B
-	on A.trip_code_uc = B.trip_code_uc; 
-
+	on A.trip_code_uc = B.trip_code_uc;
+	
 	create table tmp as 
-	select A.*, B.product_module_descr, B.size, B.unit_price, B.PCTL_UPRICE, B.PCTL_SIZE
+	select A.*, month(purchase_date) as month, 1 * (year >= 2008) as Rc, 
+		B.product_module_descr, B.size, B.unit_price, B.PCTL_UPRICE, B.PCTL_SIZE
 	from tmp_purch as A left join myprod as B
-	on A.upcv = B.upcv; 
+	on A.upcv = B.upcv
+	order by household_code; 
+	
+	drop table tmp_purch; 
 
+/*NOTE: SAS may have insufficient space for this step. In that case, I use the following the data step.*/
 	create table purchases as 
 	select A.*, B.first_income, B.famsize
 	from tmp as A left join demo_init as B
 	on A.household_code = B.household_code
 	order by household_code, purchase_date; 
 quit; 
+
+/*data purchases;
+	merge tmp demo_init; 
+	by household_code; 
+run;*/
+
+proc datasets noprint; delete tmp tmp_purch tmp1; run; 
 
 * Aggregate size tier and price tier from purchase data to biweek level; 
 proc sql noprint;
@@ -476,15 +519,9 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Cost-SI
 ******************************; 
 * In-recesssion substitution *; 
 ******************************; 
-data hh_exp; 
-	set hh_exp; 
-	Rc = 1 * (year >= 2008); 
-proc sort; by household_code month descending Rc; run;
+proc sort data = hh_exp; by household_code month descending Rc; run;
 
-data purchases; 
-	set purchases; 
-	Rc = 1 * (year >= 2008); 
-proc sort; by household_code product_module_descr month descending Rc; run; 
+proc sort data = purchases; by household_code product_module_descr month descending Rc; run; 
 
 * Within-household substitution of grocery expenditure; 
 %run_FE(data=hh_exp, dv=dol, iv= first_income*Rc month, 
@@ -520,7 +557,7 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Ba
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
 * Within-household substitution of price-tier -- purchase level;
-%run_FE(data=purchase, dv=PCTL_UPRICE, iv= first_income*Rc month, 
+%run_FE(data=purchases, dv=PCTL_UPRICE, iv= first_income*Rc month, 
 		classvar = first_income month, FEvar = household_code product_module_descr, outname = tmp);
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Purchase_Unit_price'; run; 		
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
@@ -537,6 +574,58 @@ data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Ba
 data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Purchase_Size'; run; 		
 %my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
 
+* ----------------------------------------------------------*;
+* Within-household substitution of grocery expenditure; 
+%run_FE(data=hh_exp, dv=dol, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Expenditure'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+		
+* Within-household substitution of expenditure share; 
+%run_FE(data=hh_exp, dv=SHR_Discount_Store, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Discount_Store'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+%run_FE(data=hh_exp, dv=SHR_Dollar_Store, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Dollar_Store'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+%run_FE(data=hh_exp, dv=SHR_Grocery, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Grocery'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+%run_FE(data=hh_exp, dv=SHR_Warehouse_Club, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Warehouse_Club'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+* Within-household substitution of price-tier -- biweekly basket level;
+%run_FE(data=hh_exp, dv=PCTL_UPRICE, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Basket_Unit_price'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+* Within-household substitution of price-tier -- purchase level;
+/*%run_FE(data=purchases, dv=PCTL_UPRICE, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code product_module_descr, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Purchase_Unit_price'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);*/
+
+* Within-household substitution of size -- biweekly basket level;
+%run_FE(data=hh_exp, dv=PCTL_SIZE, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Basket_Size'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+
+* Within-household substitution of size -- purchase level;
+/*%run_FE(data=purchases, dv=PCTL_UPRICE, iv= first_income*ln_inc month, 
+		classvar = first_income month, FEvar = household_code product_module_descr, outname = tmp);
+data tmp; length test $30 Dependent $50 Parameter $50 ; set tmp; test = 'Post-Inc-Purchase_Size'; run; 		
+%my_merge(base_data=myreg, add_data=tmp, byvar=test Dependent, outname = myreg);
+*/
 * Export regression results to excel; 
 PROC EXPORT DATA= myreg
             OUTFILE= "&reg_outfile" 

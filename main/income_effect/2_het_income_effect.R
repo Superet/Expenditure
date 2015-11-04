@@ -598,3 +598,78 @@ saveWorkbook(mywb, outxls)
 
 save.image(file = outfile)
 cat("This program is done.")
+
+
+#################
+# Post plotting #
+#################
+plot.wd	<- "~/Desktop"
+ww		<- 4
+ar		<- .8
+incg.col<- c("red","grey30", "grey50")			# Color of low, median, high income bar
+
+# Function to change factor levels and label
+changelab	<- function(x, ord, lab){
+	y	<- rep(NA, length(x))
+	for(i in 1:length(ord)){
+		sel		<- x == ord[i]
+		y[sel]	<- lab[i]
+	}
+	y	<- factor(y, levels = lab)
+	return(y)
+}
+
+# Homogenous income effect for expenditure in SUR regressions
+ggtmp1	<- subset(regrs1, model == "Homogeneity" & substr(DV,1,3) == "SHR" & Var == "ln_income")
+ggtmp1$Retail	<- factor(as.character(ggtmp1$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), 
+						labels = fmt_name[-1])
+ord		<- order(ggtmp1$Estimate)
+ggtmp1$Retail 	<- factor(ggtmp1$Retail, levels = ggtmp1[ord,"Retail"])
+ord		<- levels(ggtmp1$Retail)
+						
+if(make_plot){
+	pdf(paste(plot.wd, "/graph_income_shr_avg.pdf", sep=""), width = ww*ar, height = ww)
+	plots	<- ggplot(ggtmp1, aes(Retail, Estimate)) + 
+				geom_bar(stat = "identity", width = .9) + 
+				geom_errorbar(aes(ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error), width=0.25) + 
+				# geom_pointrange(aes(ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error)) +
+				xlab("Dependent variable") + coord_flip()
+	print(plots)
+	dev.off()
+}
+
+# Heterogenous income effect for expenditure in SUR regressions
+ggtmp1	<- subset(regrs1, model == "Heterogeneity" & substr(DV,1,3) == "SHR" & substr(Var,1,9) == "ln_income")
+ggtmp1$Retail	<- factor(as.character(ggtmp1$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), 
+						labels = fmt_name[-1])						
+ggtmp1$IncGrp	<- changelab(ggtmp1$Var, paste("ln_income",c("T1","","T3"),sep=""), c("Low", "Med", "High"))
+ggtmp1$IncGrp	<- factor(ggtmp1$IncGrp, levels = rev(levels(ggtmp1$IncGrp)), ordered = TRUE)
+ggtmp1$Retail 	<- factor(ggtmp1$Retail, levels = ord)
+
+# Adjust the difference to estiamte
+sel		<- ggtmp1$Var == "ln_income"
+tmp		<- ggtmp1[sel,"Estimate"]
+names(tmp)	<- ggtmp1[sel,"DV"]
+tmp1	<- tmp[as.character(ggtmp1$DV)]
+tmp1[sel]	<- 0
+ggtmp1$Estimate1	<- ggtmp1$Estimate + tmp1
+tmp		<- ggtmp1[sel,"Std..Error"]
+names(tmp)	<- ggtmp1[sel,"DV"]
+tmp1	<- tmp[as.character(ggtmp1$DV)]
+tmp1[sel]	<- 0
+ggtmp1$StdErr	<- sqrt(ggtmp1$Std..Error^2 + tmp1^2)
+if(make_plot){
+	pdf(paste(plot.wd, "/graph_income_shr_het.pdf", sep=""), width = ww, height = ww)
+	plots	<- ggplot(ggtmp1, aes(Retail, Estimate1, fill = IncGrp, col = IncGrp)) + 
+				geom_bar(stat = "identity", position = position_dodge(width=0.9)) + 
+				geom_errorbar(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr, col = IncGrp), position=position_dodge(width=0.9), width=0.25) + 
+				# geom_pointrange(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr), position=position_dodge(width=0.9)) +
+				scale_fill_manual(values = rev(incg.col)) + 
+				scale_color_manual(values = rev(incg.col)) + 
+				xlab("Dependent variable") + ylab("Estimate")+ coord_flip() + 
+				guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE))
+	print(plots)
+	dev.off()
+}
+
+
