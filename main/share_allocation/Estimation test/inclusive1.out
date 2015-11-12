@@ -1,0 +1,123 @@
+Loading required package: methods
+Loading required package: miscTools
+
+Please cite the 'maxLik' package as:
+Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihood estimation in R. Computational Statistics 26(3), 443-458. DOI 10.1007/s00180-010-0217-1.
+
+If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
+https://r-forge.r-project.org/projects/maxlik/
+[1] "seg_id = 1"
+Table of initial income distribution:
+
+  T1   T2   T3 
+8669 7572 6962 
+
+Table of segments in the expenditure data:
+
+    T1     T2     T3 
+814520 705673 592992 
+
+[1] 2
+[1] 2 2
+[1] "Convenience Store"
+   user  system elapsed 
+  1.030   0.000   1.033 
+The ll from these estimates are:
+[1] -1994252 -1994252
+
+The coefficient estimates are:
+                [,1]        [,2]
+beta_1   -1.06369724 -1.06397500
+beta_2   -0.22699595 -0.22776522
+beta_3    0.82104679  0.82334062
+beta_4   -1.78654829 -1.78687566
+beta_5    0.10558845  0.10561772
+beta_6    0.11460000  0.11467243
+beta_7   -0.07537211 -0.07558597
+beta_8    0.20476627  0.20479134
+beta0_1  -1.67112961 -1.67119019
+beta0_2  -1.13239417 -1.13258324
+beta0_3  -1.02162252 -1.02180207
+beta0_4  -0.59632567 -0.59646273
+beta0_6  -1.55234515 -1.55265307
+gamma_1   3.88522204  3.88542599
+gamma_2  15.07172267 15.07167965
+gamma_3   4.44375387  4.44375363
+gamma_4   3.72589042  3.72579346
+gamma_5   6.77398583  6.77204651
+gamma_6  33.69743949 33.70025699
+ln_sigma  0.00000000  0.00000000
+
+MDCEV estimation finishes with 118.6096 min.
+--------------------------------------------
+Maximum Likelihood estimation
+BFGS maximisation, 160 iterations
+Return code 0: successful convergence 
+Log-Likelihood: -1994252 
+19  free parameters
+Estimates:
+          Estimate Std. error  t value Pr(> t)    
+beta_1   -1.063697   0.012790  -83.166  <2e-16 ***
+beta_2   -0.226996   0.024283   -9.348  <2e-16 ***
+beta_3    0.821047   0.046251   17.752  <2e-16 ***
+beta_4   -1.786548   0.043679  -40.902  <2e-16 ***
+beta_5    0.105588   0.001219   86.638  <2e-16 ***
+beta_6    0.114600   0.002404   47.676  <2e-16 ***
+beta_7   -0.075372   0.004571  -16.491  <2e-16 ***
+beta_8    0.204766   0.005085   40.269  <2e-16 ***
+beta0_1  -1.671130   0.012882 -129.731  <2e-16 ***
+beta0_2  -1.132394   0.004414 -256.534  <2e-16 ***
+beta0_3  -1.021623   0.006538 -156.248  <2e-16 ***
+beta0_4  -0.596326   0.005008 -119.076  <2e-16 ***
+beta0_6  -1.552345   0.015783  -98.356  <2e-16 ***
+gamma_1   3.885222   0.026725  145.378  <2e-16 ***
+gamma_2  15.071723   0.059429  253.609  <2e-16 ***
+gamma_3   4.443754   0.014848  299.285  <2e-16 ***
+gamma_4   3.725890   0.012462  298.982  <2e-16 ***
+gamma_5   6.773986   0.024789  273.268  <2e-16 ***
+gamma_6  33.697439   0.068414  492.553  <2e-16 ***
+ln_sigma  0.000000   0.000000       NA      NA    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+--------------------------------------------
+--------------------------------------------------------
+Simulation of omega with random draws finishes with 31.0661 min.
+--------------------------------------------------------
+Dimention of market-year combination is 532 .
+Full simulation at income level 1 finishes using 937.4164 min.
+Full simulation at income level 2 finishes using 971.1694 min.
+Full simulation at income level 3 finishes using 985.9124 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 4 finishes using 993.7074 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 5 finishes using 1003.57 min.
+Full simulation at income level 6 finishes using 1023.638 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 7 finishes using 1011.985 min.
+Full simulation at income level 8 finishes using 1020.894 min.
+Full simulation at income level 9 finishes using 1063.247 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 10 finishes using 1104.628 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 11 finishes using 1106.292 min.
+Full simulation at income level 12 finishes using 1097.829 min.
+Full simulation at income level 13 finishes using 1081.179 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 14 finishes using 1053.695 min.
+Full simulation at income level 15 finishes using 1149.656 min.
+Full simulation at income level 16 finishes using 1271.83 min.
+Error in grid.newpage() : 
+  cannot open file '', reason No such file or directory
+Calls: print -> print.ggplot -> grid.newpage
+This program is done. 
+ *** caught segfault ***
+address (nil), cause 'memory not mapped'
+aborting ...

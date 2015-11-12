@@ -29,8 +29,8 @@ if(length(args)>0){
 # sourceCpp(paste("../Exercise/Multiple_discrete_continuous_model/", model_name, ".cpp", sep=""))
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 
-# setwd("/home/brgordon/ccv103/Exercise/run")
-setwd("/kellogg/users/marketing/2661703/Exercise/run")
+setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 model_name 	<- "MDCEV_share"
 run_id		<- 1
@@ -179,10 +179,8 @@ MDCEV_wrapper <- function(param){
 }
 
 # Estimation with multiple initial values. 
-theta_init	<- list(c(.2, .5, .5,-.5, rep(0,4), -5, -1, -3, -3, -2, .8*c(1:R), 0), 
-					c(-.2, 0, 0, -.1, -.1, .1, -.1, .2, -3, -1, -2, -2, -1, 10/c(1:R), 0),
-					c(.7, -1, -1, -2, .2, -.1, .2, 0, -2, -.5, -1, -2, -2, 2*c(1:R), 0),
-					c(-3, -2, -2, -2, -.05, .2, -.2, .2, -5, -2, -2, -3, -2, 3*c(1:R), 0) )
+theta_init	<- list(c(-1, -.1, 1, -2, .1, .1, -.1, .1, -1, -1, -1, -.5, -2, 3, 15, 4, 3, 6, 33, 0), 
+					c(-1, -.5, 1.5, -.1, .1, -.1, -1, .5, -3, -1, -2, -1, -1, 3, 15, 4, 4, 8, 40, 0  ) )
 system.time(tmp <- MDCEV_wrapper(theta_init[[1]]) )
 
 tmp_sol <- vector("list", length(theta_init))
@@ -206,85 +204,11 @@ cat("MDCEV estimation finishes with", use.time[3]/60, "min.\n")
 print(summary(sol))
 cat("--------------------------------------------------------\n")
 
-################################
-# Simulate the inclusive value # 
-################################
-# For simulation, we need elements: income level, expenditure, (average) price, (average) retail attributes
-lnInc	<- sort(unique(hh_exp$ln_inc))
-numnodes<- 30		# Number of interpolation nodes of expenditure
-tmpy	<- quantile(mydata$dol, c(0:(numnodes-1)/numnodes) )
-tmpy	<- c(tmpy, max(mydata$dol)*1.2)
-numnodes<- numnodes + 1
-
-# Average price
-tmp 		<- dcast(price_dat,	 scantrack_market_descr + year + biweek ~ channel_type, value.var = "bsk_price_paid_2004") 
-tmp_price	<- rep(1,numnodes) %*% t(colMeans(as.matrix(tmp[,4:(3+R)]), na.rm=T) )
-
-# Average retail attributes
-tmpX_list	<- lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_attr, channel_type == x)[,selcol])))		
-
-#-------------------------------------------- # 
-# Compute the inclusive value with random draws
-tmp_coef	<- coef(sol)
-set.seed(666)
-numsim 		<- 100
-eps_draw	<- matrix(rgev(numsim*R), numsim, R)
-omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(NULL, lnInc, tmpy))
-pct			<- proc.time()
-for(i in 1:numsim){
-	for(j in 1:length(lnInc)){
-		tmpX_list1	<- lapply(tmpX_list, function(x) rep(1, numnodes) %*% t(c(x, x*lnInc[j])))
-		tmpsol 		<- incl_value_fn(param_est=tmp_coef, base= beta0_base, X_list=tmpX_list1, y=tmpy, Q=Inf, price=tmp_price, 
-					R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw[i,]) )
-		omega_draw[i,j,] <- tmpsol$omega
-	}	
-}
-use.time	<- proc.time() - pct
-cat("Simulation of omega with random draws finishes with", use.time[3]/60, "min.\n")
-cat("--------------------------------------------------------\n")
-
-###################################
-# Upper level expenditue decision # 
-###################################
-omega_deriv <- lapply(1:length(lnInc), function(i) splinefun(tmpy, colMeans(omega_draw[,i,], na.rm = T), method = "natural"))
-names(omega_deriv)	<- lnInc
-
-M_fn	<- function(lambda, omega_deriv, y, ln_inc){
-# Moment function: lambda * omega'(y,Inc) - 1 = 0
-	o.deriv	<- rep(NA, length(y))
-	for(i in 1:length(lnInc)){
-		sel				<- ln_inc == lnInc[i]
-		o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1)
-	}
-	m	<- (lambda[1] + lambda[2] * ln_inc)* o.deriv - 1
-	mbar<- c(mean(m), mean(m * ln_inc))
-	return(list(moment = mbar, omega.derive = o.deriv))
-}
-
-GMM_fn	<- function(lambda, omega_deriv, y, ln_inc){
-# We use unit diagnial matrix as the weighting matric in GMM
-	mm 	<- M_fn(lambda, omega_deriv, y, ln_inc)
-	m	<- mm$moment
-	obj	<- -crossprod(m)				# negative moment function for maxLik
-	grad<- cbind(- 2 * m[1] * mean(mm$omega.deriv) - 2 * m[2] * mean(ln_inc * mm$omega.deriv), 
-				 - 2 * m[1] * mean(ln_inc * mm$omega.deriv) - 2 * m[2] * mean(ln_inc^2 * mm$omega.deriv) ) 
-	attr(obj, "gradient")	<- grad
-	return(obj)
-}
-
-pct		<- proc.time()
-tmp		<- setNames(c(.01, .001), paste("lambda", 1:2, sep=""))
-sol1	<- maxLik(GMM_fn, start=tmp, method="BFGS", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc)
-use.time <- proc.time() - pct
-print(sol1)
-summary(sol1)
-cat("Top level estimation finishes with", use.time[3]/60, "min.\n")
-
 ############################
 # Bootstrap standard error #
 ############################
 selcol
-my.bt1	<- function(idxb, coef1, coef2){	
+my.bt1	<- function(idxb, coef1){	
 	# Outcome variables as matrix
 	sel		<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")
 	shr		<- as.matrix(mydata[idxb,sel])
@@ -320,8 +244,7 @@ my.bt1	<- function(idxb, coef1, coef2){
 		MDCEV_ll_fnC(param, nx, shr, y, s1_index, price, X_list, beta0_base)$ll
 	}
 	sol.bot <- maxLik(MDCEV_wrapper, start=coef1, method="BFGS", fixed=myfix)
-	sol.top	<- maxLik(GMM_fn, start = coef2, method="BFGS", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc)
-	out		<- c(coef(sol.bot), coef(sol.top))
+	out		<- coef(sol.bot)
 	return(out)
 }
 
@@ -333,16 +256,15 @@ nh		<- length(unq.hh)
 all.idx <- split(1:nrow(mydata), mydata$household_code)
 idxb	<- lapply(1:nb, function(i){ unlist(all.idx[as.character(sample(unq.hh, nh, replace = T))]) })
 coef1	<- coef(sol)
-coef2	<- coef(sol1)
 
 pct		<- proc.time()
-beta.bt	<- sapply(1:nb, function(i) my.bt1(idxb[[i]], coef1, coef2))
+beta.bt	<- sapply(1:nb, function(i) my.bt1(idxb[[i]], coef1))
 use.time	<- proc.time() - pct
 cat("Boostrap standard procedure finishes using", use.time[3]/60, "min.\n")
 
 # Compute se
 se.bt		<- apply(beta.bt, 1, sd)
-tmp.tab		<- cbind(c(coef1, coef2), se.bt)
+tmp.tab		<- cbind(coef1, se.bt)
 cat("Estimates and bootstrap se:\n"); print(round(tmp.tab, 4)); cat("\n"); 
 
 ####################

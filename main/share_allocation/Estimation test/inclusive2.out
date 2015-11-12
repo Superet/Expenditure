@@ -1,0 +1,129 @@
+Loading required package: methods
+Loading required package: miscTools
+
+Please cite the 'maxLik' package as:
+Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihood estimation in R. Computational Statistics 26(3), 443-458. DOI 10.1007/s00180-010-0217-1.
+
+If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
+https://r-forge.r-project.org/projects/maxlik/
+[1] "seg_id = 2"
+Table of initial income distribution:
+
+  T1   T2   T3 
+8669 7572 6962 
+
+Table of segments in the expenditure data:
+
+    T1     T2     T3 
+814520 705673 592992 
+
+[1] 2
+[1] 2 2
+[1] "Convenience Store"
+   user  system elapsed 
+  0.879   0.000   0.879 
+The ll from these estimates are:
+[1] -1713432 -1713432
+
+The coefficient estimates are:
+                [,1]        [,2]
+beta_1   -0.87254295 -0.87252446
+beta_2   -0.03036355 -0.03043000
+beta_3    0.11049922  0.11052746
+beta_4   -0.77152809 -0.77061477
+beta_5    0.07949424  0.07949236
+beta_6    0.09988112  0.09988748
+beta_7   -0.01180477 -0.01180728
+beta_8    0.08624919  0.08616426
+beta0_1  -1.75184450 -1.75184075
+beta0_2  -1.09124792 -1.09124827
+beta0_3  -1.36684107 -1.36683962
+beta0_4  -0.58477319 -0.58476897
+beta0_6  -0.87914126 -0.87912651
+gamma_1   3.43665246  3.43661415
+gamma_2  15.33130098 15.33120707
+gamma_3   4.50571017  4.50572121
+gamma_4   3.97136813  3.97134288
+gamma_5   7.43969269  7.43971497
+gamma_6  37.49365231 37.49294677
+ln_sigma  0.00000000  0.00000000
+
+Warning messages:
+1: In sqrt(diag(vc)) : NaNs produced
+2: In sqrt(diag(vc)) : NaNs produced
+3: In sqrt(diag(vc)) : NaNs produced
+4: In sqrt(diag(vc)) : NaNs produced
+5: In sqrt(diag(vc)) : NaNs produced
+6: In sqrt(diag(vc)) : NaNs produced
+7: In sqrt(diag(vc)) : NaNs produced
+8: In sqrt(diag(vc)) : NaNs produced
+MDCEV estimation finishes with 99.7888 min.
+--------------------------------------------
+Maximum Likelihood estimation
+BFGS maximisation, 163 iterations
+Return code 0: successful convergence 
+Log-Likelihood: -1713432 
+19  free parameters
+Estimates:
+          Estimate Std. error t value Pr(> t)    
+beta_1   -0.872543   0.011700  -74.57  <2e-16 ***
+beta_2   -0.030364         NA      NA      NA    
+beta_3    0.110499         NA      NA      NA    
+beta_4   -0.771528   0.031063  -24.84  <2e-16 ***
+beta_5    0.079494   0.001066   74.60  <2e-16 ***
+beta_6    0.099881         NA      NA      NA    
+beta_7   -0.011805         NA      NA      NA    
+beta_8    0.086249   0.003169   27.21  <2e-16 ***
+beta0_1  -1.751844   0.011486 -152.52  <2e-16 ***
+beta0_2  -1.091248   0.004621 -236.16  <2e-16 ***
+beta0_3  -1.366841   0.006130 -222.96  <2e-16 ***
+beta0_4  -0.584773   0.004051 -144.35  <2e-16 ***
+beta0_6  -0.879141   0.014376  -61.15  <2e-16 ***
+gamma_1   3.436652   0.024212  141.94  <2e-16 ***
+gamma_2  15.331301   0.040848  375.33  <2e-16 ***
+gamma_3   4.505710   0.019235  234.25  <2e-16 ***
+gamma_4   3.971368   0.013181  301.30  <2e-16 ***
+gamma_5   7.439693   0.024966  297.99  <2e-16 ***
+gamma_6  37.493652         NA      NA      NA    
+ln_sigma  0.000000   0.000000      NA      NA    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+--------------------------------------------
+Warning messages:
+1: In sqrt(diag(vc)) : NaNs produced
+2: In sqrt(diag(vc)) : NaNs produced
+--------------------------------------------------------
+Simulation of omega with random draws finishes with 26.43372 min.
+--------------------------------------------------------
+Dimention of market-year combination is 532 .
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 1 finishes using 789.8825 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 2 finishes using 817.277 min.
+Full simulation at income level 3 finishes using 823.7876 min.
+Full simulation at income level 4 finishes using 828.1612 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 5 finishes using 834.2878 min.
+Full simulation at income level 6 finishes using 843.8467 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 7 finishes using 868.2234 min.
+Full simulation at income level 8 finishes using 868.072 min.
+Full simulation at income level 9 finishes using 877.6637 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 10 finishes using 893.0443 min.
+Full simulation at income level 11 finishes using 946.2964 min.
+Full simulation at income level 12 finishes using 955.9728 min.
+Full simulation at income level 13 finishes using 967.7614 min.
+Full simulation at income level 14 finishes using 1117.975 min.
+Full simulation at income level 15 finishes using 1185 min.
+Error in optim(theta.old, fun, gradient, control = control, method = method,  : 
+  initial value in 'vmmin' is not finite
+Full simulation at income level 16 finishes using 1188.364 min.
+null device 
+          1 
+This program is done. 

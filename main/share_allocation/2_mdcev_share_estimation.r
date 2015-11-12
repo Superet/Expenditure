@@ -12,6 +12,9 @@ library(RcppArmadillo)
 library(maxLik)
 library(evd)
 library(data.table)
+library(doParallel)
+library(foreach)
+library(plm)
 options(error = quote({dump.frames(to.file = TRUE)}))
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -22,18 +25,19 @@ if(length(args)>0){
     }
 }
 
+model_name 	<- "MDCEV_share"
+run_id		<- 1
+# seg_id		<- 1
+make_plot	<- FALSE
+
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
 # sourceCpp(paste("../Exercise/Multiple_discrete_continuous_model/", model_name, ".cpp", sep=""))
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 
-# setwd("/home/brgordon/ccv103/Exercise/run")
-setwd("/kellogg/users/marketing/2661703/Exercise/run")
+setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
-model_name 	<- "MDCEV_share"
-run_id		<- 1
-# seg_id		<- 1
-make_plot	<- FALSE
 
 sourceCpp(paste(model_name, ".cpp", sep=""))
 source("0_Allocation_function.R")
@@ -177,10 +181,9 @@ MDCEV_wrapper <- function(param){
 }
 
 # Estimation with multiple initial values. 
-theta_init	<- list(c(.2, .5, .5,-.5, rep(0,4), -5, -1, -3, -3, -2, .8*c(1:R), 0), 
-					c(-.2, 0, 0, -.1, -.1, .1, -.1, .2, -3, -1, -2, -2, -1, 10/c(1:R), 0),
-					c(.7, -1, -1, -2, .2, -.1, .2, 0, -2, -.5, -1, -2, -2, 2*c(1:R), 0),
-					c(-3, -2, -2, -2, -.05, .2, -.2, .2, -5, -2, -2, -3, -2, 3*c(1:R), 0) )
+theta_init	<- list(c(-1, -.1, 1, -2, .1, .1, -.1, .1, -1, -1, -1, -.5, -2, 3, 15, 4, 3, 6, 33, 0), 
+					c(-1, -.1, 1, -1, .1, .1, -.1, .1, -2, -1, -1, -.5, -1, 3, 15, 4, 4, 7, 37, 0), 
+					c(-1, -.5, 1.5, -.1, .1, -.1, -1, .5, -3, -1, -2, -1, -1, 3, 15, 4, 4, 8, 40, 0  ) )
 system.time(tmp <- MDCEV_wrapper(theta_init[[1]]) )
 
 tmp_sol <- vector("list", length(theta_init))
@@ -210,8 +213,8 @@ cat("--------------------------------------------------------\n")
 # For simulation, we need elements: income level, expenditure, (average) price, (average) retail attributes
 lnInc	<- sort(unique(hh_exp$ln_inc))
 numnodes<- 30		# Number of interpolation nodes of expenditure
-tmpy	<- quantile(mydata$dol, c(0:(numnodes-1)/numnodes) )
-tmpy	<- c(tmpy, max(mydata$dol)*1.2)
+y.nodes	<- quantile(mydata$dol, c(0:(numnodes-1)/numnodes) )
+y.nodes	<- c(y.nodes, max(mydata$dol)*1.2)
 numnodes<- numnodes + 1
 
 # Average price
@@ -221,59 +224,63 @@ tmp_price	<- rep(1,numnodes) %*% t(colMeans(as.matrix(tmp[,4:(3+R)]), na.rm=T) )
 # Average retail attributes
 tmpX_list	<- lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_attr, channel_type == x)[,selcol])))		
 
+# Register parallel computing
+mycore 	<- 2
+cl		<- makeCluster(mycore, type = "FORK")
+registerDoParallel(cl)
+cat("Register", mycore, "core parallel computing. \n")
+
 #-------------------------------------------- # 
 # Compute the inclusive value with random draws
 tmp_coef	<- coef(sol)
 set.seed(666)
 numsim 		<- 100
 eps_draw	<- matrix(rgev(numsim*R), numsim, R)
-omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(NULL, lnInc, tmpy))
+
 pct			<- proc.time()
-for(i in 1:numsim){
-	for(j in 1:length(lnInc)){
+tmp			<- foreach(i = 1:numsim) %dopar% {
+	out	<- foreach(j = 1:length(lnInc), .combine = cbind) %do% {
 		tmpX_list1	<- lapply(tmpX_list, function(x) rep(1, numnodes) %*% t(c(x, x*lnInc[j])))
-		tmpsol 		<- incl_value_fn(param_est=tmp_coef, base= beta0_base, X_list=tmpX_list1, y=tmpy, Q=Inf, price=tmp_price, 
-					R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw[i,]) )
-		omega_draw[i,j,] <- tmpsol$omega
-	}	
+		tmpsol 		<- incl_value_fn(param_est=tmp_coef, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price, 
+							R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw[i,]) )
+		return(tmpsol$omega)
+	}
+	return(out)
 }
+omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(NULL, lnInc, y.nodes))
+for(i in 1:numsim){
+	omega_draw[i,,]	<- tmp[[i]]
+}
+
 use.time	<- proc.time() - pct
 cat("Simulation of omega with random draws finishes with", use.time[3]/60, "min.\n")
 cat("--------------------------------------------------------\n")
+stopCluster(cl)
+cat("Stop clustering. \n")
 
 ###################################
 # Upper level expenditue decision # 
 ###################################
-omega_deriv <- lapply(1:length(lnInc), function(i) splinefun(tmpy, colMeans(omega_draw[,i,], na.rm = T), method = "natural"))
+omega_deriv <- lapply(1:length(lnInc), function(i) splinefun(y.nodes, colMeans(omega_draw[,i,], na.rm = T), method = "natural"))
 names(omega_deriv)	<- lnInc
 
-M_fn	<- function(lambda, omega_deriv, y, ln_inc){
-# Moment function: lambda * omega'(y,Inc) - 1 = 0
-	o.deriv	<- rep(NA, length(y))
-	for(i in 1:length(lnInc)){
-		sel				<- ln_inc == lnInc[i]
-		o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1)
-	}
-	m	<- (lambda[1] + lambda[2] * ln_inc)* o.deriv - 1
-	mbar<- c(mean(m), mean(m * ln_inc))
-	return(list(moment = mbar, omega.derive = o.deriv))
+o.deriv	<- rep(NA, length(y))
+for(i in 1:length(lnInc)){
+	sel				<- ln_inc == lnInc[i]
+	o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1)
 }
 
-GMM_fn	<- function(lambda, omega_deriv, y, ln_inc){
-# We use unit diagnial matrix as the weighting matric in GMM
-	mm 	<- M_fn(lambda, omega_deriv, y, ln_inc)
-	m	<- mm$moment
-	obj	<- -crossprod(m)				# negative moment function for maxLik
-	grad<- cbind(- 2 * m[1] * mean(mm$omega.deriv) - 2 * m[2] * mean(ln_inc * mm$omega.deriv), 
-				 - 2 * m[1] * mean(ln_inc * mm$omega.deriv) - 2 * m[2] * mean(ln_inc^2 * mm$omega.deriv) ) 
-	attr(obj, "gradient")	<- grad
-	return(obj)
-}
-
+# Reduced formed regression
 pct		<- proc.time()
-sol1	<- maxLik(GMM_fn, start=c(.01, .001), method="BFGS", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc)
+tmpdat	<- data.frame(mydata[,c("household_code", "biweek")], y1 = 1/o.deriv, ln_inc = ln_inc)
+rd.fit1	<- plm(y1 ~ ln_inc, data = tmpdat, index = c("household_code", "biweek"), model = "random")
+rd.fit2	<- plm(y1 ~ ln_inc, data = tmpdat, index = c("household_code", "biweek"), model = "pooling")
+
+summary(rd.fit1)
+summary(rd.fit2)
+sol1	<- rd.fit1
+
 use.time <- proc.time() - pct
-print(sol1)
 cat("Top level estimation finishes with", use.time[3]/60, "min.\n")
 
 ####################
@@ -281,8 +288,8 @@ cat("Top level estimation finishes with", use.time[3]/60, "min.\n")
 ####################
 ls()
 rm(list=c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","j","MDCEV_ll_fnC",
-		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","selcol","param_assign", 
-		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "tmpsol","ord","panelist","tmpidx","tmpn"))
+		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","selcol","param_assign","tmpX_list1", 
+		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "tmpsol","ord","panelist","tmpidx","tmpn","cl"))
 
 save.image(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,".rdata",sep=""))
 

@@ -189,12 +189,25 @@ Allocation_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, exp_outsi
 	return(out) 
 }
 
+param_assignR	<- function(param, nx, R, base = 0){
+	beta	<- param[1:nx]
+	if(base ==0 ){
+		beta0	<- c(0, param[(nx+1):(nx+R-1)])
+	}else{
+		beta0	<- rep(0, R)
+		beta0[-base]	<- param[(nx+1):(nx+R-1)]
+	}
+	gamma	<- param[(nx+R):(nx+R*2-1)]
+	sigma	<- 1
+	return(list(beta = beta, beta0 = beta0, gamma = gamma, sigma = sigma))
+}
+
 incl_value_fn <- function(param_est, base, X_list, y, Q, price, R, Ra, qz_cons = 0, exp_outside = TRUE, quant_outside = TRUE, eps_draw = NULL, inits=NULL,...){
 # param_est		...	parameter estimates
 # X_array		...	Attributes array, dimension(R*Nobs*nx)
 # y				... A Nobs-dimensional expenditure budget. 
 # Q				... Q is the scalor of the quantity constraint.
-	param_out	<- param_assign(param_est, nx, R, base)
+	param_out	<- param_assignR(param_est, nx, R, base)
 	beta		<- param_out$beta
 	beta0		<- param_out$beta0
 	gamma		<- param_out$gamma
