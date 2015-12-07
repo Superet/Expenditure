@@ -15,6 +15,7 @@ library(data.table)
 library(doParallel)
 library(foreach)
 library(plm)
+library(chebpol)
 options(error = quote({dump.frames(to.file = TRUE)}))
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -28,7 +29,8 @@ if(length(args)>0){
 model_name 	<- "MDCEV_share"
 run_id		<- 1
 # seg_id		<- 1
-make_plot	<- FALSE
+make_plot	<- TRUE
+interp.method	<- "spline"			# "cheb"
 
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
@@ -212,10 +214,19 @@ cat("--------------------------------------------------------\n")
 ################################
 # For simulation, we need elements: income level, expenditure, (average) price, (average) retail attributes
 lnInc	<- sort(unique(hh_exp$ln_inc))
-numnodes<- 30		# Number of interpolation nodes of expenditure
-y.nodes	<- quantile(mydata$dol, c(0:(numnodes-1)/numnodes) )
-y.nodes	<- c(y.nodes, max(mydata$dol)*1.2)
-numnodes<- numnodes + 1
+cat("Range of expenditure in the dara:", range(mydata$dol), "\n")
+cat("Probability of expenditure > 1000: ", sum(mydata$dol > 1000)/nrow(mydata), "\n")
+
+if(interp.method == "spline"){
+	y.nodes		<- quantile(mydata$dol, c(0:50)/50)
+	y.nodes		<- sort(unique(c(y.nodes , seq(600, 1000, 100)) ))
+}else{
+	# Set up Chebyshev interpolation
+	GH_num_nodes<- 100
+	y.interval	<- c(.1, 1000)
+	y.nodes		<- chebknots(GH_num_nodes, interval = y.interval)[[1]]
+}
+numnodes<- length(y.nodes)
 
 # Average price
 tmp 		<- dcast(price_dat,	 scantrack_market_descr + year + biweek ~ channel_type, value.var = "bsk_price_paid_2004") 
@@ -234,18 +245,23 @@ cat("Register", mycore, "core parallel computing. \n")
 # Compute the inclusive value with random draws
 tmp_coef	<- coef(sol)
 set.seed(666)
-numsim 		<- 100
+numsim 		<- 400
 eps_draw	<- matrix(rgev(numsim*R), numsim, R)
+
+omega_parallel	<- function(eps_draw){
+	out		<- matrix(NA, length(lnInc), numnodes)
+	for(j in 1:length(lnInc)){
+		tmpX_list1	<- lapply(tmpX_list, function(x) rep(1, numnodes) %*% t(c(x, x*lnInc[j])))
+		tmpsol 		<- incl_value_fn(param_est=tmp_coef, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price, 
+							R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw) )
+		out[j,]		<- tmpsol$omega
+	}
+	return(out)
+}
 
 pct			<- proc.time()
 tmp			<- foreach(i = 1:numsim) %dopar% {
-	out	<- foreach(j = 1:length(lnInc), .combine = cbind) %do% {
-		tmpX_list1	<- lapply(tmpX_list, function(x) rep(1, numnodes) %*% t(c(x, x*lnInc[j])))
-		tmpsol 		<- incl_value_fn(param_est=tmp_coef, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price, 
-							R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw[i,]) )
-		return(tmpsol$omega)
-	}
-	return(out)
+	omega_parallel(eps_draw[i,])
 }
 omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(NULL, lnInc, y.nodes))
 for(i in 1:numsim){
@@ -258,39 +274,119 @@ cat("--------------------------------------------------------\n")
 stopCluster(cl)
 cat("Stop clustering. \n")
 
+# NOTE: we trim 5% omega data to smooth things out. 
+tmp		<- apply(omega_draw, c(2, 3), mean, na.rm =T, trim = .05)
+if(interp.method == "spline"){
+	omega_deriv	<- lapply(1:length(lnInc), function(i) splinefun(x = y.nodes, y = tmp[i,], method = "natural"))
+}else{
+	omega_deriv	<- lapply(1:length(lnInc), function(i) chebfun(x = y.nodes, y = tmp[i,], interval = y.interval))
+}
+names(omega_deriv)	<- lnInc
+
+# Check the concavity of omega function 
+if(make_plot){
+	ggtmp	<- melt(apply(omega_draw, c(2, 3), mean, na.rm = T))
+	names(ggtmp)	<- c("lnInc", "y", "omega")
+	
+	tmp1	<- seq(80, 120, 1)
+	tmp2	<- sapply(omega_deriv, function(f) f(tmp1))
+	ggtmp1	<- setNames(melt(tmp2), c("yidx", "lnInc", "omega"))
+	ggtmp1$y<- tmp1[ggtmp1$yidx]
+	
+	pdf(paste("estrun_",run_id,"/omega_seg",seg_id,"_", Sys.Date(),".pdf",sep=""), width = 10, height = 6)
+	print(ggplot(ggtmp, aes(y, omega)) + geom_line() + facet_wrap(~lnInc, scales = "free_y") + 
+			xlim(c(0, 1000)) + labs(title = "Omega function at interpolating nodes")
+		)
+	print(ggplot(ggtmp1, aes(y, omega)) + geom_line() + 
+			facet_wrap(~lnInc, scales = "free") + labs(title = "Omega function")
+		)
+	dev.off()
+}
+
 ###################################
 # Upper level expenditue decision # 
 ###################################
-omega_deriv <- lapply(1:length(lnInc), function(i) splinefun(y.nodes, colMeans(omega_draw[,i,], na.rm = T), method = "natural"))
-names(omega_deriv)	<- lnInc
-
-o.deriv	<- rep(NA, length(y))
-for(i in 1:length(lnInc)){
-	sel				<- ln_inc == lnInc[i]
-	o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1)
+M_fn	<- function(lambda, omega_deriv, y, ln_inc, dT = NULL){
+# Moment function: lambda * omega'(y,Inc) - 1 = 0
+	o.deriv	<- rep(NA, length(y))
+	if(interp.method == "cheb"){
+		for(i in 1:length(lnInc)){
+			sel				<- ln_inc == lnInc[i]
+			o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1, dT = dT[sel,])
+		}
+	}else{
+		for(i in 1:length(lnInc)){
+			sel				<- ln_inc == lnInc[i]
+			o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1)
+		}
+	}
+	m1	<- (lambda[1] + lambda[2] * ln_inc)* o.deriv - 1
+	m	<- cbind(m1, m1*ln_inc)
+	mbar<- colMeans(m)
+	return(list(moment = mbar, omega.derive = o.deriv, m = m))
 }
 
-# Reduced formed regression
+GMM_fn	<- function(lambda, omega_deriv, y, ln_inc, dT, W = NULL){
+# We use unit diagnial matrix as the weighting matric in GMM
+	mm 	<- M_fn(lambda, omega_deriv, y, ln_inc, dT = dT)
+	m	<- mm$moment
+	if(is.null(W)){
+		W	<- diag(length(m))
+	}
+	obj	<- - t(m) %*% W %*% m				# negative moment function for maxLik
+	return(obj)
+}
+
 pct		<- proc.time()
-tmpdat	<- data.frame(mydata[,c("household_code", "biweek")], y1 = 1/o.deriv, ln_inc = ln_inc)
-rd.fit1	<- plm(y1 ~ ln_inc, data = tmpdat, index = c("household_code", "biweek"), model = "random")
-rd.fit2	<- plm(y1 ~ ln_inc, data = tmpdat, index = c("household_code", "biweek"), model = "pooling")
+init	<- matrix(c(.01,  .001, 
+					.1, -.02, 
+					.05, -.001), 
+					3, 2, byrow = T)
+colnames(init)	<- c("lambda1", "lambda2")
+dT <- cheb.1d.basis(y, numnodes, interval = y.interval)				# Derivative of Chebshev basis
+system.time(tmp <- GMM_fn(init[1,], omega_deriv, y, ln_inc, dT))
 
-summary(rd.fit1)
-summary(rd.fit2)
-sol1	<- rd.fit1
+tmp_sol	<- tmp_sol1 <- list(NULL)
+for(i in 1:nrow(init)){
+	tmp_sol[[i]]	<- maxLik(GMM_fn, start=init[i,], method="BFGS", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc, dT = dT)
+	tmp_sol1[[i]]	<- maxLik(GMM_fn, start=init[i,], method="NM", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc, dT = dT)
+}
 
+# Choose the solution with max(-MM)
+tmp		<- sapply(tmp_sol, function(x) ifelse(is.null(x$maximum), NA, x$maximum))
+tmp1	<- sapply(tmp_sol1, function(x) ifelse(is.null(x$maximum), NA, x$maximum))
+if(max(tmp1, na.rm =T) > max(tmp, na.rm=T)){
+	tmp_sol	<- tmp_sol1
+	cat("NM optimization has better results.\n")
+}
+sel 	<- which(abs(tmp - max(tmp, na.rm=T)) < 1e-4, arr.ind=T)
+sel1	<- sapply(tmp_sol[sel], function(x) !any(is.na(summary(x)$estimate[,"Std. error"])) & !any(summary(x)$estimate[,"Std. error"]==Inf) )
+sel		<- ifelse(sum(sel1)==1, sel[sel1], ifelse(sum(sel1)==0, sel[1], sel[sel1][1]))
+sol.top	<- tmp_sol[[sel]]
+if(!sol.top$code %in% c(0,1,2,8)){
+	cat("Top level estimation does NOT have normal convergence.\n")
+}
 use.time <- proc.time() - pct
+cat("--------------------------------------------------------\n")
+summary(sol.top)
 cat("Top level estimation finishes with", use.time[3]/60, "min.\n")
+
+# 2nd step with updated W 
+m			<- M_fn(lambda = coef(sol.top), omega_deriv = omega_deriv, y = y , ln_inc = ln_inc, dT = dT)
+W			<- solve(var(m$m))
+cat("Optimal weighting matrix is:\n"); print(W); cat("\n")
+sol.top2	<- maxLik(GMM_fn, start=coef(sol.top), method="BFGS", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc, dT = dT, W = W)
+summary(sol.top2)
+cat("Top level estimation finishes.\n")
 
 ####################
 # Save the results #
 ####################
-ls()
-rm(list=c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","j","MDCEV_ll_fnC",
-		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","selcol","param_assign","tmpX_list1", 
-		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "tmpsol","ord","panelist","tmpidx","tmpn","cl"))
+rm(list=c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","MDCEV_ll_fnC",
+		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","param_assign","tmpX_list", 
+		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "ord","panelist","tmpidx","tmpn","cl", 
+		  "tmp_sol1", "GMM_fn", "M_fn", "init", "m", "mycore", "param_assignR", "ggtmp", "ggtmp1", "dT"))
 
-save.image(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,".rdata",sep=""))
+save.image(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", Sys.Date(),".rdata",sep=""))
 
 cat("This program is done. ")

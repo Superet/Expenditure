@@ -35,6 +35,7 @@ source("0_Allocation_function.R")
 
 # Load estimation data 
 load(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,".rdata",sep=""))
+interp.method <- "spline"
 
 #############
 # Functions #

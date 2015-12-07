@@ -95,11 +95,7 @@ Allocation_constr_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, ex
 				inits	<- list( c(tmp/R * price,  Q-tmp - eps), 
 								 c(rep(eps,R), Q - sum(eps/price)- eps) )
 			}else{
-				tmp		<- min(y/price) * .99
-				sel		<- which(psi == sort(psi, decreasing=T)[2])
-				tmp1	<- rep(eps, R)
-				tmp1[sel] <- y - eps*R
-				inits	<- list( tmp/R*price, tmp1)
+				inits	<- list( psi/sum(psi) * y * .99)
 			}
 		}
 	}
@@ -118,16 +114,20 @@ Allocation_constr_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, ex
 						 gamma=gamma, price=price, R=R, Ra=Ra, qz_cons = qz_cons, exp_outside = exp_outside, quant_outside = quant_outside), silent=silent)
 		}
 		
-		sol.list1 <- sol.list[sapply(sol.list, function(x) !inherits(x, "try-error"))]
-		sel <- which.max(sapply(sol.list1, function(x) x$value))
-		if(length(sel)==0){
-			sol <- list(par = rep(NA, Ra), value=NA, convergence = NA)
+		if(length(inits) == 1){
+			sol	<- sol.list[[1]]
 		}else{
-			sol <- sol.list1[[sel]]
-			if(sol$convergence != 0){
-				cat("Constrained optimization does not converge at value y=",y,", Q=",Q,"\n")
+			sol.list1 <- sol.list[sapply(sol.list, function(x) !inherits(x, "try-error"))]
+			sel <- which.max(sapply(sol.list1, function(x) x$value))
+			if(length(sel)==0){
+				sol <- list(par = rep(NA, Ra), value=NA, convergence = NA)
+			}else{
+				sol <- sol.list1[[sel]]
+				if(sol$convergence != 0){
+					cat("Constrained optimization does not converge at value y=",y,", Q=",Q,"\n")
+				}
 			}
-		}
+		}		
 		return(list(e = sol$par, max = sol$value, convergence = sol$convergence))
 	}			
 }
@@ -250,5 +250,68 @@ incl_value_fn <- function(param_est, base, X_list, y, Q, price, R, Ra, qz_cons =
 	return(list(e = e, omega = omega))
 }	
 
+cheb.basis	<- function(x, M, interval = c(0, 1), adj = TRUE){
+# This function returns the Chebyshev basis function. 
+# x			...	a vector of interpolating knots
+# M			...	a scalor of Chebyshev degree
+# interval	...	interval of knots
+# adj		... logical value of whether to adjust x to [0,1]
+	n		<- length(x)
+	if(adj){
+		x.adj	<- 2*(x - interval[1])/(interval[2] - interval[1]) - 1
+	}else{
+		x.adj	<- x
+	}
+	
+	out	<- matrix(NA, n, M)
+	out[,1]	<- 1
+	out[,2]	<- x.adj
+	for(i in 3:M){
+		out[,i]	<- 2 * x.adj * out[,(i-1)] - out[,(i-2)]
+	}
+	return(out)
+}
 
+cheb.1d.basis <- function(x, M, interval = c(0, 1), adj = T){
+# This function returns the 1st derivative of Chebyshev basis function. 
+# x			...	a vector of interpolating knots
+# M			...	a scalor of Chebyshev degree
+# interval	...	interval of knots
+# adj		... logical value of whether to adjust x to [0,1]
+	n		<- length(x)
+	if(adj){
+		x.adj	<- 2*(x - interval[1])/(interval[2] - interval[1]) - 1
+	}else{
+		x.adj	<- x
+	}
+	T		<- matrix(NA, n, M)
+	out		<- matrix(NA, n, M)
+	T[,1]	<- 1
+	T[,2]	<- x.adj
+	out[,1]	<- 0
+	out[,2]	<- 1
+	for(i in 3:M){
+		T[,i]	<- 2 * x.adj * T[,(i-1)] - T[,(i-2)]
+		out[,i]	<- 2*x.adj*out[,(i-1)] + 2*T[,(i-1)] - out[,(i-2)]
+	}
+	return(out)	
+}
 
+chebfun	<- function(x, y, interval = c(0, 1), ... ){
+	df	<- length(x)
+	T	<- cheb.basis(x = x, M = df, interval = interval, adj = TRUE)
+	alpha	<- solve(t(T) %*% T) %*% t(T) %*% y
+	f	<- function(x, deriv = 0, dT = NULL){
+		if(deriv == 0){
+			T1	<- cheb.basis(x = x, M = df, interval = interval, adj = TRUE)
+			out	<-as.vector(T1 %*% alpha)
+		}else if(deriv == 1){
+			if(is.null(dT)){
+				dT	<- cheb.1d.basis(x = x, M = df, interval = interval)
+			}
+			out	<- dT %*% (alpha * 2 /(interval[2] - interval[1]))
+		}	
+		return( out )
+	}
+	return(f)
+}
