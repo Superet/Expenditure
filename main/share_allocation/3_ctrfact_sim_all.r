@@ -209,32 +209,27 @@ if(make_plot){
 # Assume only grocery stores change retail attributes. 
 iv.change		<- .1			# Percentage increase of independent variable
 
-sim.parallel	<- function(var){
-	out			<- data.frame()
-	for(i in 1:R){
-		sel.retail	<- fmt_name[i]
+sim.X.ls	<- data.frame()
+for(i in 1:length(selcol)){
+	pct			<- proc.time()
+	var1		<- selcol[i]
+	out	<- foreach(sel.retail = fmt_name, .combine = rbind) %dopar% {
 		X_list_new	<- X_list07
-		if(var %in% c("ln_upc_per_mod", "ln_num_module")){
-			X_list_new[[sel.retail]][var]	<- X_list_new[[sel.retail]][var] + log(1 + iv.change)
+		if(var1 %in% c("ln_upc_per_mod", "ln_num_module")){
+			X_list_new[[sel.retail]][var1]	<- X_list_new[[sel.retail]][var1] + log(1 + iv.change)
 		}else{
-			X_list_new[[sel.retail]][var]	<- X_list_new[[sel.retail]][var] * (1 + iv.change)
+			X_list_new[[sel.retail]][var1]	<- X_list_new[[sel.retail]][var1] * (1 + iv.change)
 		}
-		out1	<- SimOmega_fn(ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
+		out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
 					base = beta0_base, X_list = X_list_new, price = price.07, 
 					lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, interp.method = interp.method)
-		out1 	<- data.frame(out1,lnInc = sim.unq$Inc08, retailer = fmt_name[i], Var = var)
-		out		<- rbind(out, out1)
+		out1 	<- data.frame(out1,lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), Var = var1)
+		return(out1)
 	}
-	out$Var	<- as.character(out$Var)
-	return(out)
+	sim.X.ls	<- rbind(sim.X.ls, out)
+	use.time	<- proc.time() - pct
+	cat("Parallel simulation of retail attributes", var1, "finishes with", use.time[3]/60, "min.\n")
 }
-
-pct			<- proc.time()
-sim.X.ls	<- foreach(var = selcol, .combine = rbind) %dopar% {
-	sim.parallel(var)
-}
-use.time	<- proc.time() - pct
-cat("Parallel simulation of retail attributes finishes with", use.time[3]/60, "min.\n")
 
 #-------------------------------#
 # Simulation of price reduction # 

@@ -1,9 +1,9 @@
 #!/bin/bash
 #PBS -j oe
-#PBS -l walltime=08:00:00
+#PBS -l walltime=20:00:00
 #PBS -l mem=2gb
 #PBS -l ncpus=1
 
 cd /sscc/home/c/ccv103/rms_attributes
-sas p1_scan_unix.sas -log g0503_2006.log -set single 1 -set sel_year 2006 -set sel_group 0503
+sas p2_scan_unix_v2.sas -log g6001_2008.log -set single 1 -set sel_year 2008 -set sel_group 6001
 
