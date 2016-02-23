@@ -73,16 +73,16 @@ mytransition <- function(x1, x2){
 fmt_name 	<- as.character(sort(unique(fmt_attr$channel_type)))
 R			<- length(fmt_name)
 
+# Conver some date and factor variables
+hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))
+hh_exp$famsize		<- factor(hh_exp$famsize, levels = c("Single","Two", "Three+"))
+
 # Compute expenditure share
 sel			<- paste("DOL_", gsub("\\s", "_", fmt_name), sep="")
 sel1		<- gsub("DOL", "SHR", sel)
 for(i in 1:length(fmt_name)){
 	hh_exp[,sel1[i]] <- hh_exp[,sel[i]]/hh_exp$dol
 }
-
-# Conver some date and factor variables
-hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))
-hh_exp$famsize		<- factor(hh_exp$famsize, levels = c("Single","Two", "Three+"))
 
 # Segment households based on their initial income level 
 panelist	<- data.table(hh_exp)
@@ -136,7 +136,7 @@ if(write2csv){
 # Plot the income trend 
 tmp			<- unique(pan_yr[,c("first_incomeg","year")])
 tmp$year	<- factor(tmp$year)
-tmpx		<- model.matrix(~first_incomeg*year, data = tmp)[,-1]
+tmpx		<- model.matrix(~first_incomeg*year, data = tmp)[,-(1:3)]
 identical(colnames(tmpx), names(coef(myfit)))
 ggtmp		<- tmpx %*% coef(myfit)
 ggtmp		<- cbind(tmp, ggtmp)

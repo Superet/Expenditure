@@ -5,6 +5,8 @@
 # 4. Simulate inclusive values; 
 # 5. Estimate upper level expenditure model. 
 
+cat("This program begins to run at", as.character(Sys.time()), ".\n")
+
 library(ggplot2)
 library(reshape2)
 library(Rcpp)
@@ -16,6 +18,8 @@ library(doParallel)
 library(foreach)
 library(plm)
 library(chebpol)
+library(nloptr)
+library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -27,10 +31,11 @@ if(length(args)>0){
 }
 
 model_name 	<- "MDCEV_share"
-run_id		<- 1
+run_id		<- 3
 # seg_id		<- 1
 make_plot	<- TRUE
 interp.method	<- "spline"			# "cheb"
+trim.alpha		<- 0.05
 
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
@@ -43,6 +48,7 @@ setwd("/home/brgordon/ccv103/Exercise/run")
 
 sourceCpp(paste(model_name, ".cpp", sep=""))
 source("0_Allocation_function.R")
+source("ctrfact_sim_functions_v2.r")
 
 #################################
 # Read data and subsetting data #
@@ -166,7 +172,7 @@ for(i in 1:length(fmt_name)){
 ##############
 # Set estimation control: fixing parameters
 fixgamma 	<- FALSE
-fixsigma 	<- TRUE
+fixsigma 	<- FALSE
 if(fixgamma){
 	myfix 	<- (nx+R):(nx+2*R-1)
 }else{
@@ -183,9 +189,13 @@ MDCEV_wrapper <- function(param){
 }
 
 # Estimation with multiple initial values. 
-theta_init	<- list(c(-1, -.1, 1, -2, .1, .1, -.1, .1, -1, -1, -1, -.5, -2, 3, 15, 4, 3, 6, 33, 0), 
-					c(-1, -.1, 1, -1, .1, .1, -.1, .1, -2, -1, -1, -.5, -1, 3, 15, 4, 4, 7, 37, 0), 
-					c(-1, -.5, 1.5, -.1, .1, -.1, -1, .5, -3, -1, -2, -1, -1, 3, 15, 4, 4, 8, 40, 0  ) )
+theta_init	<- list(c(-1, -.1, 1, -1.5, 	.1, .1, -.1, .1, 	-1, -1, -1, -.5, -1,  5, 20, 4, 4, 6, 50, -.3), 
+					c(-.6, -.1, .1, -.8, 	.1, .1, -.05, -.1, 	-1.2, -1, -1, -.3, -.5, 6, 25, 6, 5, 15, 60, -.4), 
+					c(-1, -.3, 1.2, -6, 	.1, 0, -.1, .6, 	-1.5, -1, -1.5, -.5, -.3, 5, 30, 6, 6, 15, 80, -.4 ),
+					c(-1, -.2, 1.1, -3, 	.1, .05, -.1, .3, 	-1.2, -1, -1.2, -.5, -.6, 6, 25, 5, 6, 10, 65, -.35  ) )
+# theta_init	<- list(c(-1, -.2, 1, -2, 	.1, .1, -.1, .1,	-2, -1, -1, -.5, -2,	3, 15, 4, 3, 6, 33, 0), 
+# 					c(-1, -.3, 1, -2, 	.1, .0, -.1, .3, 	-2, -1, -1, -.5, -1, 	3, 15, 4, 4, 7, 37, 0), 
+# 					c(-1, -.5, 1.5, -4,	.1, -.1,-.5, .5, 	-3, -1, -2, -1, -.8, 	3, 15, 4, 4, 8, 40, 0  ) )
 system.time(tmp <- MDCEV_wrapper(theta_init[[1]]) )
 
 tmp_sol <- vector("list", length(theta_init))
@@ -194,8 +204,10 @@ for(i in 1:length(theta_init)){
 	names(theta_init[[i]]) 	<- c(paste("beta_",1:nx, sep=""), paste("beta0_",setdiff(1:R, beta0_base),sep=""), 
 								 paste("gamma_",1:R,sep=""), "ln_sigma")
 	tmp_sol[[i]]	<- maxLik(MDCEV_wrapper, start=theta_init[[i]], method="BFGS", fixed=myfix)
+	print(i)
 }
 tmp		<- sapply(tmp_sol, function(x) ifelse(is.null(x$maximum), NA, x$maximum))
+cat("Maximium values from different initial values:\n"); print(tmp); cat("\n")
 sel 	<- which(abs(tmp - max(tmp, na.rm=T)) < 1e-4, arr.ind=T)
 sel1	<- sapply(tmp_sol[sel], function(x) !any(is.na(summary(x)$estimate[,"Std. error"])) & !any(summary(x)$estimate[,"Std. error"]==Inf) )
 sel		<- ifelse(sum(sel1)==1, sel[sel1], ifelse(sum(sel1)==0, sel[1], sel[sel1][1]))
@@ -214,6 +226,7 @@ cat("--------------------------------------------------------\n")
 ################################
 # For simulation, we need elements: income level, expenditure, (average) price, (average) retail attributes
 lnInc	<- sort(unique(hh_exp$ln_inc))
+lnInc	<- c(lnInc + log(.8), lnInc + log(.9), lnInc)
 cat("Range of expenditure in the dara:", range(mydata$dol), "\n")
 cat("Probability of expenditure > 1000: ", sum(mydata$dol > 1000)/nrow(mydata), "\n")
 
@@ -236,23 +249,23 @@ tmp_price	<- rep(1,numnodes) %*% t(colMeans(as.matrix(tmp[,4:(3+R)]), na.rm=T) )
 tmpX_list	<- lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_attr, channel_type == x)[,selcol])))		
 
 # Register parallel computing
-mycore 	<- 2
+mycore 	<- 3
 cl		<- makeCluster(mycore, type = "FORK")
 registerDoParallel(cl)
 cat("Register", mycore, "core parallel computing. \n")
 
 #-------------------------------------------- # 
 # Compute the inclusive value with random draws
-tmp_coef	<- coef(sol)
+shr.par	<- coef(sol)
 set.seed(666)
-numsim 		<- 400
-eps_draw	<- matrix(rgev(numsim*R), numsim, R)
+numsim 		<- 2000
+eps_draw	<- matrix(rgev(numsim*R, scale = exp(shr.par["ln_sigma"])), numsim, R)
 
 omega_parallel	<- function(eps_draw){
 	out		<- matrix(NA, length(lnInc), numnodes)
 	for(j in 1:length(lnInc)){
 		tmpX_list1	<- lapply(tmpX_list, function(x) rep(1, numnodes) %*% t(c(x, x*lnInc[j])))
-		tmpsol 		<- incl_value_fn(param_est=tmp_coef, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price, 
+		tmpsol 		<- incl_value_fn(param_est=shr.par, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price, 
 							R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw) )
 		out[j,]		<- tmpsol$omega
 	}
@@ -263,7 +276,7 @@ pct			<- proc.time()
 tmp			<- foreach(i = 1:numsim) %dopar% {
 	omega_parallel(eps_draw[i,])
 }
-omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(NULL, lnInc, y.nodes))
+omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(iter = NULL, lnInc = lnInc, y = y.nodes))
 for(i in 1:numsim){
 	omega_draw[i,,]	<- tmp[[i]]
 }
@@ -275,13 +288,16 @@ stopCluster(cl)
 cat("Stop clustering. \n")
 
 # NOTE: we trim 5% omega data to smooth things out. 
-tmp		<- apply(omega_draw, c(2, 3), mean, na.rm =T, trim = .05)
 if(interp.method == "spline"){
-	omega_deriv	<- lapply(1:length(lnInc), function(i) splinefun(x = y.nodes, y = tmp[i,], method = "natural"))
+	tmp	<- apply(omega_draw, c(2,3), mytrimfun, alpha = trim.alpha)
+	tmpdat	<- melt(tmp)
+	names(tmpdat) <- c("iter", "lnInc", "y", "omega")
+	omega_deriv	<- spl2dfun(tmpdat)
+	gamfit		<- spl2dfun(tmpdat, return.fit = TRUE)
 }else{
 	omega_deriv	<- lapply(1:length(lnInc), function(i) chebfun(x = y.nodes, y = tmp[i,], interval = y.interval))
+	names(omega_deriv)	<- lnInc
 }
-names(omega_deriv)	<- lnInc
 
 # Check the concavity of omega function 
 if(make_plot){
@@ -289,9 +305,9 @@ if(make_plot){
 	names(ggtmp)	<- c("lnInc", "y", "omega")
 	
 	tmp1	<- seq(80, 120, 1)
-	tmp2	<- sapply(omega_deriv, function(f) f(tmp1))
-	ggtmp1	<- setNames(melt(tmp2), c("yidx", "lnInc", "omega"))
-	ggtmp1$y<- tmp1[ggtmp1$yidx]
+	tmpdat	<- data.frame(lnInc = rep(lnInc, each = length(tmp1)), y = rep(tmp1, length(lnInc)))
+	tmp2	<- omega_deriv(tmpdat)
+	ggtmp1	<- cbind(tmpdat, omega = tmp2)
 	
 	pdf(paste("estrun_",run_id,"/omega_seg",seg_id,"_", Sys.Date(),".pdf",sep=""), width = 10, height = 6)
 	print(ggplot(ggtmp, aes(y, omega)) + geom_line() + facet_wrap(~lnInc, scales = "free_y") + 
@@ -300,6 +316,7 @@ if(make_plot){
 	print(ggplot(ggtmp1, aes(y, omega)) + geom_line() + 
 			facet_wrap(~lnInc, scales = "free") + labs(title = "Omega function")
 		)
+	print(vis.gam(gamfit))
 	dev.off()
 }
 
@@ -315,10 +332,8 @@ M_fn	<- function(lambda, omega_deriv, y, ln_inc, dT = NULL){
 			o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1, dT = dT[sel,])
 		}
 	}else{
-		for(i in 1:length(lnInc)){
-			sel				<- ln_inc == lnInc[i]
-			o.deriv[sel]	<- omega_deriv[[i]](y[sel], deriv = 1)
-		}
+		newx	<- data.frame(lnInc = ln_inc, y = y)
+		o.deriv	<- omega_deriv(newx, deriv = 1)
 	}
 	m1	<- (lambda[1] + lambda[2] * ln_inc)* o.deriv - 1
 	m	<- cbind(m1, m1*ln_inc)
@@ -343,7 +358,9 @@ init	<- matrix(c(.01,  .001,
 					.05, -.001), 
 					3, 2, byrow = T)
 colnames(init)	<- c("lambda1", "lambda2")
-dT <- cheb.1d.basis(y, numnodes, interval = y.interval)				# Derivative of Chebshev basis
+if(interp.method == "cheb"){
+	dT <- cheb.1d.basis(y, numnodes, interval = y.interval)				# Derivative of Chebshev basis
+}
 system.time(tmp <- GMM_fn(init[1,], omega_deriv, y, ln_inc, dT))
 
 tmp_sol	<- tmp_sol1 <- list(NULL)
@@ -385,7 +402,10 @@ cat("Top level estimation finishes.\n")
 rm(list=c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","MDCEV_ll_fnC",
 		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","param_assign","tmpX_list", 
 		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "ord","panelist","tmpidx","tmpn","cl", 
-		  "tmp_sol1", "GMM_fn", "M_fn", "init", "m", "mycore", "param_assignR", "ggtmp", "ggtmp1", "dT"))
+		  "tmp_sol1", "GMM_fn", "M_fn", "init", "m", "mycore", "param_assignR", "ggtmp", "ggtmp1", 
+		  "interp.method", "trim.alpha", "mysplfun", "mytrimfun", "expFOC_fn", "exp_fn", "solveExp_fn", 
+		  "simExp_fn", "SimWrapper_fn", "SimOmega_fn", "cheb.1d.basis", "cheb.basis", "chebfun", "omega_parallel", 
+		  "lastFuncGrad", "lastFuncParam", "args"))
 
 save.image(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", Sys.Date(),".rdata",sep=""))
 

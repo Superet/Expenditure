@@ -1,4 +1,5 @@
 * This file is to generate group_year data for the product groups which do not have sales in 2006; 
+* NOTE: for product group 5520, I change the name from 5520_2007.csv to 5520_2006.csv.; 
 
 libname mymaster "/sscc/home/c/ccv103/rms_attributes/master";
 libname	grpyear "/sscc/home/c/ccv103/rms_attributes/group_year";

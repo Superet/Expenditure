@@ -95,7 +95,8 @@ Allocation_constr_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, ex
 				inits	<- list( c(tmp/R * price,  Q-tmp - eps), 
 								 c(rep(eps,R), Q - sum(eps/price)- eps) )
 			}else{
-				inits	<- list( psi/sum(psi) * y * .99)
+				tmp	  <- min(y/price) * .99
+				inits	<- list( psi/sum(psi) * y * .99, tmp/R*price)
 			}
 		}
 	}
@@ -116,6 +117,9 @@ Allocation_constr_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, ex
 		
 		if(length(inits) == 1){
 			sol	<- sol.list[[1]]
+			if(class(sol) == "try-error"){
+				sol <- list(par = rep(NA, Ra), value=NA, convergence = NA)
+			}
 		}else{
 			sol.list1 <- sol.list[sapply(sol.list, function(x) !inherits(x, "try-error"))]
 			sel <- which.max(sapply(sol.list1, function(x) x$value))
@@ -133,26 +137,53 @@ Allocation_constr_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, ex
 }
 
 Allocation_nlop_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, exp_outside = TRUE, quant_outside = TRUE, 
-						  inits=NULL, silent=FALSE, nloptr.opts = list("algorithm"="NLOPT_LD_MMA")){
+						  inits=NULL, silent=FALSE, nloptr.opts = list("algorithm"="NLOPT_LD_MMA", "maxeval" = 200, xtol_rel = 1e-8)){
 # Solve the constrained optimization with augmented Lagrangian algorithm
 
 	# Define the objective function and inequality function
-	obj_fn <- function(e) {uP_fn(e, psi=psi, gamma=gamma, price=price, R=R, Ra=Ra, qz_cons = qz_cons, exp_outside = exp_outside, quant_outside = quant_outside)}
-	grad_fn<- function(e) {uPGrad_fn(e, psi=psi, gamma=gamma, price=price, R=R, Ra=Ra, qz_cons = qz_cons, exp_outside = exp_outside, quant_outside = quant_outside)}
+	obj_fn <- function(e) {-uP_fn(e, psi=psi, gamma=gamma, price=price, R=R, Ra=Ra, qz_cons = qz_cons, exp_outside = exp_outside, quant_outside = quant_outside)}
+	grad_fn<- function(e) {-uPGrad_fn(e, psi=psi, gamma=gamma, price=price, R=R, Ra=Ra, qz_cons = qz_cons, exp_outside = exp_outside, quant_outside = quant_outside)}
 	if(exp_outside){
 		if(quant_outside){
-			hin	<- function(e) {c(e, y - sum(e[1:(R+1)]), Q - sum(e[1:R]/price) - e[Ra] )}
-			hjac<- function(e) {rbind(diag(Ra), c(rep(-1, R+1),0), c(-1/price, 0, -1)) }
-		}else{
-			hin <- function(e) {c(e, y - sum(e[1:(R+1)]) ) }
-			hjac<- function(e) {rbind(diag(Ra), c(rep(-1, R+1),0) ) }
+			gin	<- function(e) {c(e, y - sum(e[1:(R+1)]), Q - sum(e[1:R]/price) - e[Ra] )}
+			gjac<- function(e) {rbind(diag(Ra), c(rep(-1, R+1),0), c(-1/price, 0, -1)) }
+		}
+	}else{
+		if(!quant_outside){
+			gin <- function(e) { return(sum(e) - y) }
+			gjac<- function(e){
+				out	<- matrix(NA, 1, length(e))
+				out[1,]	<- rep(1, length(e))
+				return(out)
+			}
 		}
 	}
 	
-	# Set initial values. 
+	# Set initial values for the optimization
 	if(is.null(inits)){
-		inits <- list(runif(Ra))
+		eps <- 1e-6
+		if(exp_outside){
+			if(quant_outside){
+				tmp	  <- min(y/price, Q) * .99
+				inits <- list(c(tmp/(Ra-1)*price, tmp/(Ra-1), Q - tmp - eps), 
+						  c(rep(eps, R), y-(R+2)*eps, Q - sum(price)*eps - eps),
+						  c(tmp/R * price, y- sum(tmp/R*price) -eps, eps) )	
+			}else{
+				tmp	  <- min(y/price) * .99
+				inits <- list(c(tmp/Ra*price, tmp/Ra), 
+						  	c(tmp/R*price, eps) )	
+			}
+		}else{
+			if(quant_outside){
+				tmp		<- min(y/price, Q) * .99
+				inits	<- list( c(tmp/R * price,  Q-tmp - eps), 
+								 c(rep(eps,R), Q - sum(eps/price)- eps) )
+			}else{
+				inits	<- list( psi/sum(psi) * y )
+			}
+		}
 	}
+	
 	
 	# Solve for the optimal values. 
 	if(Q <= 0){
@@ -162,15 +193,36 @@ Allocation_nlop_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, exp_
 		}
 		return(list(e = e, max = log(y) ) )
 	}else{
-		sol	<- nloptr(inits[[1]], eval_f = obj_fn, eval_grad=grad_fn, eval_g_ineq = hin, eval_jac_g_ineq=hjac, opts = nloptr.opts)	
-		if(sol$status != 0){
-			cat("Constrained optimization does not converge at value y=",y,", Q=",Q,"\n")
+		sol.list <- vector("list", length(inits))
+		for(j in 1:length(inits)){
+			sol.list[[j]] <- try(nloptr(x0=inits[[j]], eval_f = obj_fn, eval_grad_f=grad_fn, 
+							lb = rep(0, length(inits[[j]])), ub = rep(y, length(inits[[j]])), 
+							eval_g_ineq = gin, eval_jac_g_ineq=gjac, opts = nloptr.opts), 
+							silent=silent)
 		}
-		return(list(e = sol$solution, max = sol$objective, convergence = sol$status))
+		
+		if(length(inits) == 1){
+			sol	<- sol.list[[1]]
+			if(class(sol) == "try-error"){
+				sol <- list(solution = rep(NA, Ra), objective=NA, status = NA)
+			}
+		}else{
+			sol.list1 <- sol.list[sapply(sol.list, function(x) !inherits(x, "try-error"))]
+			sel <- which.min(sapply(sol.list1, function(x) x$objective))
+			if(length(sel)==0){
+				sol <- list(solution = rep(NA, Ra), objective=NA, status = NA)
+			}else{
+				sol <- sol.list1[[sel]]
+				# if(sol$status != 0){
+				# 	cat("Constrained optimization does not converge at value y=",y,", Q=",Q,"\n")
+				# }
+			}
+		}
+		return(list(e = sol$solution, max = -sol$objective, convergence = sol$status))
 	}
 }
 
-Allocation_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, exp_outside = TRUE, quant_outside = TRUE, optim_method = c("constrOptim"), inits=NULL,...){
+Allocation_fn <- function(y, psi, gamma, Q, price, R, Ra, qz_cons = 0, exp_outside = TRUE, quant_outside = TRUE, optim_method = c("nloptr"), inits=NULL,...){
 	# Check conditions;
 	if(exp_outside & quant_outside){
 		if(Ra != R+2) stop("Ra should be equal to R+2.")
@@ -198,7 +250,8 @@ param_assignR	<- function(param, nx, R, base = 0){
 		beta0[-base]	<- param[(nx+1):(nx+R-1)]
 	}
 	gamma	<- param[(nx+R):(nx+R*2-1)]
-	sigma	<- 1
+	# sigma	<- 1
+	sigma	<- exp(param[(nx+R*2)])
 	return(list(beta = beta, beta0 = beta0, gamma = gamma, sigma = sigma))
 }
 

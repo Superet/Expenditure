@@ -8,7 +8,7 @@ library(data.table)
 library(r2excel)
 
 setwd("/kellogg/users/marketing/2661703/Exercise/run")
-run_id		<- 1
+run_id		<- 2
 make_plot	<- FALSE
 source("outreg function.R")
 
@@ -28,13 +28,16 @@ nseg	<- 3
 shr.est	<- vector("list", nseg)
 exp.est	<- vector("list", nseg)
 omega.est	<- vector("list", nseg)
+ver.date	<- "2016-01-22"
+
 for(i in 1:nseg){
 	# load(paste("estrun_",run_id,"/MDCEV_est_seg",i,".rdata",sep=""))
-	load(paste("Estimation/MDCEV_est_seg",i,".rdata",sep=""))
+	load(paste("Estimation/estrun_", run_id, "/MDCEV_est_seg",i,"_", ver.date, ".rdata",sep=""))
 	shr.est[[i]]	<- sol
-	exp.est[[i]]	<- sol1
-	names(omega_deriv)	<- lnInc
+	# exp.est[[i]]	<- sol1
+	exp.est[[i]]	<- sol.top2
 	omega.est[[i]]	<- omega_deriv
+	print(i)
 }
 
 #########################################

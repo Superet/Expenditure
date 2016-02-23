@@ -8,6 +8,7 @@ library(data.table)
 library(doParallel)
 library(foreach)
 library(chebpol)
+library(nloptr)
 options(error = quote({dump.frames(to.file = TRUE)}))
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -27,7 +28,7 @@ model_name 	<- "MDCEV_share"
 setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
-run_id		<- 1
+run_id		<- 2
 plot.wd		<- getwd()
 make_plot	<- TRUE
 ww			<- 6.5
@@ -37,10 +38,11 @@ source("0_Allocation_function.R")
 source("ctrfact_sim_functions.r")
 
 # Load estimation data 
-ver.date	<- "2015-11-25"
+ver.date	<- "2016-02-09"
 load(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", ver.date,".rdata",sep=""))
 interp.method	<- "spline"					# Spline interpolation or Chebyshev interpolation
 exp.method		<- "Utility"				# Utility maximization or finding roots for first order condition
+trim.alpha		<- 0.05
 
 ###############################
 # Prepare simulation elements # 
@@ -86,8 +88,8 @@ cat("The average retail attributes in 2007:\n"); print(do.call(rbind, X_list07))
 #-------------------#
 # Take random draws #
 set.seed(666)
-numsim 		<- 400
-eps_draw	<- matrix(rgev(numsim*R), numsim, R)
+numsim 		<- 1000
+eps_draw	<- matrix(rgev(numsim*R, scale = exp(shr.par["ln_sigma"])), numsim, R)
 
 ##############
 # Simulation #
@@ -104,7 +106,7 @@ if(interp.method == "spline"){
 numnodes<- length(y.nodes)
 
 # Register parallel computing
-mycore 	<- 2
+mycore 	<- 3
 cl		<- makeCluster(mycore, type = "FORK")
 registerDoParallel(cl)
 cat("Register", mycore, "core parallel computing. \n")
@@ -160,18 +162,23 @@ names(omega.ls.08)	<- lnInc_08
 
 # Simulate expenditure and expenditure share. 
 pct				<- proc.time()
-sim.base07		<- SimWrapper_fn(omega.ls.07, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, 
-						base = beta0_base, X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method)
+sim.base07		<- SimWrapper_fn(omega.ls.07, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, base = beta0_base, 
+					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE)
 use.time		<- proc.time() - pct						
 cat("2007 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
 pct				<- proc.time()
 sim.base08		<- SimWrapper_fn(omega_fn_ls = omega.ls.08, ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
-						base = beta0_base, X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method)
+					base = beta0_base, X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE)
 use.time		<- proc.time() - pct						
 cat("2008 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
 # Check the baseline simulation 
+tmp1	<- sim.base07$Allocation 
+tmp2	<- sim.base08$Allocation
+tmp		<- -1/my.change*(tmp2-tmp1)/tmp1
+cat("Summary of baseline income elasticity:\n"); print(summary(c(tmp))); cat("\n")
+
 tmp		<- seq(50, 250, 10)
 tmp1	<- sapply(omega.ls.07, function(f) f(tmp))
 tmp2	<- sapply(omega.ls.08, function(f) f(tmp))
@@ -180,17 +187,21 @@ names(ggtmp)	<- c("yidx", "lnInc", "omega", "year")
 ggtmp$y			<- tmp[ggtmp$yidx]
 ggtmp$Income	<- exp(ggtmp$lnInc)
 
-tmp1	<- melt(sim.base07[,"Exp"] * sim.base07[,fmt_name])
-tmp2	<- melt(sim.base08[,"Exp"] * sim.base08[,fmt_name])
+tmp1	<- melt(sim.base07$Average[,fmt_name])
+tmp2	<- melt(sim.base08$Average[,fmt_name])
 ggtmp1	<- rbind(data.frame(tmp1, year = 2007), data.frame(tmp2, year = 2008))
 names(ggtmp1)	<- c("inc_idx", "Retail", "Exp", "year")
-ggtmp1$Inc	<- sim.unq[ggtmp1$inc_idx,"income2007"]
-sel		<- ggtmp1$year == 2008
-ggtmp1[sel,"Inc"]	<- sim.unq[ggtmp1[sel,"inc_idx"], "income2008"]
-ggtmp1$Inc1	<- factor(ggtmp1$Inc, levels = sort(ggtmp1$Inc))
+ggtmp1$Inc	<- round(exp(ggtmp1$inc_idx), 0)
+ggtmp1$Inc1	<- factor(ggtmp1$Inc, levels = sort(unique(ggtmp1$Inc)))
+
+tmp		<- seq(100, 110, .1)
+u		<- -sapply(1:length(lnInc), function(i) exp_fn(tmp, lambda, omega.ls.07[[i]], ln_inc = lnInc[i]))
+dimnames(u)	<- list(tmp, lnInc)
+ggtmp2	<- melt(u)
+names(ggtmp2)	<- c("y", "lnInc", "utility")
 
 if(make_plot){
-	pdf(paste(plot.wd, "/estrun_",run_id,"/graph_ctrfact_checkbase_seg", seg_id, ".pdf", sep=""), width = ww, height = ww)
+	pdf(paste(plot.wd, "/estrun_",run_id,"/graph_ctrfact_checkbase_seg", seg_id, ".pdf", sep=""), width = ww/ar, height = ww)
 	print(ggplot(ggtmp, aes(y, omega, col = factor(Income))) + geom_line() + 
 			facet_wrap(~year) + 
 			guides(col = FALSE) + 
@@ -201,19 +212,23 @@ if(make_plot){
 			labs(x = "Income", title = "Baseline simulation expenditure allocation") + 
 			theme(axis.text.x = element_text(angle = 60))
 		)
+	print(ggplot(ggtmp2, aes(y, utility)) + geom_point() + geom_line() + facet_wrap(~lnInc, scales = "free"))
 	dev.off()
 }
+
+save.image(paste("estrun_",run_id,"/ctrfact_income_eff_seg",seg_id, "_", Sys.Date(), ".rdata",sep=""))
 
 #------------------------#
 # Simulation of strategy #
 # Assume only grocery stores change retail attributes. 
 iv.change		<- .1			# Percentage increase of independent variable
 
-sim.X.ls	<- data.frame()
+sim.X.ls	<- setNames(vector("list", length(selcol)), selcol)
+sim.X.df	<- data.frame()
 for(i in 1:length(selcol)){
 	pct			<- proc.time()
 	var1		<- selcol[i]
-	out	<- foreach(sel.retail = fmt_name, .combine = rbind) %dopar% {
+	out	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .verbose = TRUE) %dopar% {
 		X_list_new	<- X_list07
 		if(var1 %in% c("ln_upc_per_mod", "ln_num_module")){
 			X_list_new[[sel.retail]][var1]	<- X_list_new[[sel.retail]][var1] + log(1 + iv.change)
@@ -222,11 +237,13 @@ for(i in 1:length(selcol)){
 		}
 		out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
 					base = beta0_base, X_list = X_list_new, price = price.07, 
-					lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, interp.method = interp.method)
-		out1 	<- data.frame(out1,lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), Var = var1)
+					lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
+					interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha)
+		out1$Average 	<- data.frame(out1$Average, lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), Var = var1)
 		return(out1)
 	}
-	sim.X.ls	<- rbind(sim.X.ls, out)
+	sim.X.ls[[i]]	<- out
+	sim.X.df	<- rbind(sim.X.df, do.call(rbind, lapply(out, function(x) x$Average)))
 	use.time	<- proc.time() - pct
 	cat("Parallel simulation of retail attributes", var1, "finishes with", use.time[3]/60, "min.\n")
 }
@@ -234,13 +251,14 @@ for(i in 1:length(selcol)){
 #-------------------------------#
 # Simulation of price reduction # 
 pct			<- proc.time()
-sim.prc.ls	<- foreach(sel.retail = fmt_name, .combine = rbind) %dopar% {
+sim.prc.ls	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .verbose = TRUE) %dopar% {
 	price.new	<- price.07
 	price.new[sel.retail]	<- price.07[sel.retail] * (1 - iv.change)
 	out		<- SimOmega_fn(ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
 				base = beta0_base, X_list = X_list07, price = price.new, 
-				lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, interp.method = interp.method)
-	out		<- data.frame(out, lnInc = sim.unq$Inc08, retailer = as.character(sel.retail))
+				lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
+				interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha)
+	out$Average		<- data.frame(out$Average, lnInc = sim.unq$Inc08, retailer = as.character(sel.retail))
 	return(out)
 }
 use.time	<- proc.time() - pct
@@ -252,6 +270,10 @@ cat("Stop clustering. \n")
 ################
 # Save results #
 ################
+rm(list  = c("ar", "args", "cl", "ggtmp", "ggtmp1", "ggtmp2", "i", "lastFuncGrad", "lastFuncParam", "make_plot", "mycore", 
+			"myfix", "plot.wd", "s1_index", "sel", "selyr", "shr", "price", "sol", "sol.top", "sol.top2", "tmp", "tmp_coef", 
+			"tmp_price", "tmp1", "tmp2", "use.time", "ver.date", "var1", "ww"))
+
 save.image(paste("estrun_",run_id,"/ctrfact_seg",seg_id, "_", Sys.Date(), ".rdata",sep=""))
 
 cat("This program is done.\n")

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#PBS -J 19-30
+#PBS -J 93-95
 #PBS -j oe
 #PBS -l walltime=20:00:00
 #PBS -l mem=2gb
 #PBS -l ncpus=1
 
 cd /sscc/home/c/ccv103/rms_attributes
-sas p2_scan_unix_v2.sas -set single 0 -set sel_year 2008 -log g${PBS_ARRAY_INDEX}.log
+sas p2_scan_unix_v2.sas -set single 0 -set sel_year 2011 -log g${PBS_ARRAY_INDEX}_2011.log

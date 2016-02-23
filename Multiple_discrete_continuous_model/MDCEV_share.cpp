@@ -27,8 +27,8 @@ List param_assign(vec param, int nx, int R, int base=0){
 		}
 	}
 	 
-// 	double sigma = exp(param(nx+2*R-1)); 
-	double sigma = 1; 
+	double sigma = exp(param(nx+2*R-1)); 
+// 	double sigma = 1; 
 	List out = List::create(_["beta"]=beta, _["beta0"]=beta0, _["gamma"]=gamma, _["sigma"] = sigma) ;
 	return(out);
 }
@@ -57,7 +57,7 @@ List MDCEV_ll_fnC(vec param, int nx, mat shr, vec y, vec s1_index, mat p, List X
 	
 	// Sum up the log likelihood; 
 	vec ll = J - (M - ones<vec>(N)) * log(sigma) + sum(V_tilde % sgn_shr_tilde/sigma, 1) 
-			- M % log(sum(exp(V_tilde/sigma), 1)); 
+			- M % log(sum(exp(V_tilde/sigma), 1)) ; 
 	
 	List out = List::create(_["ll"]=ll, _["V_tilde"]=V_tilde);
 	return(out);

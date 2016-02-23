@@ -5,5 +5,5 @@
 #PBS -l ncpus=1
 
 cd /sscc/home/c/ccv103/rms_attributes
-sas p3_aggregation.sas -log aggrg_2007.log -set sel_year 2007
+sas p3_aggregation.sas -log aggrg_2011.log -set sel_year 2011
 
