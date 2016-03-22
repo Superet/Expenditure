@@ -17,7 +17,7 @@ library(data.table)
 library(doParallel)
 library(foreach)
 library(plm)
-library(chebpol)
+# library(chebpol)
 library(nloptr)
 library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
@@ -30,16 +30,19 @@ if(length(args)>0){
     }
 }
 
+seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
+cat("seg_id =", seg.id, "\.\n")
+
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
 # sourceCpp(paste("../Exercise/Multiple_discrete_continuous_model/", model_name, ".cpp", sep=""))
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
-# setwd("/sscc/home/c/ccv103/Exercise/run")
+setwd("/sscc/home/c/ccv103/Exercise/run")
 model_name 	<- "MDCEV_share"
-run_id		<- 3
+run_id		<- 4
 # seg_id		<- 1
 make_plot	<- TRUE
 plot.wd		<- paste(getwd(), "/estrun_",run_id, sep="")
@@ -47,15 +50,22 @@ ww			<- 10
 ar			<- .6
 interp.method	<- "spline"			# "cheb"
 trim.alpha		<- 0.05
-# nb		<- 200
+cpi.adj			<- TRUE
+nb				<- 100
 
-ver.date	<- "2016-02-16"
-load(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", ver.date,".rdata",sep=""))
+ver.date	<- "2016-02-26"
+if(cpi.adj){
+	fname	<- paste("estrun_",run_id,"/MDCEV_cpi_est_seg",seg_id,"_", ver.date,".rdata",sep="")
+}else{
+	fname	<- paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", ver.date,".rdata",sep="")
+}
+fname
+load(fname)
 sourceCpp(paste(model_name, ".cpp", sep=""))
 source("0_Allocation_function.R")
 source("ctrfact_sim_functions_v2.r")
 
-rm(list = c("gamfit","tmpdat"))
+rm(list = c("gamfit","tmpdat", "shr", "y", "price", "X_list", "ln_inc", "s1_index"))
 
 #############
 # Functions #
@@ -154,7 +164,12 @@ coef2	<- coef(sol.top2)
 cat("The coefficient estimates are:\n"); print(c(coef1, coef2)); cat("\n")
 
 pct		<- proc.time()
-beta.bt	<- sapply(1:nb, function(i) my.bt1(idxb[[i]], coef1, coef2))
+# beta.bt	<- sapply(1:nb, function(i) my.bt1(idxb[[i]], coef1, coef2))
+beta.bt	<- matrix(NA, length(c(coef1, coef2)), nb)
+for(i in 1:nb){
+	beta.bt[,i]	<- my.bt1(idxb[[i]], coef1, coef2)
+	print(i)
+}
 use.time	<- proc.time() - pct
 cat("Boostrap standard procedure finishes using", use.time[3]/60, "min.\n")
 

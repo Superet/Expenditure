@@ -7,9 +7,13 @@ library(evd)
 library(data.table)
 library(doParallel)
 library(foreach)
-library(chebpol)
+# library(chebpol)
 library(nloptr)
+library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
+
+seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
+cat("seg_id =", seg.id, "\.\n")
 
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
@@ -25,24 +29,43 @@ model_name 	<- "MDCEV_share"
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 # source("../Exercise/main/share_allocation/ctrfact_sim_functions.r")
 
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
-# setwd("/sscc/home/c/ccv103/Exercise/run")
-run_id		<- 2
+setwd("/sscc/home/c/ccv103/Exercise/run")
+run_id		<- 4
 plot.wd		<- getwd()
 make_plot	<- TRUE
-ww			<- 6.5
+ww			<- 10
 ar			<- .6
 
 source("0_Allocation_function.R")
-source("ctrfact_sim_functions.r")
+source("ctrfact_sim_functions_v2.r")
 
 # Load estimation data 
-ver.date	<- "2016-02-09"
-load(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", ver.date,".rdata",sep=""))
+ver.date	<- "2016-02-25"
+cpi.adj		<- TRUE
+
+if(cpi.adj){
+	loadf	<- paste("estrun_",run_id,"/MDCEV_cpi_est_seg",seg_id,"_", ver.date,".rdata",sep="")
+}else{
+	loadf	<- paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", ver.date,".rdata",sep="")
+}
+loadf
+load(loadf)
+rm(list = c("gamfit", "shr","model_name", "tmpdat"))
+
+# Set simulation parameters
 interp.method	<- "spline"					# Spline interpolation or Chebyshev interpolation
 exp.method		<- "Utility"				# Utility maximization or finding roots for first order condition
 trim.alpha		<- 0.05
+numsim			<- 1000	#numsim1		#<- 1000
+draw.par		<- FALSE
+sim.omega		<- FALSE
+fname			<- paste("ctrfact_seg",seg_id,sep="")
+if(draw.par){ fname <- paste(fname, "_pardraw", sep="") }
+if(sim.omega){fname	<- paste(fname, "_simomega", sep="") }
+fname			<- paste(fname, "_sim", numsim, "_", as.character(Sys.Date()), sep="")
+cat("Output file name is", fname, ".\n")
 
 ###############################
 # Prepare simulation elements # 
@@ -85,11 +108,23 @@ X_list07<- setNames( lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_
 					 fmt_name)
 cat("The average retail attributes in 2007:\n"); print(do.call(rbind, X_list07)); cat("\n")
 
+# Expand X_list and price to match the nobs of income 
+price.07	<- rep(1, nrow(sim.unq)) %*% matrix(price.07, nrow = 1)
+colnames(price.07)	<- fmt_name
+X_list07	<- lapply(X_list07, function(x) 
+				{out <- rep(1, nrow(sim.unq)) %*% matrix(x, nrow = 1); colnames(out) <- names(x); return(out)})
+
 #-------------------#
 # Take random draws #
 set.seed(666)
-numsim 		<- 1000
 eps_draw	<- matrix(rgev(numsim*R, scale = exp(shr.par["ln_sigma"])), numsim, R)
+if(draw.par){
+	par_se	<- c(sqrt(diag(vcov(sol.top2))), sqrt(diag(vcov(sol))) )
+	par_se[is.na(par_se)]	<- 0
+	par_draw <- sapply(par_se, function(x) rnorm(numsim, mean = 0, sd = x))
+}else{
+	par_draw <- NULL
+}
 
 ##############
 # Simulation #
@@ -111,82 +146,35 @@ cl		<- makeCluster(mycore, type = "FORK")
 registerDoParallel(cl)
 cat("Register", mycore, "core parallel computing. \n")
 
-# --------------------#
-# Simulate inclusive values 
-omega_parallel	<- function(eps_draw, lnInc, y.nodes, X_list, price){
-	numnodes<- length(y.nodes)
-	out		<- matrix(NA, length(lnInc), numnodes)
-	for(j in 1:length(lnInc)){
-		tmpX_list1	<- lapply(X_list, function(x) rep(1, numnodes) %*% t(c(x, x*lnInc[j])))
-		tmpsol 		<- incl_value_fn(param_est=shr.par, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=rep(1, numnodes) %*% t(price), 
-							R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw) )
-		out[j,]		<- tmpsol$omega
-	}
-	return(out)
-}
-
-pct		<- proc.time()
-tmp		<- foreach(i = 1:numsim) %dopar% {
-	omega_parallel(eps_draw = eps_draw[i,], lnInc = lnInc, y.nodes = y.nodes, X_list = X_list07, price = price.07)
-}
-tmp1	<- foreach(i = 1:numsim) %dopar% {
-	omega_parallel(eps_draw = eps_draw[i,], lnInc = lnInc_08, y.nodes = y.nodes, X_list = X_list07, price = price.07)
-}
-omega.07	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(NULL, lnInc, y.nodes))
-omega.08	<- array(NA, c(numsim, length(lnInc_08), numnodes), dimnames = list(NULL, lnInc_08, y.nodes))
-for(i in 1:numsim){
-	omega.07[i,,]	<- tmp[[i]]
-	omega.08[i,,]	<- tmp1[[i]]
-}
-use.time	<- proc.time() - pct
-cat("Simulation of omega with random draws finishes with", use.time[3]/60, "min.\n")
-
-# Interpolation functions
-if(interp.method == "spline"){
-	# omega.ls.07 <- lapply(1:length(lnInc), function(i) splinefun(y.nodes, omega.07[i,], method = "natural"))
-	# omega.ls.08 <- lapply(1:length(lnInc), function(i) splinefun(y.nodes, omega.08[i,], method = "natural"))
-	tmp1	<- apply(omega.07, c(2,3), mytrimfun)
-	tmp2	<- apply(omega.08, c(2,3), mytrimfun)
-	omega.ls.07	<- lapply(1:length(lnInc), function(i) 
-								mysplfun(x = rep(y.nodes, each = dim(tmp1)[1]), y = as.vector(tmp1[,i,])))
-	omega.ls.08	<- lapply(1:length(lnInc), function(i) 
-								mysplfun(x = rep(y.nodes, each = dim(tmp2)[1]), y = as.vector(tmp2[,i,])))								
-}else{
-	omega.07	<- apply(omega.07, c(2, 3), mean, trim = .05)
-	omega.08	<- apply(omega.08, c(2, 3), mean, trim = .05)
-	omega.ls.07 <- lapply(1:length(lnInc), function(i) chebfun(x = y.nodes, y = omega.07[i,], interval = y.interval))
-	omega.ls.08 <- lapply(1:length(lnInc), function(i) chebfun(x = y.nodes, y = omega.08[i,], interval = y.interval))
-}
-names(omega.ls.07)	<- lnInc
-names(omega.ls.08)	<- lnInc_08
-
 # Simulate expenditure and expenditure share. 
 pct				<- proc.time()
-sim.base07		<- SimWrapper_fn(omega.ls.07, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, base = beta0_base, 
-					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE)
+sim.base07		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, base = beta0_base, 
+					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
 use.time		<- proc.time() - pct						
 cat("2007 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
 pct				<- proc.time()
-sim.base08		<- SimWrapper_fn(omega_fn_ls = omega.ls.08, ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
-					base = beta0_base, X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE)
+sim.base08		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
+					base = beta0_base, X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
 use.time		<- proc.time() - pct						
 cat("2008 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
 # Check the baseline simulation 
 tmp1	<- sim.base07$Allocation 
 tmp2	<- sim.base08$Allocation
-tmp		<- -1/my.change*(tmp2-tmp1)/tmp1
+tmp		<- tmp2-tmp1
 cat("Summary of baseline income elasticity:\n"); print(summary(c(tmp))); cat("\n")
 
+# Plot omega over y
 tmp		<- seq(50, 250, 10)
-tmp1	<- sapply(omega.ls.07, function(f) f(tmp))
-tmp2	<- sapply(omega.ls.08, function(f) f(tmp))
-ggtmp	<- rbind(data.frame(melt(tmp1), year = 2007), data.frame(melt(tmp2), year = 2008))
-names(ggtmp)	<- c("yidx", "lnInc", "omega", "year")
-ggtmp$y			<- tmp[ggtmp$yidx]
+tmpd1	<- data.frame(lnInc = rep(sim.unq$Inc07, each = length(tmp)), y = rep(tmp, length(sim.unq$Inc07)))
+tmp1	<- omega_deriv(tmpd1)
+tmpd2	<- data.frame(lnInc = rep(sim.unq$Inc08, each = length(tmp)), y = rep(tmp, length(sim.unq$Inc08)))
+tmp2	<- omega_deriv(tmpd2)
+ggtmp	<- rbind(cbind(tmpd1, omega = tmp1, year = 2007), cbind(tmpd2, omega = tmp2, year = 2008))
 ggtmp$Income	<- exp(ggtmp$lnInc)
 
+# Plot the simulation baseline -- expenditure allocation by income 
 tmp1	<- melt(sim.base07$Average[,fmt_name])
 tmp2	<- melt(sim.base08$Average[,fmt_name])
 ggtmp1	<- rbind(data.frame(tmp1, year = 2007), data.frame(tmp2, year = 2008))
@@ -194,14 +182,20 @@ names(ggtmp1)	<- c("inc_idx", "Retail", "Exp", "year")
 ggtmp1$Inc	<- round(exp(ggtmp1$inc_idx), 0)
 ggtmp1$Inc1	<- factor(ggtmp1$Inc, levels = sort(unique(ggtmp1$Inc)))
 
-tmp		<- seq(100, 110, .1)
-u		<- -sapply(1:length(lnInc), function(i) exp_fn(tmp, lambda, omega.ls.07[[i]], ln_inc = lnInc[i]))
-dimnames(u)	<- list(tmp, lnInc)
-ggtmp2	<- melt(u)
-names(ggtmp2)	<- c("y", "lnInc", "utility")
+# Check if utility function at the top level is concave
+tmp		<- seq(100, 110, .2)
+u		<- matrix(NA, length(tmp), length(lnInc), dimnames = list(y = tmp, lnInc = lnInc))
+for(i in 1:length(lnInc)){
+	f 	<- function(y, ...){
+		newx	<- data.frame(lnInc = lnInc[i], y = y)
+		omega_deriv(newx, ...)
+	}
+	u[,i]<- -exp_fn(tmp, lambda, f, ln_inc = lnInc[i])
+}
+ggtmp2	<- melt(u, value.name = "utility")
 
 if(make_plot){
-	pdf(paste(plot.wd, "/estrun_",run_id,"/graph_ctrfact_checkbase_seg", seg_id, ".pdf", sep=""), width = ww/ar, height = ww)
+	pdf(paste(plot.wd, "/estrun_",run_id,"/graph_checkbase_", fname, ".pdf", sep=""), width = ww/ar, height = ww)
 	print(ggplot(ggtmp, aes(y, omega, col = factor(Income))) + geom_line() + 
 			facet_wrap(~year) + 
 			guides(col = FALSE) + 
@@ -216,7 +210,7 @@ if(make_plot){
 	dev.off()
 }
 
-save.image(paste("estrun_",run_id,"/ctrfact_income_eff_seg",seg_id, "_", Sys.Date(), ".rdata",sep=""))
+save.image(paste("estrun_",run_id, "/", fname, ".rdata",sep=""))
 
 #------------------------#
 # Simulation of strategy #
@@ -228,17 +222,24 @@ sim.X.df	<- data.frame()
 for(i in 1:length(selcol)){
 	pct			<- proc.time()
 	var1		<- selcol[i]
-	out	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .verbose = TRUE) %dopar% {
+	out	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packages=c("mgcv", "nloptr")) %do% {
 		X_list_new	<- X_list07
 		if(var1 %in% c("ln_upc_per_mod", "ln_num_module")){
-			X_list_new[[sel.retail]][var1]	<- X_list_new[[sel.retail]][var1] + log(1 + iv.change)
+			X_list_new[[sel.retail]][,var1]	<- X_list_new[[sel.retail]][,var1] + log(1 + iv.change)
 		}else{
-			X_list_new[[sel.retail]][var1]	<- X_list_new[[sel.retail]][var1] * (1 + iv.change)
+			X_list_new[[sel.retail]][,var1]	<- X_list_new[[sel.retail]][,var1] * (1 + iv.change)
 		}
-		out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
-					base = beta0_base, X_list = X_list_new, price = price.07, 
-					lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
-					interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha)
+		if(sim.omega){
+			out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+						base = beta0_base, X_list = X_list_new, price = price.07, 
+						lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
+						interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha, par.draw = par_draw)
+		}else{
+			out1 	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+						base = beta0_base, X_list = X_list_new, price = price.07, 
+						eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+		}
+		
 		out1$Average 	<- data.frame(out1$Average, lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), Var = var1)
 		return(out1)
 	}
@@ -251,13 +252,19 @@ for(i in 1:length(selcol)){
 #-------------------------------#
 # Simulation of price reduction # 
 pct			<- proc.time()
-sim.prc.ls	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .verbose = TRUE) %dopar% {
+sim.prc.ls	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packages=c("mgcv", "nloptr")) %do% {
 	price.new	<- price.07
-	price.new[sel.retail]	<- price.07[sel.retail] * (1 - iv.change)
-	out		<- SimOmega_fn(ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
-				base = beta0_base, X_list = X_list07, price = price.new, 
-				lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
-				interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha)
+	price.new[,sel.retail]	<- price.07[,sel.retail] * (1 - iv.change)
+	if(sim.omega){
+		out	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+					base = beta0_base, X_list = X_list07, price = price.new, 
+					lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
+					interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha, par.draw = par_draw)
+	}else{
+		out	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+					base = beta0_base, X_list = X_list07, price = price.new, 
+					eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+	}
 	out$Average		<- data.frame(out$Average, lnInc = sim.unq$Inc08, retailer = as.character(sel.retail))
 	return(out)
 }
@@ -271,10 +278,15 @@ cat("Stop clustering. \n")
 # Save results #
 ################
 rm(list  = c("ar", "args", "cl", "ggtmp", "ggtmp1", "ggtmp2", "i", "lastFuncGrad", "lastFuncParam", "make_plot", "mycore", 
-			"myfix", "plot.wd", "s1_index", "sel", "selyr", "shr", "price", "sol", "sol.top", "sol.top2", "tmp", "tmp_coef", 
-			"tmp_price", "tmp1", "tmp2", "use.time", "ver.date", "var1", "ww"))
+			"myfix", "plot.wd", "s1_index", "sel", "selyr", "price", "sol", "sol.top", "sol.top2", "tmp", "tmp_coef", 
+			"tmp_price", "tmp1", "tmp2", "use.time", "ver.date", "var1", "ww", "f", 
+			"numnodes", "out", "out1", "pct", "tmpd1", "tmpd2", "tmpdat", "u", "W", "y", "y.nodes",
+			"Allocation_constr_fn", "Allocation_fn", "Allocation_nlop_fn", "cheb.1d.basis", "cheb.basis", "chebfun", 
+			"exp_fn", "expFOC_fn", "incl_value_fn", "mysplfun", "mytrimfun", "param_assignR", "simExp_fn", "SimOmega_fn", 
+			"SimWrapper_fn", "solveExp_fn", "spl2dfun", "uP_fn", "uGrad_fn"))
 
-save.image(paste("estrun_",run_id,"/ctrfact_seg",seg_id, "_", Sys.Date(), ".rdata",sep=""))
+save.image(paste("estrun_",run_id, "/", fname, ".rdata",sep=""))
+# save.image(paste("estrun_",run_id,"/ctrfact_seg",seg_id, "_", Sys.Date(), ".rdata",sep=""))
 
 cat("This program is done.\n")
 

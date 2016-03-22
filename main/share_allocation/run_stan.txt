@@ -1,0 +1,9 @@
+#!/bin/bash
+#PBS -J 1-9
+#PBS -j oe
+#PBS -l walltime=500:00:00
+#PBS -l mem=20gb
+#PBS -l ncpus=4
+
+cd /sscc/home/c/ccv103/Exercise/run/estrun_5
+R CMD BATCH 2_mdcev_share_estimation_stan.r stan_sub${PBS_ARRAY_INDEX}_iter10000.log

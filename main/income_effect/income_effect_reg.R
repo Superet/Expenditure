@@ -22,7 +22,7 @@ ww			<- 6.5
 ww1			<- 12
 ar 			<- .8	#.6
 
-cpi.adj		<- FALSE
+cpi.adj		<- TRUE
 write2csv	<- TRUE
 make_plot	<- TRUE
 fname		<- "expenditure_reg"
@@ -111,11 +111,12 @@ pan_yr		<- pan_yr[,move_all := sum(move), by = list(household_code)]
 # Regression data #
 mydata 	<- hh_exp
 if(cpi.adj){
-	mydata$ln_income	<- log(mydata$income_midvalue/mydata$cpi)
-}else{
-	mydata$ln_income	<- log(mydata$income_midvalue)
-}
+	mydata$income_midvalue	<- mydata$income_midvalue/mydata$cpi
+}	
+mydata$ln_income	<- log(mydata$income_midvalue)
 sum(mydata$dol == 0 )/nrow(mydata)
+annual.week	<- 26
+mydata$week_income	<- mydata$income_midvalue/annual.week
 mydata$month		<- factor(mydata$month)
 mydata$ln_dol 		<- log(mydata$dol)
 mydata$recession 	<- factor(mydata$recession)
@@ -155,15 +156,18 @@ mydata	<- mydata[, c("household_code", "biweek","dol", "ln_dol",
 					paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), 
 					paste("PRC_", gsub("\\s", "_", fmt_name), sep=""),
 					paste("IC_", gsub("\\s", "_", fmt_name), sep=""), 
-					"first_incomeg", "ln_income", "ln_income_low", "ln_income_med", "ln_income_high",
+					"first_incomeg", "ln_income", "ln_income_low", "ln_income_med", "ln_income_high", "week_income",
 					"year", "month", "lag_dol")]
+
+cat("Number of observations with 0 expenditure =", sum(mydata$dol==0), ", or, ", round(sum(mydata$dol==0)/nrow(mydata), 4), ".\n")
 
 ############################################
 # Single-equation fixed effect regressions #
 ############################################
 #---------------------------------------#
 # Set up DV and IV, regression models 
-dv_vec	<- c("dol", "ln_dol", paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), paste("IC_", gsub("\\s", "_", fmt_name), sep="") )
+# dv_vec	<- c("dol", "ln_dol", paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), paste("IC_", gsub("\\s", "_", fmt_name), sep="") )
+dv_vec	<- c("ln_dol", paste("SHR_", gsub("\\s", "_", fmt_name), sep=""))
 myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + year + month"), 
 				Heterogeneity	= as.formula("y ~ ln_income*first_incomeg + month"), 
 				Year			= as.formula("y ~ ln_income*first_incomeg + year + month"), 
@@ -176,15 +180,15 @@ myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + year + month"),
 regrs	<- data.frame()
 for(i in 1:length(dv_vec)){
 	prc 		<- proc.time()
-	if(dv_vec[i] != "dol"){
+	# if(dv_vec[i] != "dol"){
 		sel	<- mydata$dol > 0
-	}else{
+	# }else{
 		if(dv_vec[i] != "ln_dol"){
-			sel <- !is.na(mydata$lag_dol)
-		}else{
-			sel	<- rep(TRUE, nrow(mydata))
-		}
-	}
+			sel <- !is.na(mydata$lag_dol) & sel
+		}# else{
+		# 			sel	<- rep(TRUE, nrow(mydata))
+		# 		}
+	# }
 	reg.ls	<- setNames(vector("list", 4), names(myfml))
 	for(j in 1:length(myfml)){
 		rm(list = "myfit")
@@ -203,7 +207,7 @@ for(i in 1:length(dv_vec)){
 	stargazer(reg.ls, type = "html", title = "Single-equation fixed effects regression", 
 			 align = TRUE, no.space = TRUE, 
 			 omit = c("year", "month"), order=c("ln_income"), 
-			 add.lines = list(c("Year FE","Y","Y","Y","Y"), c("Month FE","Y","Y","Y","Y")), 
+			 add.lines = list(c("Year FE","Y","N","Y","Y"), c("Month FE","Y","Y","Y","Y")), 
 			 out = paste(plot.wd, "/", fname, "_se_", dv_vec[i], ".html", sep=""))
 			
 	use.time 	<- proc.time() - prc
@@ -223,6 +227,77 @@ for(i in 1:length(myfml)){
 
 if(write2csv){
 	for(i in 1:length(tmpls)){
+		xlsx.addHeader(mywb, sht1, value = names(tmpls)[i], level = 3)
+		xlsx.addTable(mywb, sht1, tmpls[[i]], row.names = F)
+	}
+}
+
+#############################################################################
+# Single-equation fixed effect regressions measureing propensity to consume #
+#############################################################################
+#---------------------------------------#
+# Set up DV and IV, regression models 
+dv_vec	<- c("dol", paste("SHR_", gsub("\\s", "_", fmt_name), sep=""))
+myfml	<- list(Homogeneity		= as.formula("y ~ week_income + year + month"), 
+				Heterogeneity	= as.formula("y ~ week_income*first_incomeg + month"), 
+				Year			= as.formula("y ~ week_income*first_incomeg + year + month"), 
+				Price			= as.formula("y ~ week_income*first_incomeg + 
+											PRC_Convenience_Store + PRC_Discount_Store + PRC_Dollar_Store + 
+											PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club + month + year")
+				)
+
+# Run regressions
+regrs.ptc	<- data.frame()
+for(i in 1:length(dv_vec)){
+	prc 		<- proc.time()
+	# if(dv_vec[i] != "dol"){
+		sel	<- mydata$dol > 0
+	# }else{
+		if(dv_vec[i] != "ln_dol"){
+			sel <- !is.na(mydata$lag_dol) & sel
+		}# else{
+		# 			sel	<- rep(TRUE, nrow(mydata))
+		# 		}
+	# }
+	reg.ls	<- setNames(vector("list", 4), names(myfml))
+	for(j in 1:length(myfml)){
+		rm(list = "myfit")
+		tmp 	<- as.formula(substitute(y ~ x, list(y = as.name(dv_vec[i]), x = terms(myfml[[j]])[[3]])) )
+		if(!dv_vec[i] %in% c("ln_dol", "dol")){
+			tmp		<- update(tmp, . ~ . + lag_dol)
+		}
+		myfit	<- plm(tmp, data = mydata[sel,], index = c("household_code","biweek"), model="within")
+		reg.ls[[j]]	<- myfit
+		tmp2	<- summary(myfit)
+		tmp3	<- data.frame(model = names(myfml)[j], DV = dv_vec[i], tmp2$coefficients)
+		tmp3$Var<- rownames(tmp3)
+		rownames(tmp3) <- NULL
+		regrs.ptc	<- rbind(regrs.ptc, tmp3)
+	}
+	stargazer(reg.ls, type = "html", title = "Single-equation fixed effects regression of expenditure on weekly income", 
+			 align = TRUE, no.space = TRUE, 
+			 omit = c("year", "month"), order=c("week_income"), 
+			 add.lines = list(c("Year FE","Y","N","Y","Y"), c("Month FE","Y","Y","Y","Y")), 
+			 out = paste(plot.wd, "/", fname, "_septc_", dv_vec[i], ".html", sep=""))
+			
+	use.time 	<- proc.time() - prc
+	cat("Regressions for", dv_vec[i], "finishes, using", use.time[3]/60, "min.\n")
+}
+
+# Print regression results 
+tmp			<- subset(regrs.ptc, substr(regrs.ptc$Var, 1, 5) != "month" & substr(regrs.ptc$Var, 1, 4) != "year")
+tmpls		<- vector("list", length(myfml))
+names(tmpls)<- names(myfml)
+for(i in 1:length(myfml)){
+	tmp1	<- subset(tmp, model == names(myfml)[i])
+	model_list	<- split(tmp1, tmp1$DV)
+	tmp.tab	<- model_outreg(model_list, p.given = TRUE, head.name = c("Estimate","Std..Error","Pr...t..","Var"), digits = 4)
+	tmpls[[i]]	<- tmp.tab
+}
+
+if(write2csv){
+	for(i in 1:length(tmpls)){
+		xlsx.addHeader(mywb, sht1, value = "Single equation regression of expenditure on weekly income", level = 2)
 		xlsx.addHeader(mywb, sht1, value = names(tmpls)[i], level = 3)
 		xlsx.addTable(mywb, sht1, tmpls[[i]], row.names = F)
 	}
@@ -270,13 +345,16 @@ my.SURFE <- function(syseq, data, panid, ...){
 }
 
 # Fit SUR with fixed effects 
-dv_mat	<- cbind(paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), paste("IC_", gsub("\\s", "_", fmt_name), sep=""))
+# dv_mat	<- cbind(paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), paste("IC_", gsub("\\s", "_", fmt_name), sep=""))
+dv_mat	<- matrix(paste("SHR_", gsub("\\s", "_", fmt_name), sep=""), R, 1)
 dv_mat	<- dv_mat[-1,]
 colnames(dv_mat) <- c("share", "incidence")
 myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + month + year + lag_dol"), 
-				Heterogeneity	= as.formula("y ~ ln_income + ln_income_med + ln_income_high + month + lag_dol"), 
-				Year 			= as.formula("y ~ ln_income + ln_income_med + ln_income_high + year + month + lag_dol"), 
-				Price 			= as.formula("y ~ ln_income + ln_income_med + ln_income_high + lag_dol + year + month + 
+				HomoPrice		= as.formula("y ~ ln_income + month + year + lag_dol + 
+													PRC_Convenience_Store + PRC_Discount_Store + PRC_Dollar_Store + 
+													PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club"), 
+				Heterogeneity 	= as.formula("y ~ ln_income + ln_income_med + ln_income_high + year + month + lag_dol"), 
+				HeterPrice 		= as.formula("y ~ ln_income + ln_income_med + ln_income_high + lag_dol + year + month + 
 													PRC_Convenience_Store + PRC_Discount_Store + PRC_Dollar_Store + 
 													PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club")
 				)
@@ -389,7 +467,7 @@ changelab	<- function(x, ord, lab){
 }
 
 # Homogenous income effect for expenditure in SUR regressions
-ggtmp1	<- subset(regrs1, model == "Homogeneity" & substr(DV,1,3) == "SHR" & Var == "ln_income")
+ggtmp1	<- subset(regrs1, model == "HomoPrice" & substr(DV,1,3) == "SHR" & Var == "ln_income")
 ggtmp1$Retail	<- factor(as.character(ggtmp1$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), 
 						labels = fmt_name[-1])
 ord		<- order(ggtmp1$Estimate)
@@ -408,7 +486,7 @@ if(make_plot){
 }
 
 # Heterogenous income effect for expenditure in SUR regressions
-ggtmp1	<- subset(regrs1, model == "Heterogeneity" & substr(DV,1,3) == "SHR" & substr(Var,1,9) == "ln_income")
+ggtmp1	<- subset(regrs1, model == "HeterPrice" & substr(DV,1,3) == "SHR" & substr(Var,1,9) == "ln_income")
 ggtmp1$Retail	<- factor(as.character(ggtmp1$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), 
 						labels = fmt_name[-1])						
 ggtmp1$IncGrp	<- changelab(ggtmp1$Var, paste("ln_income",c("","_med","_high"),sep=""), c("Low", "Med", "High"))

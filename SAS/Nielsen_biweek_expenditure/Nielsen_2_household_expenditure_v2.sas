@@ -408,9 +408,6 @@ data tmp;
 			income_real household_size type_of_residence male_head_employment female_head_employment age_and_presence_of_children)
 		  tmp2; 
 	by household_code; 		
-	famsize = "Three+";
-	if household_size = 2 then famsize = "Two";
-	if household_size = 1 then famsize = "Single";
 	condo = 0; 
 	if mod(type_of_residence, 2)=0 then condo = 1;
 	employed = 0;

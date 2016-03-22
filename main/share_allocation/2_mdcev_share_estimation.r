@@ -17,7 +17,6 @@ library(data.table)
 library(doParallel)
 library(foreach)
 library(plm)
-library(chebpol)
 library(nloptr)
 library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
@@ -30,21 +29,25 @@ if(length(args)>0){
     }
 }
 
-model_name 	<- "MDCEV_share"
-run_id		<- 3
+seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
+cat("seg_id =", seg.id, "\.\n")
+
+model_name 		<- "MDCEV_share"
+run_id			<- 4
 # seg_id		<- 1
-make_plot	<- TRUE
+make_plot		<- TRUE
 interp.method	<- "spline"			# "cheb"
 trim.alpha		<- 0.05
+cpi.adj			<- TRUE
 
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
 # sourceCpp(paste("../Exercise/Multiple_discrete_continuous_model/", model_name, ".cpp", sep=""))
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
-# setwd("/sscc/home/c/ccv103/Exercise/run")
+setwd("/sscc/home/c/ccv103/Exercise/run")
 
 sourceCpp(paste(model_name, ".cpp", sep=""))
 source("0_Allocation_function.R")
@@ -74,6 +77,9 @@ sel			<- paste("DOL_", gsub("\\s", "_", fmt_name), sep="")
 sel1		<- gsub("DOL", "SHR", sel)
 for(i in 1:length(fmt_name)){
 	hh_exp[,sel1[i]] <- hh_exp[,sel[i]]/hh_exp$dol
+}
+if(cpi.adj){
+	hh_exp$income_midvalue	<- hh_exp$income_midvalue/hh_exp$cpi
 }
 
 # Segment households based on their initial income level 
@@ -189,13 +195,23 @@ MDCEV_wrapper <- function(param){
 }
 
 # Estimation with multiple initial values. 
-theta_init	<- list(c(-1, -.1, 1, -1.5, 	.1, .1, -.1, .1, 	-1, -1, -1, -.5, -1,  5, 20, 4, 4, 6, 50, -.3), 
-					c(-.6, -.1, .1, -.8, 	.1, .1, -.05, -.1, 	-1.2, -1, -1, -.3, -.5, 6, 25, 6, 5, 15, 60, -.4), 
-					c(-1, -.3, 1.2, -6, 	.1, 0, -.1, .6, 	-1.5, -1, -1.5, -.5, -.3, 5, 30, 6, 6, 15, 80, -.4 ),
-					c(-1, -.2, 1.1, -3, 	.1, .05, -.1, .3, 	-1.2, -1, -1.2, -.5, -.6, 6, 25, 5, 6, 10, 65, -.35  ) )
-# theta_init	<- list(c(-1, -.2, 1, -2, 	.1, .1, -.1, .1,	-2, -1, -1, -.5, -2,	3, 15, 4, 3, 6, 33, 0), 
-# 					c(-1, -.3, 1, -2, 	.1, .0, -.1, .3, 	-2, -1, -1, -.5, -1, 	3, 15, 4, 4, 7, 37, 0), 
-# 					c(-1, -.5, 1.5, -4,	.1, -.1,-.5, .5, 	-3, -1, -2, -1, -.8, 	3, 15, 4, 4, 8, 40, 0  ) )
+if(fixsigma){
+	theta_init	<- list(c(-1, -.2, 1, -2, 	.1, .1, -.1, .1,	-2, -1, -1, -.5, -2,	3, 15, 4, 3, 6, 33, 0), 
+						c(-1, -.3, 1, -2, 	.1, .0, -.1, .3, 	-2, -1, -1, -.5, -1, 	3, 15, 4, 4, 7, 37, 0), 
+						c(-1, -.5, 1.5, -4,	.1, -.1,-.5, .5, 	-3, -1, -2, -1, -.8, 	3, 15, 4, 4, 8, 40, 0  ) )	
+}else if(cpi.adj){
+	theta_init	<- list(c(-1, -.1, 1, -1.5, 	.1, .1, -.1, .1, 	-1, -1, -1, -.5, -1,  5, 20, 4, 4, 6, 50, -.3), 
+						c(-.6, -.2, 1.1, -2, 	.1, .1, -.1, .1, 	-1.2, -1, -1, -.3, -.5, 6, 25, 6, 5, 15, 60, -.4), 
+						c(-1, -.3, 1.2, -6, 	.1, 0, -.1, .6, 	-1.5, -1, -1.5, -.5, -.3, 5, 30, 7, 7, 15, 80, -.4 ) )
+	
+}else{
+	theta_init	<- list(c(-1, -.1, 1, -1.5, 	.1, .1, -.1, .1, 	-1, -1, -1, -.5, -1,  5, 20, 4, 4, 6, 50, -.3), 
+						c(-.6, -.1, .1, -.8, 	.1, .1, -.05, -.1, 	-1.2, -1, -1, -.3, -.5, 6, 25, 6, 5, 15, 60, -.4), 
+						c(-1, -.3, 1.2, -6, 	.1, 0, -.1, .6, 	-1.5, -1, -1.5, -.5, -.3, 5, 30, 6, 6, 15, 80, -.4 ),
+						c(-1, -.2, 1.1, -3, 	.1, .05, -.1, .3, 	-1.2, -1, -1.2, -.5, -.6, 6, 25, 5, 6, 10, 65, -.35  ) )
+}
+
+
 system.time(tmp <- MDCEV_wrapper(theta_init[[1]]) )
 
 tmp_sol <- vector("list", length(theta_init))
@@ -225,8 +241,13 @@ cat("--------------------------------------------------------\n")
 # Simulate the inclusive value # 
 ################################
 # For simulation, we need elements: income level, expenditure, (average) price, (average) retail attributes
-lnInc	<- sort(unique(hh_exp$ln_inc))
-lnInc	<- c(lnInc + log(.8), lnInc + log(.9), lnInc)
+if(cpi.adj){
+	lnInc	<- sort(unique(hh_exp$ln_inc))
+	lnInc	<- lnInc[seq(2, length(lnInc), 2)]
+}else{
+	lnInc	<- sort(unique(hh_exp$ln_inc))
+	lnInc	<- c(lnInc + log(.8), lnInc + log(.9), lnInc)
+}
 cat("Range of expenditure in the dara:", range(mydata$dol), "\n")
 cat("Probability of expenditure > 1000: ", sum(mydata$dol > 1000)/nrow(mydata), "\n")
 
@@ -358,6 +379,7 @@ init	<- matrix(c(.01,  .001,
 					.05, -.001), 
 					3, 2, byrow = T)
 colnames(init)	<- c("lambda1", "lambda2")
+dT		<- NULL
 if(interp.method == "cheb"){
 	dT <- cheb.1d.basis(y, numnodes, interval = y.interval)				# Derivative of Chebshev basis
 }
@@ -402,11 +424,18 @@ cat("Top level estimation finishes.\n")
 rm(list=c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","MDCEV_ll_fnC",
 		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","param_assign","tmpX_list", 
 		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "ord","panelist","tmpidx","tmpn","cl", 
-		  "tmp_sol1", "GMM_fn", "M_fn", "init", "m", "mycore", "param_assignR", "ggtmp", "ggtmp1", 
+		  "tmp_sol1", "GMM_fn", "M_fn", "init", "m", "mycore", "param_assignR", "ggtmp", "ggtmp1", "tmpdat",
 		  "interp.method", "trim.alpha", "mysplfun", "mytrimfun", "expFOC_fn", "exp_fn", "solveExp_fn", 
 		  "simExp_fn", "SimWrapper_fn", "SimOmega_fn", "cheb.1d.basis", "cheb.basis", "chebfun", "omega_parallel", 
 		  "lastFuncGrad", "lastFuncParam", "args"))
 
-save.image(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", Sys.Date(),".rdata",sep=""))
+if(cpi.adj){
+	fname	<- paste("estrun_",run_id,"/MDCEV_cpi_est_seg",seg_id,"_", Sys.Date(),".rdata",sep="")
+}else{
+	fname	<- paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", Sys.Date(),".rdata",sep="")
+}
+fname
+
+save.image(file = fname)
 
 cat("This program is done. ")

@@ -7,10 +7,13 @@ library(evd)
 library(data.table)
 library(doParallel)
 library(foreach)
-library(chebpol)
+# library(chebpol)
 library(nloptr)
 library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
+
+seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
+cat("seg_id =", seg.id, "\.\n")
 
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
@@ -24,12 +27,12 @@ model_name 	<- "MDCEV_share"
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
-# source("../Exercise/main/share_allocation/ctrfact_sim_functions_v2.r")
+# source("../Exercise/main/share_allocation/ctrfact_sim_functions.r")
 
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
-# setwd("/sscc/home/c/ccv103/Exercise/run")
-run_id		<- 3
+setwd("/sscc/home/c/ccv103/Exercise/run")
+run_id		<- 4
 plot.wd		<- getwd()
 make_plot	<- TRUE
 ww			<- 10
@@ -39,18 +42,26 @@ source("0_Allocation_function.R")
 source("ctrfact_sim_functions_v2.r")
 
 # Load estimation data 
-ver.date	<- "2016-02-16"
-load(paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", ver.date,".rdata",sep=""))
-rm(list = c("gamfit", "shr","model_name", "tmpdat"))
+ver.date	<- "2016-02-26"
+cpi.adj		<- TRUE
+
+if(cpi.adj){
+	loadf	<- paste("estrun_",run_id,"/MDCEV_cpi_est_seg",seg_id,"_", ver.date,".rdata",sep="")
+}else{
+	loadf	<- paste("estrun_",run_id,"/MDCEV_est_seg",seg_id,"_", ver.date,".rdata",sep="")
+}
+loadf
+load(loadf)
+rm(list = intersect(ls(), c("gamfit", "shr","model_name", "tmpdat")))
 
 # Set simulation parameters
 interp.method	<- "spline"					# Spline interpolation or Chebyshev interpolation
 exp.method		<- "Utility"				# Utility maximization or finding roots for first order condition
 trim.alpha		<- 0.05
-numsim			<- numsim1		#<- 1000
+numsim			<- 5000	#numsim1		#<- 1000
 draw.par		<- FALSE
 sim.omega		<- FALSE
-fname			<- paste("ctrfact_seg",seg_id,sep="")
+fname			<- paste("ctrfact_seq_seg",seg_id,sep="")
 if(draw.par){ fname <- paste(fname, "_pardraw", sep="") }
 if(sim.omega){fname	<- paste(fname, "_simomega", sep="") }
 fname			<- paste(fname, "_sim", numsim, "_", as.character(Sys.Date()), sep="")
@@ -96,6 +107,12 @@ selcol	<- c("size_index", "ln_upc_per_mod", "ln_num_module","overall_prvt")
 X_list07<- setNames( lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_attr, channel_type == x & year%in% selyr)[,selcol]))), 
 					 fmt_name)
 cat("The average retail attributes in 2007:\n"); print(do.call(rbind, X_list07)); cat("\n")
+
+# Expand X_list and price to match the nobs of income 
+price.07	<- rep(1, nrow(sim.unq)) %*% matrix(price.07, nrow = 1)
+colnames(price.07)	<- fmt_name
+X_list07	<- lapply(X_list07, function(x) 
+				{out <- rep(1, nrow(sim.unq)) %*% matrix(x, nrow = 1); colnames(out) <- names(x); return(out)})
 
 #-------------------#
 # Take random draws #
@@ -198,36 +215,41 @@ save.image(paste("estrun_",run_id, "/", fname, ".rdata",sep=""))
 #------------------------#
 # Simulation of strategy #
 # Assume only grocery stores change retail attributes. 
-iv.change		<- .1			# Percentage increase of independent variable
-
+iv.change.vec	<- seq(-0.15, .15, by = .01)
 sim.X.ls	<- setNames(vector("list", length(selcol)), selcol)
-sim.X.df	<- data.frame()
 for(i in 1:length(selcol)){
 	pct			<- proc.time()
 	var1		<- selcol[i]
-	out	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packages=c("mgcv", "nloptr")) %do% {
-		X_list_new	<- X_list07
-		if(var1 %in% c("ln_upc_per_mod", "ln_num_module")){
-			X_list_new[[sel.retail]][var1]	<- X_list_new[[sel.retail]][var1] + log(1 + iv.change)
-		}else{
-			X_list_new[[sel.retail]][var1]	<- X_list_new[[sel.retail]][var1] * (1 + iv.change)
+	out	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packages=c("mgcv", "nloptr")) %dopar% {
+		out1.avg	<- data.frame()
+		out1.alc	<- array(NA, c(length(iv.change.vec), numsim, nrow(sim.unq), R), 
+							dimnames = list(change = iv.change.vec, iter = 1:numsim, lnInc = sim.unq[,"Inc08"], retail = fmt_name))
+		for(j in 1:length(iv.change.vec)){
+			X_list_new	<- X_list07
+			if(var1 %in% c("ln_upc_per_mod", "ln_num_module")){
+				X_list_new[[sel.retail]][,var1]	<- X_list_new[[sel.retail]][,var1] + log(1 + iv.change.vec[j])
+			}else{
+				X_list_new[[sel.retail]][,var1]	<- X_list_new[[sel.retail]][,var1] * (1 + iv.change.vec[j])
+			}
+			if(sim.omega){
+				out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+							base = beta0_base, X_list = X_list_new, price = price.07, 
+							lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
+							interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha, par.draw = par_draw)
+			}else{
+				out1 	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+							base = beta0_base, X_list = X_list_new, price = price.07, sim.y = sim.base08$y, 
+							eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+			}
+			out1.avg	<- rbind(out1.avg, data.frame(out1$Average, 
+												lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), 
+												Var = var1, change = iv.change.vec[j] ))
+			out1.alc[j,,,]	<- out1$Allocation
 		}
-		if(sim.omega){
-			out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
-						base = beta0_base, X_list = X_list_new, price = price.07, 
-						lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
-						interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha, par.draw = par_draw)
-		}else{
-			out1 	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
-						base = beta0_base, X_list = X_list_new, price = price.07, 
-						eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
-		}
-		
-		out1$Average 	<- data.frame(out1$Average, lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), Var = var1)
+		out1	<- list(Average = out1.avg, Allocation = out1.alc)
 		return(out1)
 	}
 	sim.X.ls[[i]]	<- out
-	sim.X.df	<- rbind(sim.X.df, do.call(rbind, lapply(out, function(x) x$Average)))
 	use.time	<- proc.time() - pct
 	cat("Parallel simulation of retail attributes", var1, "finishes with", use.time[3]/60, "min.\n")
 }
@@ -235,21 +257,31 @@ for(i in 1:length(selcol)){
 #-------------------------------#
 # Simulation of price reduction # 
 pct			<- proc.time()
-sim.prc.ls	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packages=c("mgcv", "nloptr")) %do% {
-	price.new	<- price.07
-	price.new[sel.retail]	<- price.07[sel.retail] * (1 - iv.change)
-	if(sim.omega){
-		out	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
-					base = beta0_base, X_list = X_list07, price = price.new, 
-					lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
-					interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha, par.draw = par_draw)
-	}else{
-		out	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
-					base = beta0_base, X_list = X_list07, price = price.new, 
-					eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+sim.prc.ls	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packages=c("mgcv", "nloptr")) %dopar% {
+	out1.avg	<- data.frame()
+	out1.alc	<- array(NA, c(length(iv.change.vec), numsim, nrow(sim.unq), R), 
+						dimnames = list(change = iv.change.vec, iter = 1:numsim, lnInc = sim.unq[,"Inc08"], retail = fmt_name))
+	
+	for(j in 1:length(iv.change.vec)){
+		price.new	<- price.07
+		price.new[,sel.retail]	<- price.07[,sel.retail] * (1 + iv.change.vec[j])
+		if(sim.omega){
+			out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+						base = beta0_base, X_list = X_list07, price = price.new, 
+						lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
+						interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha, par.draw = par_draw)
+		}else{
+			out1	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
+						base = beta0_base, X_list = X_list07, price = price.new, sim.y = sim.base08$y, 
+						eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+		}
+		out1.avg	<- rbind(out1.avg, data.frame(out1$Average, 
+											lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), 
+											Var = 'price', change = iv.change.vec[j] ))
+		out1.alc[j,,,]	<- out1$Allocation
 	}
-	out$Average		<- data.frame(out$Average, lnInc = sim.unq$Inc08, retailer = as.character(sel.retail))
-	return(out)
+	out1	<- list(Average = out1.avg, Allocation = out1.alc)
+	return(out1)
 }
 use.time	<- proc.time() - pct
 cat("Parallel simulation of retail price finishes with", use.time[3]/60, "min.\n")
@@ -260,16 +292,15 @@ cat("Stop clustering. \n")
 ################
 # Save results #
 ################
-rm(list  = c("ar", "args", "cl", "ggtmp", "ggtmp1", "ggtmp2", "i", "lastFuncGrad", "lastFuncParam", "make_plot", "mycore", 
+rm(list  = intersect(ls(), c("ar", "args", "cl", "ggtmp", "ggtmp1", "ggtmp2", "i", "lastFuncGrad", "lastFuncParam", "make_plot", "mycore", 
 			"myfix", "plot.wd", "s1_index", "sel", "selyr", "price", "sol", "sol.top", "sol.top2", "tmp", "tmp_coef", 
 			"tmp_price", "tmp1", "tmp2", "use.time", "ver.date", "var1", "ww", "f", 
 			"numnodes", "out", "out1", "pct", "tmpd1", "tmpd2", "tmpdat", "u", "W", "y", "y.nodes",
 			"Allocation_constr_fn", "Allocation_fn", "Allocation_nlop_fn", "cheb.1d.basis", "cheb.basis", "chebfun", 
 			"exp_fn", "expFOC_fn", "incl_value_fn", "mysplfun", "mytrimfun", "param_assignR", "simExp_fn", "SimOmega_fn", 
-			"SimWrapper_fn", "solveExp_fn", "spl2dfun", "uP_fn", "uGrad_fn"))
+			"SimWrapper_fn", "solveExp_fn", "spl2dfun", "uP_fn", "uGrad_fn")))
 
 save.image(paste("estrun_",run_id, "/", fname, ".rdata",sep=""))
-# save.image(paste("estrun_",run_id,"/ctrfact_seg",seg_id, "_", Sys.Date(), ".rdata",sep=""))
 
 cat("This program is done.\n")
 

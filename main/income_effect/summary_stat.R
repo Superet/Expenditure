@@ -68,13 +68,46 @@ cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_in
 # ------------------- #
 # Household-year data #
 pan_yr		<- data.table(hh_exp)
-pan_yr		<- pan_yr[,list(Income = unique(income_midvalue), Inc = unique(income_real)), by = list(first_incomeg, household_code, year, cpi)]
+pan_yr		<- pan_yr[,list(Income = unique(income_midvalue), Inc = unique(income_real), scantrack_market_descr = unique(scantrack_market_descr)), 
+						by = list(first_incomeg, household_code, year, cpi)]
 setkeyv(pan_yr, c("household_code", "year"))
 pan_yr		<- pan_yr[, ':='(ln_income = log(Income), cpi_adj_income = Income/cpi, recession = 1*(year >= 2008))]
 pan_yr    	<- pan_yr[,':='(year_id= year - year[1] + 1, tenure = length(year), move = c(0, 1*(diff(Inc)!=0)))
                           	# move = 1*(!all(Inc==Inc[1]))) 
                     , by = list(household_code)]
 pan_yr		<- pan_yr[,move_all := sum(move), by = list(household_code)]
+
+##########################
+# Table of summary stats #
+##########################
+# Table of tenure
+tmp		<- unique(pan_yr, by = "household_code")
+tmp1 	<- table(tmp$tenure)
+tmp.tab	<- cbind(tmp1, prop.table(tmp1))
+tmp.tab[,2]		<- round(tmp.tab[,2]*100, 2)
+dimnames(tmp.tab)	<- list(Tenure = 1:nrow(tmp.tab), c("Num. HH", "Proportion (%)"))
+cat("Household tenure table:\n"); print(tmp.tab); cat("\n")
+stargazer(tmp.tab)
+
+# Summary table of demogrpahics
+selcol	<- c("household_size", "condo", "employed", "NumChild")
+tmp		<- data.table(hh_exp[,c("household_code", selcol)])
+tmp		<- unique(tmp, by = "household_code")
+tmp1	<- t(apply(as.matrix(tmp)[,-1], 2, function(x) c(summary(x), SD = sd(x))))
+tmptab	<- c("Household size", "Condo", "Employed", "Num. child")
+rownames(tmp1)	<- tmptab
+tmp1	<- tmp1[,c("Mean", "SD", "Min.", "1st Qu.", "Median", "3rd Qu.", "Max.")]
+cat("Summary stat of household demographics are:\n"); print(tmp1)
+stargazer(tmp1)
+
+# Summary stats of biweekly shopping behavior
+tmp		<- hh_exp[,c("dol", "num_day", "num_trip")]
+tmp$nchannel	<- rowSums(hh_exp[,paste("DOL_", gsub("\\s", "_", fmt_name), sep="")]>0)
+tmp1	<- t(apply(tmp, 2, function(x) c(summary(x), SD = sd(x))))
+tmp1	<- tmp1[,c("Mean", "SD", "Min.", "1st Qu.", "Median", "3rd Qu.", "Max.")]
+rownames(tmp1)	<- c("Expenditure ($)", "Num. shopping days", "Num. trips", "Num. retail formats")
+cat("Summary stats of biweekly shopping pattern:\n"); print(tmp1); cat("\n")
+stargazer(tmp1)
 
 ################################################
 # Variation of independent variables -- income # 
@@ -125,7 +158,7 @@ ggtmp1  <- do.call("rbind", tmp)
 names(ggtmp1)	<- c("x", "y", "Freq", "year")
 ggtmp1        	<- data.table(ggtmp1)
 ggtmp1			<- ggtmp1[,':='(Prop= Freq/sum(Freq)*100, TotalChange = sum(Freq*1*(x!=y))/sum(Freq)*100), by = list(year)]
-ggtmp1			<- ggtmp1[, year.lab:= paste(year, "-th year(", round(TotalChange, 0), "%)", sep="")]
+ggtmp1			<- ggtmp1[, year.lab:= paste("Year ", year, " (", round(TotalChange, 0), "%)", sep="")]
 
 plots			<- ggplot(ggtmp1, aes(x, y, size = Prop, alpha = .8)) + 
 				  geom_point(position= "jitter", pch = 21) + 
@@ -134,7 +167,7 @@ plots			<- ggplot(ggtmp1, aes(x, y, size = Prop, alpha = .8)) +
 				  facet_wrap( ~ year.lab) + 
 				  # guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)"), col = guide_legend(title = "n-th year")) + 
 				  guides(alpha = FALSE, size = guide_legend(title = "Proportion(%)")) + 
-				  labs(x = "1st Year Income", y = "nth Year Income", title = "Income transition from first year") + 
+				  labs(x = "1st Year Income", y = "Income of Year n") + 
 				  theme_bw() + 
 				  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
@@ -151,16 +184,17 @@ ggtmp	<- pan_yr
 ggtmp	<- ggtmp[, cpi_income := Income/cpi]
 ggtmp	<- melt(data.frame(ggtmp[, list(first_incomeg, household_code, year, Income, cpi_income)]), 
 			id.vars = c("first_incomeg", "household_code", "year"))
-ggtmp$variable	<- factor(ggtmp$variable, levels = c("Income", "cpi_income"), labels = c("Income", "CPI ajdusted income"))
+ggtmp$variable	<- factor(ggtmp$variable, levels = c("Income", "cpi_income"), labels = c("Income", "CPI ajdusted\n income"))
 
 plots	<- list(NULL)			
 # First plot the overall income trend from the raw data
-plots[[1]]	<- ggplot(ggtmp, aes(year, value/1000)) + geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6)) + 
-				facet_wrap(~variable) + 
-				labs(x = "Year", y = "Income ($1000)", title = "Average income trend from the raw data")
+# plots[[1]]	<- ggplot(ggtmp, aes(year, value/1000, linetype = variable)) + 
+# 				geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6), col = "black") + 
+# 				scale_linetype_manual(name = "", values = c(2,1)) + 
+# 				labs(x = "Year", y = "Income ($1000)", title = "Average income trend from the raw data")
 # Then plot the income trend by income group from the raw data
-plots[[2]]	<- ggplot(ggtmp, aes(year, value/1000, col = first_incomeg)) + 
-				geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6)) + 
+plots[[1]]	<- ggplot(ggtmp, aes(year, value/1000, linetype = first_incomeg)) + 
+				geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6), col = "black") + 
 				facet_wrap(~variable) + 
 				guides(color = guide_legend(title = "Income group")) + 
 				labs(x = "Year", y = "Income ($1000)", title = "Income trend by income groups from the raw data")
@@ -168,31 +202,38 @@ plots[[2]]	<- ggplot(ggtmp, aes(year, value/1000, col = first_incomeg)) +
 # We plot the within-hosuehold income trend by group 
 plots1	<- list(NULL)			
 # First plot the overall income trend from the raw data
-ggtmp	<- pan_yr
-ggtmp	<- ggtmp[,':='(grand_avg = mean(Income), grand_cpi_avg = mean(Income/cpi))]
-ggtmp	<- ggtmp[,':='(	within_income = Income - mean(Income) + grand_avg, 
-						within_cpi_income = Income/cpi - mean(Income/cpi) + grand_cpi_avg), 
+ggtmp1	<- pan_yr
+# ggtmp1	<- ggtmp1[,':='(grand_avg = mean(Income), grand_cpi_avg = mean(Income/cpi))]
+# ggtmp1	<- ggtmp1[,':='(	within_income = Income - mean(Income) + grand_avg, 
+# 						within_cpi_income = Income/cpi - mean(Income/cpi) + grand_cpi_avg), 
+# 				by = list(household_code)]
+ggtmp1	<- ggtmp1[,':='(grand_avg = mean(Income[year==2004]), grand_cpi_avg = mean((Income/cpi)[year==2004]))]
+ggtmp1	<- ggtmp1[,':='(	within_income = Income - Income[1] + grand_avg, 
+						within_cpi_income = Income/cpi - (Income/cpi)[1] + grand_cpi_avg), 
 				by = list(household_code)]
-ggtmp	<- melt(data.frame(ggtmp[, list(first_incomeg, household_code, year, within_income, within_cpi_income)]), 
+ggtmp1	<- melt(data.frame(ggtmp1[, list(first_incomeg, household_code, year, within_income, within_cpi_income)]), 
 			id.vars = c("first_incomeg", "household_code", "year"))		
-ggtmp$variable	<- factor(ggtmp$variable, levels = c("within_income", "within_cpi_income"), labels = c("Income", "CPI ajdusted income"))
+ggtmp1$variable	<- factor(ggtmp1$variable, levels = c("within_income", "within_cpi_income"), labels = c("Income", "CPI ajdusted\n income"))
+ggtmp <- rbind(cbind(ggtmp, data = "Raw data"), cbind(ggtmp1, data = "Within-hh"))
 			 		
-plots1[[1]]	<- ggplot(ggtmp, aes(year, value/1000)) + geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6)) + 
-				facet_wrap(~variable) + 
-				labs(x = "Year", y = "Income ($1000)", title = "Average within-household income trend")
+plots1[[1]]	<- ggplot(ggtmp, aes(year, value/1000, linetype = variable)) + geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6), col = "black") + 
+				facet_wrap(~data) + 
+				scale_linetype_manual(name = "", values = c(2,1)) + 
+				labs(x = "Year", y = "Income ($1000)")
 
 # Then plot the income trend by income group from the raw data
 ggtmp	<- pan_yr
-ggtmp	<- ggtmp[,':='(grand_avg = mean(Income), grand_cpi_avg = mean(Income/cpi)), by = list(first_incomeg)]
-ggtmp	<- ggtmp[,':='(	within_income = Income - mean(Income) + grand_avg, 
-						within_cpi_income = Income/cpi - mean(Income/cpi) + grand_cpi_avg), 
+# ggtmp	<- ggtmp[,':='(grand_avg = mean(Income), grand_cpi_avg = mean(Income/cpi)), by = list(first_incomeg)]
+ggtmp	<- ggtmp[,':='(grand_avg = mean(Income[year==2004]), grand_cpi_avg = mean((Income/cpi)[year==2004])), by = list(first_incomeg)]
+ggtmp	<- ggtmp[,':='(	within_income = Income - Income[1] + grand_avg, 
+						within_cpi_income = Income/cpi - (Income/cpi)[1] + grand_cpi_avg), 
 				by = list(household_code)]
 ggtmp	<- melt(data.frame(ggtmp[, list(first_incomeg, household_code, year, within_income, within_cpi_income)]), 
 			id.vars = c("first_incomeg", "household_code", "year"))				
 ggtmp$variable	<- factor(ggtmp$variable, levels = c("within_income", "within_cpi_income"), labels = c("Income", "CPI ajdusted income"))
 			
-plots1[[2]]	<- ggplot(ggtmp, aes(year, value/1000, col = first_incomeg)) + 
-				geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6)) + 
+plots1[[2]]	<- ggplot(ggtmp, aes(year, value/1000, linetype = first_incomeg)) + 
+				geom_smooth(method = "gam", formula = y ~ s(x, bs = "cr", k = 6), col = "black") + 
 				facet_wrap(~variable) + 
 				guides(color = guide_legend(title = "Income group")) + 
 				labs(x = "Year", y = "Income ($1000)", title = "Within-household income trend by income group")
@@ -200,7 +241,6 @@ plots1[[2]]	<- ggplot(ggtmp, aes(year, value/1000, col = first_incomeg)) +
 if(make_plot){
 	pdf(paste(plot.wd, "/graph_income_trend.pdf", sep=""), width = ww, height = ww*ar)
 	print(plots[[1]])
-	print(plots[[2]])
 	print(plots1[[1]])
 	print(plots1[[2]])	
 	dev.off()
@@ -210,6 +250,11 @@ if(make_plot){
 # Channel difference # 
 ######################
 # Distribution of retail attributes # 
+# Number of households in the geographic market
+tmp		<- data.table(hh_exp)[,list(household_code, year, scantrack_market_descr)]
+tmp		<- unique(tmp, by = "household_code")
+tmp1	<- table(tmp$scantrack_market_descr)
+
 # Add market-year price data 
 tmp1	<- data.table(price_dat)
 tmp1	<- tmp1[year > 2003, list(price = mean(bsk_price_paid_2004, na.rm=T)), by = list(scantrack_market_descr, year, channel_type)]
@@ -217,16 +262,31 @@ selcol 	<- c("size_index", "overall_prvt", "num_module", "avg_upc_per_mod")
 tmpdat	<- merge(fmt_attr[,c("scantrack_market_descr", "year", "channel_type", selcol)], tmp1, 
 				by = c("scantrack_market_descr", "year", "channel_type"))
 ggtmp	<- melt(tmpdat, id.vars = c("scantrack_market_descr", "year", "channel_type"))				
-tmplab	<- c("Size index", "Total proportion private label","Total num module","Num UPC per module", "Price index")								
-ggtmp$variable <- factor(ggtmp$variable, levels= c(selcol,"price"), labels= tmplab)
+tmplab	<- c("Price index", "Total num module","Num UPC per module",  "Size index", "Total proportion private label")								
+ggtmp$variable <- factor(ggtmp$variable, levels= c("price", "num_module", "avg_upc_per_mod", "size_index", "overall_prvt"), labels= tmplab)
+ggtmp1	<- data.table(ggtmp)
+ggtmp1	<- ggtmp1[, list(middle = mean(value), lower = quantile(value, .25), upper = quantile(value, .75), 
+						ymin = quantile(value, .05), ymax = quantile(value, .95)), 
+					by = list(variable, channel_type)]
 
-plots 	<- ggplot(ggtmp, aes(channel_type, value)) + 
-	stat_summary(fun.y=mean, fun.ymin=function(x) quantile(x, .25), fun.ymax = function(x) quantile(x, .75), geom ="pointrange", size=.5) + 
-	stat_summary(fun.y=mean, fun.ymin=function(x) quantile(x, .025), fun.ymax = function(x) quantile(x, .975), geom ="pointrange", size=.25) + 
+## Line range plot
+# plots 	<- ggplot(ggtmp, aes(channel_type, value)) + 
+# 	# stat_summary(fun.y=mean, fun.ymin=function(x) quantile(x, .25), fun.ymax = function(x) quantile(x, .75), geom ="pointrange", size=.5) + 
+# 	# stat_summary(fun.y=mean, fun.ymin=function(x) quantile(x, .025), fun.ymax = function(x) quantile(x, .975), geom ="pointrange", size=.25) + 
+# 	geom_boxplot(outlier.shape = NA, width = .3) + 
+# 	facet_wrap(~variable, scales="free_y") + 
+# 	theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+# 	labs(x = "Channel")
+
+# Boxplot
+plots 	<- ggplot(ggtmp1, aes(x = channel_type)) + 
+	# stat_summary(fun.y=mean, fun.ymin=function(x) quantile(x, .25), fun.ymax = function(x) quantile(x, .75), geom ="pointrange", size=.5) + 
+	# stat_summary(fun.y=mean, fun.ymin=function(x) quantile(x, .025), fun.ymax = function(x) quantile(x, .975), geom ="pointrange", size=.25) + 
+	geom_boxplot(aes(middle = middle, ymax = ymax, ymin = ymin, lower = lower, upper = upper), stat = "identity", width = .3) + 
 	facet_wrap(~variable, scales="free_y") + 
 	theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
 	labs(x = "Channel")
-
+	
 if(make_plot){
 	pdf(paste(plot.wd, "/graph_retail_distribution.pdf", sep=""), width = ww, height = ww)
 	print(plots)
@@ -252,6 +312,13 @@ if(write2csv){
 	xlsx.addHeader(mywb, sht1, value = "ANOVA variance decomposition of market-year retail attributes", level = 2)
 	xlsx.addTable(mywb, sht1, anv.ls, row.names=TRUE)
 }
+
+# ----------------- #
+# Price time series #
+(sort(table(pan_yr$scantrack_market_descr)))
+sel		<- "Boston"
+ggtmp	<- subset(price_dat, scantrack_market_descr == sel & year >= 2004)
+ggplot(ggtmp, aes(biweek, bsk_price_paid_2004, linetype = channel_type)) + geom_line() 
 
 ###################################################
 # Variation of dependent variables -- Expenditure # 
@@ -282,18 +349,19 @@ if(make_plot){
 selcol		<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")
 ggtmp 		<- melt(hh_exp[,c("first_incomeg","biweek", "dol", selcol)], id.vars=c("first_incomeg","biweek"))
 ggtmp$variable <- factor(ggtmp$variable, levels = c("dol", selcol), labels = c("Overall expenditure", fmt_name))
+ggtmp$biweek	<- as.Date("2003-12-30") + ggtmp$biweek*14
 sp.vec		<- c(-1, .05, .1, .5)
 if(make_plot){
 	pdf(paste(plot.wd,"/graph_raw_share_gam.pdf",sep=""), width = ww, height = ww*.8)
 	print(ggplot(subset(ggtmp, variable == "Overall expenditure"), aes(biweek, value, linetype = first_incomeg)) + 
-			stat_smooth(method = "gam") + 
-			labs(x = "Biweek", y = "Expenditure") + 
+			stat_smooth(method = "gam", col = "black") + 
+			labs(x = "Biweek", y = "Expenditure ($)") + 
 			guides(linetype = guide_legend(title = "Segment")) + 
 			theme_bw()
 		)	
 	for(i in 1:length(sp.vec)){
 		print(ggplot(subset(ggtmp, variable != "Overall expenditure"), aes(biweek, value, linetype = first_incomeg)) + 
-				stat_smooth(method = "gam", formula = y ~ s(x, sp = sp.vec[i])) + 
+				stat_smooth(method = "gam", formula = y ~ s(x, sp = sp.vec[i]), col = "black") + 
 				facet_wrap(~ variable, ncol = 2, scales = "free_y") + 
 				scale_y_continuous(labels=percent) + 
 				labs(x = "Biweek", y = "Expenditure share") + 
@@ -303,6 +371,37 @@ if(make_plot){
 	}
 	dev.off()
 }
+
+# --------------------------------------------------------------# 
+# Plot the trend of expenditure share of aggregate market share # 
+ggtmp	<- data.table(hh_exp[,c("first_incomeg","biweek", "dol", paste("DOL_", gsub("\\s", "_", fmt_name), sep=""))])
+ggtmp	<- ggtmp[,list(dol=sum(dol), 
+					   DOL_Convenience_Store = sum(DOL_Convenience_Store), DOL_Discount_Store = sum(DOL_Discount_Store), 
+					   DOL_Dollar_Store = sum(DOL_Dollar_Store), DOL_Drug_Store = sum(DOL_Drug_Store), 
+					   DOL_Grocery = sum(DOL_Grocery), DOL_Warehouse_Club = sum(DOL_Warehouse_Club)), 
+					by = list(first_incomeg, biweek)]
+for(i in paste("DOL_", gsub("\\s", "_", fmt_name), sep="")){
+	ggtmp	<- ggtmp[,eval(as.name(i)):= eval(as.name(i))/dol]
+}
+ggtmp	<- melt(ggtmp[,!"dol", with = FALSE], id.vars=c("first_incomeg","biweek"))
+ggtmp$variable <- factor(ggtmp$variable, levels = paste("DOL_", gsub("\\s", "_", fmt_name), sep=""), labels = fmt_name)
+ggtmp$biweek	<- as.Date("2003-12-30") + ggtmp$biweek*14
+
+if(make_plot){
+	pdf(paste(plot.wd,"/graph_raw_aggshare_gam.pdf",sep=""), width = ww, height = ww*.8)
+	for(i in 1:length(sp.vec)){
+		print(ggplot(subset(ggtmp, variable != "Overall expenditure"), aes(biweek, value, linetype = first_incomeg)) + 
+				stat_smooth(method = "gam", formula = y ~ s(x, sp = sp.vec[i]), col = "black") + 
+				facet_wrap(~ variable, ncol = 2, scales = "free_y") + 
+				scale_y_continuous(labels=percent) + 
+				labs(x = "Biweek", y = "Expenditure share") + 
+				guides(linetype = guide_legend(title = "Segment")) + 
+				theme_bw()
+			)
+	}
+	dev.off()
+}
+
 
 saveWorkbook(mywb, outxls)
 cat("This program is done.\n")

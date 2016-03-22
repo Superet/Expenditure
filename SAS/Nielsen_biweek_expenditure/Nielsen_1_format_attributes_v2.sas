@@ -438,6 +438,16 @@ proc datasets noprint; delete tmp tmp1 tmp2 tmp_products module_measure module_w
 *********************************************************************************;
 * Compute retail attributes at market-retail format level using annual purchase *; 
 *********************************************************************************;
+* Check the number of households in each scantrack market; 
+proc sql noprint;
+	create table tmp as 
+	select scantrack_market_descr, count(unique(household_code)) as freq
+	from mainex.panelists
+	group by scantrack_market_descr
+	order by freq; 
+quit; 
+proc print data = tmp; run; 
+
 proc sql;
 	connect to oledb as mydb
 	(OLEDB_SERVICES=NO Datasource="kdc01\kdwh02" PROVIDER=SQLOLEDB.1 
@@ -465,12 +475,14 @@ proc sql;
 		group by scantrack_market_descr, year, channel_type, retailer_code, department_descr, product_group_descr, product_module_descr;
 		
 		/*Aggregate retailer level index using wallet share as module weight;*/
+		/*Change the overall_prvt calculation on Mar 18 2016*/
 		select scantrack_market_descr, year, channel_type, retailer_code,
 			sum(size_index*weight)/sum(weight) as size_index,
 			sum(num_brands) as num_brands, sum(num_brands*weight)/sum(weight) as avgn_brands,
 			sum(num_upc) as num_upc, sum(num_upc*weight)/sum(weight) as avgn_upc,
 			sum(PRVT*weight)/sum(weight) as avg_prvt,
-			sum(num_prvt)/sum(num_brands) as overall_prvt,
+			/*sum(num_prvt)/sum(num_brands) as overall_prvt,*/
+			sum(num_prvt)/sum(num_upc) as overall_prvt,
 			count(distinct product_module_descr) as num_module
 		into dbo.retailersize
 		from (select A.*, B.weight from dbo.retailer_module as A left join dbo.basket as B 
@@ -701,6 +713,12 @@ RUN;
 
 PROC EXPORT DATA=mylib.format_biweek_price
 			OUTFILE= "\\tsclient\Resear1\Store switching\processed data\1_format_biweek_price.csv" 
+            DBMS=CSV REPLACE;
+     PUTNAMES=YES;
+RUN;
+
+PROC EXPORT DATA=mylib.format_year_price
+			OUTFILE= "\\tsclient\Resear1\Store switching\processed data\1_format_year_price.csv" 
             DBMS=CSV REPLACE;
      PUTNAMES=YES;
 RUN;

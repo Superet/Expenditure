@@ -154,18 +154,15 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 # lambda		... A vector of utility parameters for purchase utility
 # param_est		... A vector of parameters in the conditional allocation model
 # base			... Integer index of which retailer has intercept of 0 in the conditional allocation model
-# X_list		...	A list of retail attributes
-# price			...	A vector of price 
+# X_list		...	A list of retail attributes, each element is a matrix (length(ln_inc) \times nx)
+# price			...	A matrix of price (length(ln_inc) \times R )
 # esp_draw		... A matrix of random draw
-# sim.y			... If not NULL, then expenditure is given and only expenditure share is simulated. 
+# sim.y			... If given as a matrix (numsim \times length(ln_inc)), then expenditure is given and only expenditure share is simulated. 
 # method		... The method of solving for optimal expenditure. Take value of "FOC" (first-order condition equation)
 #					and "Utility" (directly maximizing utility function)
 # use.bound		...	Logical variable indicating if use bounds in solving for optimal expenditure
 # ret.sim		...	Logical variable indicating if return all the simulation values for each random raw, or 
 #					return average. 
-# base.ls		... A list of baseline simulations. Each elment is a array of expenditre at each retail format.
-# 					If it is not null, then we compute the standard error of the difference between the current
-#					simulation and baseline simulation. 
 #=========================================================================================================#
 	
 	numsim	<- nrow(eps_draw)	
@@ -185,37 +182,37 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 	omega1	<- matrix(NA, numsim, length(ln_inc))
 	lvinc	<- sort(unique(ln_inc))
 	
+	# Set up model matrix
+	nx0			<- ncol(X_list[[1]])		# Number of retail attributes
+	tmpX_list1	<- lapply(X_list, function(x) cbind(x, x*(ln_inc %*% matrix(1, 1, nx0))))
 	for(i in 1:length(lvinc)){
 		sel <- ln_inc == lvinc[i]
-		lower	<- NULL
-		if(sum(sel) > 0){			
-			# Omega function conditional on income level 
-			f 	<- function(y, ...){
-				newx	<- data.frame(lnInc = lvinc[i], y = y)
-				omega_deriv(newx, ...)
-			}
-			tmpX_list1	<- lapply(X_list, function(x) rep(1, sum(sel)) %*% t(c(x, x*lvinc[i])))
-			
-			# Note that expenditure y is independent of eps_draw
-			if(is.null(sim.y)){
-				if(is.null(par.draw)){
-					y[,sel]	<- solveExp_fn(lambda, f, lvinc[i], method = method, lower = lower)		# This is a scalor
-				}else{
-					y[,sel]	<- apply(lambda.draw, 1, function(x) solveExp_fn(lambda+x, f, lvinc[i], method = method, lower = lower) )
-				}
-			}
-
-			for(j in 1:numsim){				
-				tmpsol 		<- try(incl_value_fn(param_est+shr.draw[j,], base, X_list=tmpX_list1, y=y[j,sel], Q=Inf, price=rep(1, sum(sel)) %*% t(price), 
-							R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, 
-							eps_draw = rep(1, sum(sel)) %*% t(eps_draw[j,]) ), silent = TRUE)
-				if(class(tmpsol) != "try-error"){
-					omega[j,sel] 	<- tmpsol$omega			
-					omega1[j,sel]	<- omega_deriv(newx = data.frame(lnInc = lvinc[i], y = y[j,sel]))
-					e[j,sel,]		<- tmpsol$e
-				}
-			}			
+		lower	<- NULL		
+		# Omega function conditional on income level 
+		f 	<- function(y, ...){
+			newx	<- data.frame(lnInc = lvinc[i], y = y)
+			omega_deriv(newx, ...)
 		}
+
+		# Note that expenditure y is independent of eps_draw
+		if(is.null(sim.y)){
+			if(is.null(par.draw)){
+				y[,sel]	<- solveExp_fn(lambda, f, lvinc[i], method = method, lower = lower)		# This is a scalor
+			}else{
+				y[,sel]	<- apply(lambda.draw, 1, function(x) solveExp_fn(lambda+x, f, lvinc[i], method = method, lower = lower) )
+			}
+		}
+
+		for(j in 1:numsim){				
+			tmpsol 		<- try(incl_value_fn(param_est+shr.draw[j,], base, X_list=tmpX_list1, y=y[j,sel], Q=Inf, price=price, 
+						R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, 
+						eps_draw = rep(1,nrow(price)) %*% t(eps_draw[j,]) ), silent = TRUE)
+			if(class(tmpsol) != "try-error"){
+				omega[j,sel] 	<- tmpsol$omega			
+				omega1[j,sel]	<- omega_deriv(newx = data.frame(lnInc = lvinc[i], y = y[j,sel]))
+				e[j,sel,]		<- tmpsol$e
+			}
+		}			
 	}
 
 	out	<- cbind(colMeans(y, na.rm=T), colMeans(omega, na.rm = T), colMeans(omega1, na.rm = T), apply(e, c(2,3), mean, na.rm= T))	
@@ -234,11 +231,16 @@ SimOmega_fn	<- function(ln_inc, lambda, param_est, base, X_list, price, lnInc_lv
 # lambda		... A vector of utility parameters for purchase utility
 # param_est		... A vector of parameters in the conditional allocation model
 # base			... Integer index of which retailer has intercept of 0 in the conditional allocation model
-# X_list			...	A list of retail attributes
-# price			...	A vector of price 
-# lnInc_lv		... A vector of discrete log(income) level. 
-# y.nodes			... A vector of nodes of expenditure to simulate omega
+# X_list		...	A list of retail attributes, each element is a matrix (length(ln_inc) \times nx)
+# price			...	A matrix of price (length(ln_inc) \times R )
+# lnInc_lv		... A vector of discrete log(income) level as nodes to simulate inclusive value
+# y.nodes		... A vector of nodes of expenditure to simulate omega to simulate inclusive value
 # esp_draw		... A matrix of random draw
+# method		... The method of solving for optimal expenditure. Take value of "FOC" (first-order condition equation)
+#					and "Utility" (directly maximizing utility function)
+# interp.method	... Interpolation method, possible values are "spline", "cheb". 
+# ret.sim		...	Logical variable indicating if return all the simulation values for each random raw, or 
+#					return average.
 #===================================================================================================#
 	numsim		<- nrow(eps_draw)
 	numnodes	<- length(y.nodes)
@@ -247,7 +249,7 @@ SimOmega_fn	<- function(ln_inc, lambda, param_est, base, X_list, price, lnInc_lv
 	omega_new	<- array(NA, c(numsim, length(lnInc_lv), numnodes), dimnames = list(NULL, lnInc_lv, y.nodes))
 	for(i in 1:numsim){
 		for(j in 1:length(lnInc_lv)){
-			tmpX_list	<- lapply(X_list, function(x) rep(1, numnodes) %*% t(c(x, x*lnInc_lv[j])))
+			tmpX_list	<- lapply(X_list, function(x) cbind(x, x*lnInc_lv[j]))
 			tmpsol 		<- try(incl_value_fn(param_est=param_est, base= beta0_base, X_list=tmpX_list, y=y.nodes, Q=Inf, price=rep(1,numnodes) %*% t(price), 
 						R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw[i,]) ), silent = TRUE)
 			if(class(tmpsol) == "try-error"){
@@ -264,17 +266,7 @@ SimOmega_fn	<- function(ln_inc, lambda, param_est, base, X_list, price, lnInc_lv
 		tmp1		<- apply(omega_new, c(2,3), mytrimfun, alpha = alpha)
 		tmpdat	<- melt(tmp1)
 		names(tmpdat)	<- c("iter", "lnInc", "y", "omega")
-		omega_new	<- spl2dfun(tmpdat)
-		# if(!is.list(tmp1)){
-		# }else{
-		# 	# In case of NA in omega_new, tmp1 turns out to be list, then I take it carefully
-		# 	omega.new	<- vector("list", length(lnInc_lv))
-		# 	for(i in 1:length(lnInc_lv)){
-		# 		tmp1	<- lapply(1:numnodes, function(j) mytrimfun(omega_new[,i,j], alpha = alpha))		# tmp1 is a list of vector of different dim.
-		# 		tmpx	<- unlist(lapply(1:numnodes, function(j) rep(y.nodes[j], length(tmp1[[j]]))))
-		# 		omega.new[[i]]	<- mysplfun(x = tmpx, y = unlist(tmp1))
-		# 	}
-		# }			
+		omega_new	<- spl2dfun(tmpdat)		
 	}else{
 		tmp1	<- apply(omega_new, c(2, 3), mean, trim = .05)
 		omega.new <- lapply(1:length(lnInc_lv), function(i) chebfun(x = y.nodes, y = tmp1[i,], interval = y.interval))
