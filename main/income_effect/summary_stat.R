@@ -44,6 +44,8 @@ R			<- length(fmt_name)
 # Conver some date and factor variables
 hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))
 hh_exp$famsize		<- factor(hh_exp$famsize, levels = c("Single","Two", "Three+"))
+hh_exp$first_incomeg	<- as.character(hh_exp$first_incomeg)
+hh_exp$first_incomeg	<- factor(hh_exp$first_incomeg, levels = paste("T", 1:3, sep=""), labels = c("Low", "Med", "High"))
 
 # Compute expenditure share
 sel			<- paste("DOL_", gsub("\\s", "_", fmt_name), sep="")
@@ -56,12 +58,7 @@ for(i in 1:length(fmt_name)){
 # Segment households based on their initial income level #
 panelist	<- data.table(hh_exp)
 setkeyv(panelist, c("household_code","year","biweek"))
-panelist	<- panelist[,list(income = first_income[1], first_famsize = famsize[1]), by=list(household_code)]
-tmp			<- quantile(panelist$income, c(0, .33, .67, 1))
-num_grp		<- 3
-# panelist	<- panelist[, first_incomeg := cut(panelist$income, tmp, labels = paste("T", 1:num_grp, sep=""), include.lowest = T)]
-panelist	<- panelist[, first_incomeg := cut(panelist$income, tmp, labels = c("Low", "Med", "High"), include.lowest = T)]
-hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "first_incomeg")], by = "household_code", all.x=T )
+panelist	<- panelist[,list(income = first_income[1], first_famsize = famsize[1]), by=list(first_incomeg, household_code)]
 cat("Table of initial income distribution:\n"); print(table(panelist$first_incomeg)); cat("\n")
 cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_incomeg)); cat("\n")
 
@@ -318,7 +315,51 @@ if(write2csv){
 (sort(table(pan_yr$scantrack_market_descr)))
 sel		<- "Boston"
 ggtmp	<- subset(price_dat, scantrack_market_descr == sel & year >= 2004)
-ggplot(ggtmp, aes(biweek, bsk_price_paid_2004, linetype = channel_type)) + geom_line() 
+ggplot(ggtmp, aes(year, bsk_price_paid_2004, linetype = channel_type)) + geom_line() 
+
+# Smoothing curve of price 
+ggplot(price_dat, aes(year, bsk_price_tag_2004)) + geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs", k = 6))
+ggplot(price_dat, aes(year, bsk_price_paid_2004)) + geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs", k = 6))
+
+# Price trend from regressions 
+tmpfit 	<- lm(bsk_price_tag_2004 ~ factor(year) + channel_type + scantrack_market_descr, data = price_dat )
+tmpfit1	<- lm(bsk_price_paid_2004 ~ factor(year) + channel_type + scantrack_market_descr, data = price_dat )
+tmp1	<- summary(tmpfit)$coefficients
+tmp2	<- summary(tmpfit1)$coefficients
+sel		<- c(1, grep("year", rownames(tmp1)))
+ggtmp	<- rbind(data.frame(tmp1[sel,], var = "Regular price"), data.frame(tmp2[sel,], var = "Price paid"))
+names(ggtmp)	<- c("Estimate", "se", "t", "p", "var")
+ggtmp$year	<- rep(2004:2012, rep = 2)
+ggtmp	<- data.table(ggtmp)
+ggtmp	<- ggtmp[,':='(base = Estimate[year==2004], base.se = se[year==2004]), by = list(var)]
+ggtmp	<- ggtmp[,':='(Estimate = ifelse(year==2004, Estimate, Estimate + base), 
+						se = ifelse(year == 2004, se, sqrt(se^2 + base.se^2)))]
+ggplot(ggtmp, aes(year, Estimate, color = var, alpha = .7)) + 
+		geom_line() + 
+		geom_ribbon(aes(ymin = Estimate - 1.96*se, ymax = Estimate + 1.96*se), fill = "grey70")
+
+ggplot(subset(ggtmp, var == "Price paid"), aes(year, Estimate)) + 
+		geom_ribbon(aes(ymin = Estimate - 1.96*se, ymax = Estimate + 1.96*se), fill = "grey70") + 
+		geom_line() 
+
+
+# -------------- #
+# Conceptual map #
+tmp1	<- data.table(price_dat)
+tmp1	<- tmp1[year > 2003, list(price = mean(bsk_price_paid_2004, na.rm=T)), by = list(scantrack_market_descr, year, channel_type)]
+selcol 	<- c("size_index", "overall_prvt", "num_module", "avg_upc_per_mod")
+tmpdat	<- merge(fmt_attr[,c("scantrack_market_descr", "year", "channel_type", selcol)], tmp1, 
+				by = c("scantrack_market_descr", "year", "channel_type"))
+				
+# Factor analysis				
+selcol	<- c(selcol, "price")
+ev		<- eigen(cor(tmpdat[,selcol], use="complete.obs"))$values
+(nf		<- sum(ev>=1))
+scree(tmpdat[,selcol])
+(faout	<- fa(tmpdat[,selcol], nfactors=2, rotate = "varimax", fm="ml"))
+ggtmp	<- cbind(tmpdat, faout$scores)
+
+ggplot(ggtmp, aes(ML1, ML2, col = channel_type)) + geom_point()
 
 ###################################################
 # Variation of dependent variables -- Expenditure # 
@@ -356,7 +397,7 @@ if(make_plot){
 	print(ggplot(subset(ggtmp, variable == "Overall expenditure"), aes(biweek, value, linetype = first_incomeg)) + 
 			stat_smooth(method = "gam", col = "black") + 
 			labs(x = "Biweek", y = "Expenditure ($)") + 
-			guides(linetype = guide_legend(title = "Segment")) + 
+			guides(linetype = guide_legend(title = "Income\ngroup")) + 
 			theme_bw()
 		)	
 	for(i in 1:length(sp.vec)){
@@ -365,7 +406,7 @@ if(make_plot){
 				facet_wrap(~ variable, ncol = 2, scales = "free_y") + 
 				scale_y_continuous(labels=percent) + 
 				labs(x = "Biweek", y = "Expenditure share") + 
-				guides(linetype = guide_legend(title = "Segment")) + 
+				guides(linetype = guide_legend(title = "Income\ngroup")) + 
 				theme_bw()
 			)
 	}
@@ -395,13 +436,12 @@ if(make_plot){
 				facet_wrap(~ variable, ncol = 2, scales = "free_y") + 
 				scale_y_continuous(labels=percent) + 
 				labs(x = "Biweek", y = "Expenditure share") + 
-				guides(linetype = guide_legend(title = "Segment")) + 
+				guides(linetype = guide_legend(title = "Income\ngroup")) + 
 				theme_bw()
 			)
 	}
 	dev.off()
 }
-
 
 saveWorkbook(mywb, outxls)
 cat("This program is done.\n")

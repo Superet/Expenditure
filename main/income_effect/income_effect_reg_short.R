@@ -4,7 +4,6 @@ library(data.table)
 library(plm)
 library(gridExtra)
 library(scales)
-library(r2excel)
 library(systemfit)
 library(stargazer)
 library(gridExtra)
@@ -13,7 +12,6 @@ options(error = quote({dump.frames(to.file = TRUE)}))
 
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '/Users/chaoqunchen/Desktop'
-# source('~/Documents/Research/Store switching/Exercise/main/outreg function.R')
 # source('~/Documents/Research/Store switching/Exercise/main/income_effect/plm_vcovHC.R')
 
 # setwd("/home/brgordon/ccv103/Exercise/run")
@@ -21,22 +19,27 @@ setwd("/kellogg/users/marketing/2661703/Expenditure")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 plot.wd 	<- paste(getwd(), "/results", sep="")
 ww			<- 6.5
-ww1			<- 12
+ww1			<- 8.5
 ar 			<- .8	#.6
 
+week.price	<- FALSE
 cpi.adj		<- TRUE
-write2csv	<- TRUE
+write2csv	<- FALSE
 make_plot	<- TRUE
 fname		<- "expenditure_reg_sht"
 if(cpi.adj) { fname <- paste(fname, "_cpi", sep="")}
+if(week.price){ fname <- paste(fname, "_wkprc", sep="")}
 # outxls		<- paste(plot.wd, "/", fname, "_", gsub("-", "", as.character(Sys.Date())), ".xlsx", sep="")
 # mywb		<- createWorkbook()
 # sht1		<- createSheet(mywb, "Regression")
 # sht2		<- createSheet(mywb, "SUR")
 
-load("hh_biweek_exp.rdata")
+if(week.price){
+	load("hh_biweek_exp_20150812.rdata")
+}else{
+	load("hh_biweek_exp.rdata")
+}
 codebook	<- read.csv("code_book.csv")
-source("outreg function.R")
 source("plm_vcovHC.R")
 
 # Extract 5% random sample
@@ -68,6 +71,13 @@ mytransition <- function(x1, x2){
 	return(out/rowSums(out))
 }
 
+get_legend<-function(myggplot){
+  tmp <- ggplot_gtable(ggplot_build(myggplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+
 #################
 # Organize data # 
 #################
@@ -76,10 +86,26 @@ fmt_name 	<- as.character(sort(unique(fmt_attr$channel_type)))
 R			<- length(fmt_name)
 
 # Conver some date and factor variables
+if(week.price){
+	# Segment households based on their initial income level 
+	panelist	<- data.table(hh_exp)
+	setkeyv(panelist, c("household_code","year","biweek"))
+	panelist	<- panelist[,list(income = first_income[1], first_famsize = famsize[1]), by=list(household_code)]
+	tmp			<- quantile(panelist$income, c(0, .33, .67, 1))
+	num_grp		<- 3
+	panelist	<- panelist[, first_incomeg := cut(panelist$income, tmp, labels = paste("T", 1:num_grp, sep=""), include.lowest = T)]
+	hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "first_incomeg")], by = "household_code", all.x=T )
+	hh_exp$first_incomeg	<- factor(hh_exp$first_incomeg, levels = c("T1", "T2", "T3"))
+	cat("Table of initial income distribution:\n"); print(table(panelist$first_incomeg)); cat("\n")
+	cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_incomeg)); cat("\n")
+}
 hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))
 hh_exp$famsize		<- factor(hh_exp$famsize, levels = c("Single","Two", "Three+"))
 hh_exp$condo		<- factor(hh_exp$condo, levels = c(0, 1))
 hh_exp$employed		<- factor(hh_exp$employed, levels = c(0, 1))
+hh_exp$first_incomeg	<- as.character(hh_exp$first_incomeg)
+hh_exp$first_incomeg	<- factor(hh_exp$first_incomeg, levels = paste("T", 1:3, sep=""), labels = c("Low", "Med", "High"))
+cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_incomeg)); cat("\n")
 
 # Compute expenditure share
 sel			<- paste("DOL_", gsub("\\s", "_", fmt_name), sep="")
@@ -87,19 +113,6 @@ sel1		<- gsub("DOL", "SHR", sel)
 for(i in 1:length(fmt_name)){
 	hh_exp[,sel1[i]] <- hh_exp[,sel[i]]/hh_exp$dol
 }
-
-# ------------------------------------------------------ #
-# Segment households based on their initial income level #
-panelist	<- data.table(hh_exp)
-setkeyv(panelist, c("household_code","year","biweek"))
-panelist	<- panelist[,list(income = first_income[1], first_famsize = famsize[1]), by=list(household_code)]
-tmp			<- quantile(panelist$income, c(0, .33, .67, 1))
-num_grp		<- 3
-# panelist	<- panelist[, first_incomeg := cut(panelist$income, tmp, labels = paste("T", 1:num_grp, sep=""), include.lowest = T)]
-panelist	<- panelist[, first_incomeg := cut(panelist$income, tmp, labels = c("Low", "Med", "High"), include.lowest = T)]
-hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "first_incomeg")], by = "household_code", all.x=T )
-cat("Table of initial income distribution:\n"); print(table(panelist$first_incomeg)); cat("\n")
-cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_incomeg)); cat("\n")
 
 # ------------------- #
 # Household-year data #
@@ -126,12 +139,20 @@ mydata$week_income	<- mydata$income_midvalue/annual.week
 mydata$month		<- factor(mydata$month)
 mydata$ln_dol 		<- log(mydata$dol)
 mydata$recession 	<- factor(mydata$recession)
-mydata$year			<- as.factor(mydata$year)
 
 # Add price 
-tmp		<- dcast(price_dat, scantrack_market_descr+biweek ~ channel_type, value.var = "bsk_price_paid_2004")
-colnames(tmp)	<- c("scantrack_market_descr", "biweek", paste("PRC_", gsub(" ", "_", fmt_name), sep=""))
-mydata 	<- merge(mydata, tmp, by = c("scantrack_market_descr", "biweek"), all.x = T)
+if(week.price){
+	tmp		<- dcast(price_dat, scantrack_market_descr+biweek ~ channel_type, value.var = "bsk_price_paid_2004")
+	colnames(tmp)	<- c("scantrack_market_descr", "biweek", paste("PRC_", gsub(" ", "_", fmt_name), sep=""))
+	mydata 	<- merge(mydata, tmp, by = c("scantrack_market_descr", "biweek"), all.x = T)
+}else{
+	tmp		<- dcast(price_dat, scantrack_market_descr+year ~ channel_type, value.var = "bsk_price_paid_2004")
+	colnames(tmp)	<- c("scantrack_market_descr", "year", paste("PRC_", gsub(" ", "_", fmt_name), sep=""))
+	dim(mydata)
+	mydata 	<- merge(mydata, tmp, by = c("scantrack_market_descr", "year"), all.x = T)
+}
+dim(mydata)
+mydata$year			<- as.factor(mydata$year)
 
 # Shopping incidence
 tmp_dv		<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")
@@ -175,13 +196,12 @@ cat("Number of observations with 0 expenditure =", sum(mydata$dol==0), ", or, ",
 #---------------------------------------#
 # Set up DV and IV, regression models 
 dv_vec	<- "ln_dol"
-myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + year + month"), 
-				HomoPrice		= as.formula("y ~ ln_income + year + month + stone_price"), 
-				HomoControl		= as.formula("y ~ ln_income + year + month + household_size + condo + employed + NumChild"), 
+myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + month"), 
+				HomoYear		= as.formula("y ~ ln_income + year + month"), 
+				HomoPrice		= as.formula("y ~ ln_income + year + month + stone_price"),
 				Heterogeneity	= as.formula("y ~ ln_income*first_incomeg + year + month"),
-				HeteroPrice		= as.formula("y ~ ln_income*first_incomeg + year + month + stone_price"),
-				HeteroControl	= as.formula("y ~ ln_income*first_incomeg + year + month + household_size + condo + employed + NumChild")
-				)
+				HeteroYear		= as.formula("y ~ ln_income*first_incomeg + month"),
+				HeteroPrice		= as.formula("y ~ ln_income*first_incomeg + year + month + stone_price"))
 
 # Run regressions
 regrs	<- data.frame()
@@ -189,7 +209,7 @@ prc 	<- proc.time()
 sel		<- mydata$dol > 0 		# Only focus on positive expenditure 
 reg.ls	<- setNames(vector("list", length(myfml)), names(myfml))
 for(j in 1:length(myfml)){
-	rm(list = "myfit")
+	rm(list = intersect(ls(), "myfit"))
 	tmp 	<- as.formula(substitute(y ~ x, list(y = as.name(dv_vec), x = terms(myfml[[j]])[[3]])) )
 	if(!dv_vec %in% c("ln_dol", "dol")){
 		tmp		<- update(tmp, . ~ . + lag_dol)
@@ -220,18 +240,20 @@ cat("Compare cluster robust standard error for regressions of log(expenditure) ~
 # Export to HTML
 stargazer(reg.ls, type = "html", title = "Single-equation fixed effects regression", 
 		 align = TRUE, no.space = TRUE, 
-	     se = cls.se1, 
+	     se = cls.se1, omit.stat = "f",
 		 omit = c("year", "month"), order=c("ln_income"),
-		 add.lines = list(c("Year FE","Y","Y","Y","Y","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")),
+		 covariate.labels = c("log(I)", "log(I)*Med", "log(I)*High", "Stone price"), 
+		 add.lines = list(c("Year FE", "N","Y","Y","N","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")),
 		 notes = c("se clustered over households"),
 		 out = paste(plot.wd, "/", fname, "_se_", dv_vec, ".html", sep=""))
 
 # Export to Latex
 stargazer(reg.ls, type = "latex", title = "Single-equation fixed effects regression", 
 		 align = TRUE, no.space = TRUE, 
-		 se = cls.se1,
+		 se = cls.se1, omit.stat = "f",
 		 omit = c("year", "month"), order=c("ln_income"), 
-		 add.lines = list(c("Year FE","Y","Y","Y","Y","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")), 
+		 covariate.labels = c("log(I)", "log(I)*Med", "log(I)*High", "Stone price"), 
+		 add.lines = list(c("Year FE", "N","Y","Y","N","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")),
 		 out = paste(plot.wd, "/", fname, "_se_", dv_vec, ".tex", sep=""))		
 
 use.time 	<- proc.time() - prc
@@ -243,12 +265,12 @@ cat("Regressions for log(dol) finishes, using", use.time[3]/60, "min.\n")
 #---------------------------------------#
 # Set up DV and IV, regression models 
 dv_vec	<- "dol"
-myfml	<- list(Homogeneity		= as.formula("y ~ week_income + year + month"), 
+myfml	<- list(Homogeneity		= as.formula("y ~ week_income + month"), 
+				HomoYear		= as.formula("y ~ week_income + year + month"), 
 				HomoPrice		= as.formula("y ~ week_income + year + month + stone_price"), 
-				HomoControl		= as.formula("y ~ week_income + year + month + household_size + condo + employed + NumChild"), 
-				Heterogeneity	= as.formula("y ~ week_income*first_incomeg + year + month"),
-				HeteroPrice		= as.formula("y ~ week_income*first_incomeg + year + month + stone_price"),
-				HeteroControl	= as.formula("y ~ week_income*first_incomeg + year + month + household_size + condo + employed + NumChild")
+				Heterogeneity	= as.formula("y ~ week_income*first_incomeg + month"),
+				HeteroYear		= as.formula("y ~ week_income*first_incomeg + year + month"),
+				HeteroPrice		= as.formula("y ~ week_income*first_incomeg + year + month + stone_price")
 				)
 
 # Run regressions
@@ -287,16 +309,18 @@ cat("Compare cluster robust standard error for regressions of expenditure dol ~ 
 
 # Export estimation table
 stargazer(reg.linear.ls, type = "html", title = "Single-equation fixed effects regression of expenditure on weekly income", 
-		 align = TRUE, no.space = TRUE, se = cls.se1, 
+		 align = TRUE, no.space = TRUE, se = cls.se1, omit.stat = "f",
 		 omit = c("year", "month"), order=c("week_income"), 
-		 add.lines = list(c("Year FE","Y","Y","Y","Y","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")), 
+		 covariate.labels = c("I", "I*Med", "I*High", "Stone price"), 
+		 add.lines = list(c("Year FE","N","Y","Y","N","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")), 
 		 notes = c("se clustered over households"),
 		 out = paste(plot.wd, "/", fname, "_septc_", dv_vec, ".html", sep=""))
 
 stargazer(reg.linear.ls, type = "latex", title = "Single-equation fixed effects regression of expenditure on weekly income", 
-		 align = TRUE, no.space = TRUE, se = cls.se1, 
+		 align = TRUE, no.space = TRUE, se = cls.se1, omit.stat = "f",
 		 omit = c("year", "month"), order=c("week_income"), 
-		 add.lines = list(c("Year FE","Y","Y","Y","Y","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")), 
+		 covariate.labels = c("I", "I*Med", "I*High", "Stone price"), 
+		 add.lines = list(c("Year FE","N","Y","Y","N","Y","Y"), c("Month FE","Y","Y","Y","Y","Y","Y"), c("HH FE", "Y","Y","Y","Y","Y","Y")), 
 		 out = paste(plot.wd, "/", fname, "_septc_", dv_vec, ".tex", sep=""))		
 
 use.time 	<- proc.time() - prc
@@ -350,18 +374,16 @@ my.SURFE <- function(syseq, data, panid, ...){
 # Fit SUR with fixed effects 
 dv_mat	<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")
 dv_mat	<- dv_mat[-1]
-myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + month + year + lag_dol"), 
+myfml	<- list(Homogeneity		= as.formula("y ~ ln_income + month + lag_dol"), 
+				HomoYear		= as.formula("y ~ ln_income + month + year + lag_dol"), 
 				HomoPrice		= as.formula("y ~ ln_income + month + year + lag_dol + 
 													PRC_Convenience_Store + PRC_Discount_Store + PRC_Dollar_Store + 
 													PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club"), 
-				HomoControl		= as.formula("y ~ ln_income + month + year + lag_dol + 
-													household_size + condo + employed + NumChild"), 
-				Heterogeneity 	= as.formula("y ~ ln_income + ln_income_med + ln_income_high + year + month + lag_dol"), 
+				Heterogeneity 	= as.formula("y ~ ln_income + ln_income_med + ln_income_high + month + lag_dol"), 
+				HeterYear 		= as.formula("y ~ ln_income + ln_income_med + ln_income_high + year + month + lag_dol"), 
 				HeterPrice 		= as.formula("y ~ ln_income + ln_income_med + ln_income_high + lag_dol + year + month + 
 													PRC_Convenience_Store + PRC_Discount_Store + PRC_Dollar_Store + 
-													PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club"),
-				HeterControl	= as.formula("y ~ ln_income + ln_income_med + ln_income_high + month + year + lag_dol + 
-													household_size + condo + employed + NumChild") 									
+													PRC_Drug_Store + PRC_Grocery + PRC_Warehouse_Club")								
 				)
 				
 regrs1 	<- data.frame()
@@ -423,7 +445,7 @@ changelab	<- function(x, ord, lab){
 }
 
 # Homogenous income effect for expenditure in SUR regressions
-ggtmp1	<- subset(regrs1, model == "HomoPrice" & substr(DV,1,3) == "SHR" & Var == "ln_income")
+ggtmp1	<- subset(regrs1, model == "Homogeneity" & substr(DV,1,3) == "SHR" & Var == "ln_income")
 ggtmp1$Retail	<- factor(as.character(ggtmp1$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), 
 						labels = fmt_name[-1])
 ord		<- order(ggtmp1$Estimate)
@@ -431,7 +453,7 @@ ggtmp1$Retail 	<- factor(ggtmp1$Retail, levels = ggtmp1[ord,"Retail"])
 ord		<- levels(ggtmp1$Retail)
 
 # Heterogenous income effect for expenditure in SUR regressions
-ggtmp2	<- subset(regrs1, model == "HeterPrice" & substr(DV,1,3) == "SHR" & substr(Var,1,9) == "ln_income")
+ggtmp2	<- subset(regrs1, model == "Heterogeneity" & substr(DV,1,3) == "SHR" & substr(Var,1,9) == "ln_income")
 ggtmp2$Retail	<- factor(as.character(ggtmp2$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), 
 						labels = fmt_name[-1])						
 ggtmp2$IncGrp	<- changelab(ggtmp2$Var, paste("ln_income",c("","_med","_high"),sep=""), c("Low", "Med", "High"))
@@ -463,22 +485,25 @@ cat("y axis range is", mylim, "\n")
 
 plots	<- list(NULL)
 plots[[1]]	<- ggplot(ggtmp1, aes(Retail, Estimate)) + 
-			geom_bar(stat = "identity", width = .9) + 
-			geom_errorbar(aes(ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error), width=0.25) + 
+			# geom_pointrange(aes(y = Estimate, ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error), width=0.25) + 
+			geom_pointrange(aes(y = Estimate, ymin = Estimate-1.96*cls_se, ymax = Estimate + 1.96 * cls_se)) + 
 			ylim(mylim) + 
 			xlab("Retail format") + coord_flip()
-plots[[2]]	<- ggplot(ggtmp2, aes(Retail, Estimate1, fill = IncGrp, col = IncGrp)) + 
-			geom_bar(stat = "identity", position = position_dodge(width=0.9)) + 
-			geom_errorbar(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr, col = IncGrp), position=position_dodge(width=0.9), width=0.25) + 
-			scale_fill_grey() + 
-			scale_color_grey() +  
+plots[[2]]	<- ggplot(ggtmp2, aes(Retail, Estimate1, col = IncGrp)) + 
+			# geom_pointrange(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr, col = IncGrp), 
+			# 		position=position_dodge(width=0.3)) + 
+			geom_pointrange(aes(ymin = Estimate1-1.96*Cluster_se, ymax = Estimate1 + 1.96 * Cluster_se, col = IncGrp), 
+					position=position_dodge(width=0.3)) +
+			scale_color_grey(name="Income\ngroup", start = 0, end = .6) +  
 			ylim(mylim) + 
 			xlab("Retail format") + ylab("Estimate")+ coord_flip() + 
-			guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE))
-						
+			guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE)) 
+plots[[3]]	<- get_legend(plots[[2]])
+plots[[2]]	<- plots[[2]] + theme(legend.position="none")	
+					
 if(make_plot){
 	pdf(paste(plot.wd, "/graph_", fname, "_income_shr.pdf", sep=""), width = ww1, height = ww1*.5)
-	grid.arrange(plots[[1]], plots[[2]], nrow = 1)
+	grid.arrange(plots[[1]], plots[[2]], plots[[3]], nrow = 1, widths = c(.45, .45, .1))
 	dev.off()
 }
 
@@ -519,20 +544,21 @@ ggtmp2$Cluster_se	<- sqrt(ggtmp2$cls_se^2 + tmp1^2)
 
 plots	<- list(NULL)				
 plots[[1]]	<- ggplot(ggtmp1, aes(Retail, Estimate)) + 
-			geom_bar(stat = "identity", width = .9) + 
-			geom_errorbar(aes(ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error), width=0.25) + 
-			geom_errorbar(aes(ymin = Estimate-1.96*cls_se, ymax = Estimate + 1.96 * cls_se), width=0.25, linetype = 2) + 
+			geom_pointrange(aes(y = Estimate, ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error), size = .5) + 
+			geom_errorbar(aes(ymin = Estimate-1.96*cls_se, ymax = Estimate + 1.96 * cls_se), size = .25, width=0.25) + 
 			facet_wrap(~model) + 
 			xlab("Dependent variable") + coord_flip()
 plots[[2]]	<- ggplot(ggtmp2, aes(Retail, Estimate1, fill = IncGrp, col = IncGrp)) + 
-			geom_bar(stat = "identity", position = position_dodge(width=0.9)) + 
-			geom_errorbar(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr, col = IncGrp), position=position_dodge(width=0.9), width=0.25) + 
-			geom_errorbar(aes(ymin = Estimate1-1.96*Cluster_se, ymax = Estimate1 + 1.96 * Cluster_se), width=0.25, linetype = 2) + 
+			# geom_bar(stat = "identity", position = position_dodge(width=0.9)) + 
+			geom_pointrange(aes(y = Estimate1, ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 *StdErr), size = .5, position = position_dodge(width=0.5)) + 
+			# geom_errorbar(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr, col = IncGrp), position=position_dodge(width=0.9), width=0.25) + 
+			geom_errorbar(aes(ymin = Estimate1-1.96*Cluster_se, ymax = Estimate1 + 1.96 * Cluster_se), size = .25, width = .25, position = position_dodge(width=0.5)) + 
 			scale_fill_grey() + 
 			scale_color_grey() +  
 			facet_wrap(~model) +
 			xlab("Retail format") + ylab("Estimate")+ coord_flip() + 
 			guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE))
+
 
 if(make_plot){
 	pdf(paste(plot.wd, "/graph_", fname, "_income_shr_compare.pdf", sep=""), width = ww1, height = ww1*.8)

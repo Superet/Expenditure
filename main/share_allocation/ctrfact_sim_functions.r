@@ -166,6 +166,7 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 #=========================================================================================================#
 	
 	numsim	<- nrow(eps_draw)	
+	R		<- length(X_list)
 	if(is.null(sim.y)){
 		y		<- matrix(NA, numsim, length(ln_inc))
 	}else{
@@ -216,7 +217,12 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 	}
 
 	out	<- cbind(colMeans(y, na.rm=T), colMeans(omega, na.rm = T), colMeans(omega1, na.rm = T), apply(e, c(2,3), mean, na.rm= T))	
-	colnames(out)	<- c("Exp", "omega", "spl.omega", fmt_name)
+	if(length(fmt_name) == R){
+		colnames(out)	<- c("Exp", "omega", "spl.omega", fmt_name)
+	}else{
+		colnames(out)	<- c("Exp", "omega", "spl.omega", names(X_list))
+	}
+	
 	if(ret.sim){
 		out	<- list(Average = out, y = y, Allocation = e)
 	}
@@ -244,6 +250,7 @@ SimOmega_fn	<- function(ln_inc, lambda, param_est, base, X_list, price, lnInc_lv
 #===================================================================================================#
 	numsim		<- nrow(eps_draw)
 	numnodes	<- length(y.nodes)
+	R			<- length(X_list)
 	
 	# Simulate inclusive values under the new retail attributes
 	omega_new	<- array(NA, c(numsim, length(lnInc_lv), numnodes), dimnames = list(NULL, lnInc_lv, y.nodes))

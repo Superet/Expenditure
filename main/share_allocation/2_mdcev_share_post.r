@@ -23,6 +23,7 @@ nseg	<- 3
 shr.est	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 exp.est	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 gam.ls	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
+shr.par.ls	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 omega.est	<- vector("list", nseg)
 ver.date	<- "2016-02-26"
 cpi.adj		<- TRUE
@@ -44,6 +45,7 @@ for(ii in 1:nseg){
 	exp.est[[ii]]	<- sol.top2
 	omega.est[[ii]]	<- omega_deriv
 	gam.ls[[ii]]	<- gamfit
+	shr.par.ls[[ii]]	<- shr.par
 	print(ii)
 	rm(list = setdiff(ls(), c(tmpls, "ii", "tmpls", "R", "fmt_name", "beta0_base")) )
 }
@@ -64,9 +66,9 @@ tmplab
 stargazer(tmpls, type = "text", column.labels = names(shr.est))
 
 # Adjust standard error
-se		<- list(NULL, NULL, 
-			c(.11, .3077, .4473, 1.7990, .0096, .0272, .0391, .1575, .0746, .0192, .0434, .0280, .0587, .2714, .5214, .1539, .1095, .3727, 
-				2.1367, .0065, .0419, .0037))
+# se		<- list(NULL, NULL, 
+# 			c(.11, .3077, .4473, 1.7990, .0096, .0272, .0391, .1575, .0746, .0192, .0434, .0280, .0587, .2714, .5214, .1539, .1095, .3727, 
+# 				2.1367, .0065, .0419, .0037))
 
 # Export estimate table 
 stargazer(tmpls, type = "html", title = "Multi-stage model coefficent estimates", 
@@ -92,4 +94,7 @@ for(i in 1:nseg){
 }
 dev.off()
 
+# Save the parameters to a data set
+shr.par.mat	<- do.call(cbind, shr.par.ls)
+save(shr.par.mat, file = "MDCEV_cpiest_shrpar.rdata")
 			
