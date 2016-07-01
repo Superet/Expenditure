@@ -1,11 +1,10 @@
-# library(ggplot2)
+library(ggplot2)
 library(reshape2)
 library(maxLik)
 library(evd)
 library(data.table)
 library(doParallel)
 library(foreach)
-# library(chebpol)
 library(nloptr)
 library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
@@ -18,6 +17,7 @@ if(length(args)>0){
       eval(parse(text=args[[i]]))
     }
 }
+seg_id 	<- 1
 cat("seg_id =", seg_id, ".\n")
 
 # setwd("~/Documents/Research/Store switching/processed data/Estimation")
@@ -25,12 +25,14 @@ cat("seg_id =", seg_id, ".\n")
 # source("../../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 # source("../../Exercise/main/share_allocation/ctrfact_sim_functions.r")
 
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 # setwd("E:/Users/ccv103/Documents/Research/Store switching/run")
+setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
 
-run_id		<- 8#4
+run_id		<- 9
+
 plot.wd		<- getwd()
 make_plot	<- TRUE
 ww			<- 10
@@ -40,7 +42,7 @@ source("0_Allocation_function.R")
 source("ctrfact_sim_functions.r")
 
 # Load estimation data 
-ver.date	<- "2016-04-28"	#"2016-02-26"
+ver.date	<- "2016-06-20"
 cpi.adj		<- TRUE
 
 if(cpi.adj){
@@ -113,10 +115,16 @@ X_ls0	<- setNames( lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_at
 					 fmt_name)
 cat("The average retail attributes in 2007:\n"); print(do.call(rbind, X_ls0)); cat("\n")
 
-# Compute delta psi = -log(-0.1)*alpha*X
-# tmpX	<- do.call(rbind, X_ls0)
-# d.psi	<- tmpX %*% shr.par[paste("beta_", 5:8, sep="")] * log(.9)
-# cat("Change of marginal utility (psi) of 10% income change:\n"); print(d.psi); cat("\n")
+# The average shares for each income level 
+tmp		<- as.matrix(subset(mydata, year %in% selyr)[,paste("SHR_",gsub(" ", "_", fmt_name), sep="")])
+tmp		<- tmp * subset(mydata, year %in% selyr)$dol
+tmp1	<- subset(mydata, year %in% selyr)$income_midvalue
+# # Share by income level 
+# shr.stat<- apply(tmp, 2, function(x) tapply(x, tmp1, sum))
+# shr.stat<- shr.stat/rowSums(shr.stat)
+# Average share
+shr.stat<- colSums(tmp)
+shr.stat<- rep(1, nrow(sim.unq)) %*% t(shr.stat/sum(shr.stat))
 
 # Expand X_list and price to match the nobs of income 
 price.07	<- rep(1, nrow(sim.unq)) %*% matrix(price0, nrow = 1)
@@ -131,9 +139,9 @@ for(i in 1:R){
 		tmp1[,(i-1)]	<- sim.unq$Inc07
 		tmp2[,(i-1)]	<- sim.unq$Inc08
 	}
-	X_list07[[i]]	<- cbind(tmp1, rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[i]], nrow = 1), sim.unq$Inc07 %*% t(X_ls0[[i]]))
-	X_list08[[i]]	<- cbind(tmp2, rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[i]], nrow = 1), sim.unq$Inc08 %*% t(X_ls0[[i]]))
-	colnames(X_list07[[i]])	<- colnames(X_list08[[i]])	<- c(fmt_name[-beta0_base], selcol, paste("I*", selcol,sep=""))
+	X_list07[[i]]	<- cbind(tmp1, lag = shr.stat[,i], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[i]], nrow = 1))
+	X_list08[[i]]	<- cbind(tmp2, lag = shr.stat[,i], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[i]], nrow = 1))
+	colnames(X_list07[[i]])	<- colnames(X_list08[[i]])	<- c(fmt_name[-beta0_base], "lag",selcol)
 }
 
 #-------------------#
@@ -165,13 +173,15 @@ numnodes<- length(y.nodes)
 # Simulate expenditure and expenditure share. 
 pct				<- proc.time()
 sim.base07		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, base = beta0_base, 
-					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, 
+					par.draw = par_draw, share.state = shr.stat[,-beta0_base])
 use.time		<- proc.time() - pct						
 cat("2007 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
 pct				<- proc.time()
-sim.base08		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
-					base = beta0_base, X_list = X_list08, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+sim.base08		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, base = beta0_base, 
+					X_list = X_list08, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, 
+					par.draw = par_draw, share.state = shr.stat[,-beta0_base])
 use.time		<- proc.time() - pct						
 cat("2008 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
@@ -182,9 +192,9 @@ cat("2008 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 # a(2): if intercept inherents the grocery stores, discount stores;
 # b(2): if price inherents the intercept
  
-ret.a	<- c("Discount Store", "Grocery")
+ret.a	<- c("Discount Store")
 inherent.price	<- c(TRUE, FALSE)
-newf.sim07	<- newf.sim <- setNames(vector("list", 4), paste(rep(ret.a, each =2), "_prc", c(1,0), sep = ""))
+newf.sim07	<- newf.sim <- setNames(vector("list", length(ret.a)*2), paste(rep(ret.a, each =2), "_prc", c(1,0), sep = ""))
 eps_draw_new	<- cbind(eps_draw, rgev(numsim, scale = exp(shr.par["ln_sigma"])) )
 
 for(i in 1:length(ret.a)){
@@ -210,9 +220,9 @@ for(i in 1:length(ret.a)){
 					tmp1[,(k-1)]	<- sim.unq$Inc07
 					tmp2[,(k-1)]	<- sim.unq$Inc08
 				}
-				X.new07[[k]]	<- cbind(tmp1, rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1), sim.unq$Inc07 %*% t(X_ls0[[k]]))
-				X.new08[[k]]	<- cbind(tmp2, rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1), sim.unq$Inc08 %*% t(X_ls0[[k]]))
-				colnames(X.new07[[k]])	<- colnames(X.new08[[k]])	<- c(fmt_name[-beta0_base], "new", selcol, paste("I*", selcol,sep=""))
+				X.new07[[k]]	<- cbind(tmp1, lag = shr.stat[,k], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1) )
+				X.new08[[k]]	<- cbind(tmp2, lag = shr.stat[,k], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1) )
+				colnames(X.new07[[k]])	<- colnames(X.new08[[k]])	<- c(fmt_name[-beta0_base], "new", "lag", selcol)
 			}
 		tmp2	<- tmp1	<- matrix(0, nrow(sim.unq), R)
 		if(sel!=beta0_base){
@@ -221,8 +231,8 @@ for(i in 1:length(ret.a)){
 		}
 		tmp		<- X_ls0[["Convenience Store"]]
 		tmp["overall_prvt"]	<- X_ls0[[ret.a[i]]]["overall_prvt"]
-		X.new07[[(R+1)]]	<- cbind(tmp1, rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1), sim.unq$Inc07 %*% t(tmp))
-		X.new08[[(R+1)]]	<- cbind(tmp2, rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1), sim.unq$Inc08 %*% t(tmp))
+		X.new07[[(R+1)]]	<- cbind(tmp1, lag = 0, rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1))
+		X.new08[[(R+1)]]	<- cbind(tmp2, lag = 0, rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1))
 
 		# Set prices 
 		price.new		<- price.07
@@ -236,23 +246,39 @@ for(i in 1:length(ret.a)){
 		newf.sim07[[sidx]]	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc07"], 
 					lambda = lambda, param_est = shr.par.new, 
 					base = beta0_base, X_list = X.new07, price = price.new, sim.y = sim.base07$y, 
-					eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+					eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw, share.state = shr.stat[,-beta0_base])
 		newf.sim[[sidx]]	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], 
 					lambda = lambda, param_est = shr.par.new, 
 					base = beta0_base, X_list = X.new08, price = price.new, sim.y = sim.base08$y, 
-					eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+					eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw, share.state = shr.stat[,-beta0_base])
 	}
 	use.time	<- proc.time() - pct
 	cat("Counterfactual with", ret.a[i], "finishes with", use.time[3]/60, "min.\n")
 }
+
+# Compare the difference 
+fmt_name1	<- c(fmt_name, "new")
+inc.tab	<- table(mydata[mydata$year==2007,c("income_midvalue")])
+tmp1	<- sim.base08$Average
+tmp2	<- newf.sim[["Discount Store_prc1"]]$Average
+mkt1	<- c(sapply(1:R, function(i) sum(tmp1[,fmt_name[i]]*inc.tab)), 0)
+mkt2	<- sapply(1:(R+1), function(i) sum(tmp2[,fmt_name1[i]]*inc.tab))
+mkt.dif	<- setNames(mkt2/sum(mkt2)-mkt1/sum(mkt1), fmt_name1)
+cat("Difference of market share:\n"); print(round(mkt.dif*100,2)); cat("\n")
+
+tmp1	<- cbind(tmp1[, fmt_name]/tmp1[,"Exp"], 0)
+tmp2	<- tmp2[, c(fmt_name, "new")]/tmp2[,"Exp"]
+tmp		<- tmp2 - tmp1
+tmp.dif	<- apply(tmp, 2, function(x) weighted.mean(x, w = inc.tab))
+cat("Mean of share difference is:\n"); print(round(tmp.dif*100, 2)); cat("\n")
 
 ################
 # Save results #
 ################
 rm(list  = intersect(ls(), c("ar", "args", "cl", "ggtmp", "ggtmp1", "ggtmp2", "i", "lastFuncGrad", "lastFuncParam", "make_plot", "mycore", 
 			"myfix", "plot.wd", "s1_index", "sel", "selyr", "price", "sol", "sol.top", "sol.top2", "tmp", "tmp_coef", 
-			"tmp_price", "tmp1", "tmp2", "use.time", "ver.date", "var1", "ww", "f", "dT",
-			"numnodes", "out", "out1", "pct", "tmpd1", "tmpd2", "tmpdat", "u", "W", "y", "y.nodes",
+			"tmp_price", "tmp1", "tmp2", "use.time", "ver.date", "var1", "ww", "f", "dT","lag_nodes","sidx","price0", "X_ls0",
+			"numnodes", "out", "out1", "pct", "tmpd1", "tmpd2", "tmpdat", "u", "W", "y", "y.nodes", "tmp.dif", "inc.tab", 
 			"Allocation_constr_fn", "Allocation_fn", "Allocation_nlop_fn", "cheb.1d.basis", "cheb.basis", "chebfun", 
 			"exp_fn", "expFOC_fn", "incl_value_fn", "mysplfun", "mytrimfun", "param_assignR", "simExp_fn", "SimOmega_fn", "tmpX",
 			"SimWrapper_fn", "solveExp_fn", "spl2dfun", "uP_fn", "uPGrad_fn", "X_list", "beta0_7", "d.psi", "gamfit","j", "k")))

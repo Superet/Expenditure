@@ -17,11 +17,11 @@ library(data.table)
 library(doParallel)
 library(foreach)
 library(plm)
-# library(chebpol)
 library(nloptr)
 library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
 
+seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
 if(length(args)>0){
@@ -30,19 +30,20 @@ if(length(args)>0){
     }
 }
 
-seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
-cat("seg_id =", seg.id, "\.\n")
+cat("seg_id =", seg_id, ".\n")
 
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
-# sourceCpp(paste("../Exercise/Multiple_discrete_continuous_model/", model_name, ".cpp", sep=""))
+# sourceCpp(paste("../Exercise/Multiple_discrete_continuous_model/MDCEV_share.cpp", sep=""))
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 
 # setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
-setwd("/sscc/home/c/ccv103/Exercise/run")
+# setwd("/sscc/home/c/ccv103/Exercise/run")
+setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
+
 model_name 	<- "MDCEV_share"
-run_id		<- 4
+run_id		<- 8
 # seg_id		<- 1
 make_plot	<- TRUE
 plot.wd		<- paste(getwd(), "/estrun_",run_id, sep="")
@@ -51,9 +52,9 @@ ar			<- .6
 interp.method	<- "spline"			# "cheb"
 trim.alpha		<- 0.05
 cpi.adj			<- TRUE
-nb				<- 100
+nb				<- 50
 
-ver.date	<- "2016-02-26"
+ver.date	<- "2016-04-28"
 if(cpi.adj){
 	fname	<- paste("estrun_",run_id,"/MDCEV_cpi_est_seg",seg_id,"_", ver.date,".rdata",sep="")
 }else{
@@ -63,9 +64,9 @@ fname
 load(fname)
 sourceCpp(paste(model_name, ".cpp", sep=""))
 source("0_Allocation_function.R")
-source("ctrfact_sim_functions_v2.r")
+source("ctrfact_sim_functions.r")
 
-rm(list = c("gamfit","tmpdat", "shr", "y", "price", "X_list", "ln_inc", "s1_index"))
+rm(list = intersect(ls(), c("gamfit","tmpdat", "shr", "y", "price", "X_list", "ln_inc", "s1_index")))
 
 #############
 # Functions #
@@ -125,14 +126,20 @@ my.bt1	<- function(idxb, coef1, coef2){
 	sel 	<- with(mydata[idxb,], paste(scantrack_market_descr,year, sep="-"))
 	sel1	<- tmpn[sel]
 	selcol	<- c("size_index", "ln_upc_per_mod", "ln_num_module","overall_prvt")
-	nx 		<- length(selcol) * 2
+	nx 		<- length(selcol) * 2 + R -1 
 
 	X_list 	<- vector("list", length=length(fmt_name))
 	for(i in 1:length(fmt_name)){
 		sel2		<- fmt_attr$channel_type == fmt_name[i]
 		tmp			<- fmt_attr[sel2,selcol]
 		tmp1 		<- as.matrix(tmp[sel1,])
-		X_list[[i]]	<- cbind(tmp1, tmp1 * ln_inc)
+		tmp2		<- matrix(0, nrow(shr), R-1)
+		if(i < beta0_base){
+			tmp2[,i]	<- ln_inc
+		}else if(i > beta0_base){
+			tmp2[,(i-1)] <- ln_inc
+		}
+		X_list[[i]]	<- cbind(tmp2, tmp1, tmp1 * ln_inc)
 	}
 	
 	MDCEV_wrapper <- function(param){
@@ -154,7 +161,7 @@ my.bt1	<- function(idxb, coef1, coef2){
 selcol
 
 # Draw bootstrap sample index 
-set.seed(666)
+set.seed(9999)
 unq.hh	<- unique(mydata$household_code)
 nh		<- length(unq.hh)
 all.idx <- split(1:nrow(mydata), mydata$household_code)
@@ -182,9 +189,9 @@ cat("Estimates and bootstrap se:\n"); print(round(tmp.tab, 4)); cat("\n");
 # Save the results #
 ####################
 ls()
-rm(list=c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","j","MDCEV_ll_fnC",
+rm(list= intersect(ls(), c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","j","MDCEV_ll_fnC",
 		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","selcol","param_assign", 
-		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "tmpsol","ord","panelist","tmpidx","tmpn"))
+		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "tmpsol","ord","panelist","tmpidx","tmpn")))
 
 save.image(paste("estrun_",run_id,"/MDCEV_estbt_seg",seg_id, "_nb", nb, "_", Sys.Date(),".rdata",sep=""))
 

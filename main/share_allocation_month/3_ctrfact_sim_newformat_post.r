@@ -22,8 +22,10 @@ if(length(args)>0){
 # setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
+setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
+
 setwd("~/Documents/Research/Store switching/processed data/Estimation")
-run_id		<- 8
+run_id		<- 9
 
 ###########################
 # Read counterfactal data # 
@@ -35,7 +37,7 @@ sim.ls	<- setNames(vector("list", length = nseg), seg.name)
 simavg.ls	<- setNames(vector("list", length = nseg), seg.name)
 my.simdata	<- data.frame()
 numsim		<- 1000
-ver.date1	<- "2016-05-04" #"2016-04-18" 
+ver.date1	<- "2016-06-25" 
 cpi.adj		<- TRUE
 annual		<- TRUE
 annual.week	<- 26
@@ -260,7 +262,7 @@ grid.arrange(plots[[1]], plots[[2]], plots[[3]], nrow = 1, widths = c(.45, .45, 
 # Simulation results of adding a new format #
 #############################################
 # Evaluate the effect by focusing on the 2008 income level.
-sel.scn		<- c("Discount Store_prc1", "Grocery_prc1")			# Counterfactual scenarios we foucs on 
+sel.scn		<- c("Discount Store_prc1")			# Counterfactual scenarios we foucs on 
 sel.base	<- "Base08"				# Fix baseline
 scn.name	<- c("Discount Stores", "Grocery")
 
@@ -366,8 +368,8 @@ dev.off()
 # Interaction between income and downsizing # 
 #############################################
 # Evaluate the effect by focusing on the 2008 income level.
-sel.scn0	<- c("Discount Store_prc1_07", "Grocery_prc1_07")			# Counterfactual scenarios we foucs on in 2007
-sel.scn1	<- c("Discount Store_prc1", "Grocery_prc1")			# Counterfactual scenarios we foucs on 
+sel.scn0	<- c("Discount Store_prc1_07")			# Counterfactual scenarios we foucs on in 2007
+sel.scn1	<- c("Discount Store_prc1")			# Counterfactual scenarios we foucs on 
 sel.base0	<- "Base07"
 sel.base1	<- "Base08"				# Fix baseline
 scn.name	<- c("Discount Stores", "Grocery")
@@ -375,7 +377,7 @@ scn.name	<- c("Discount Stores", "Grocery")
 # Compute the changes in expenditure share at retail formats in the simulation 
 inter.only	<- TRUE
 ggtmp		<- data.frame()
-for(i in 1:length(sel.scn)){
+for(i in 1:length(sel.scn0)){
 	# The effect of downsizing at 2007 income
 	tmp0	<- data.table(do.call(rbind,lapply(simavg.ls, function(x) 
 				x[[sel.scn0[i]]][,fmt_name1]/rowSums(x[[sel.scn0[i]]][,fmt_name1]) - x[[sel.base0]][,fmt_name1]/rowSums(x[[sel.base0]][,fmt_name1]))))

@@ -2,6 +2,8 @@ library(parallelMCMCcombine)
 library(rstan)
 library(stargazer)
 library(abind)
+library(reshape2)
+library(ggplot2)
 
 # setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Expenditure")
@@ -56,14 +58,15 @@ med_qt	<- function(x){
 
 ggtmp	<- melt(sim.combine)
 names(ggtmp)	<- c("iter", "var", "value", "IncGrp")
+pdf("stan_combine.pdf", width = 12, height = 12)
 ggplot(ggtmp, aes(IncGrp, value)) + 
 	stat_summary(fun.data = "med_qt", geom = "pointrange") + 
 	facet_wrap(~var, scales = "free")
-	
+dev.off()
+
 # Posterior median 
 par.med	<- lapply(sim.combine, function(x) cbind(Estimate = apply(x, 2, median), se = apply(x, 2, sd) ))
+do.call(cbind, par.med)
 
-
-
-save(par.med, beta0.combine, hhidx.combine, file = )
+save(sim.combine, par.med, beta0.combine, hhidx.combine, file = "MDCEV_stan_est.rdata")
 	

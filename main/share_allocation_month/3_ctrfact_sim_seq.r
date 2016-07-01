@@ -5,13 +5,12 @@ library(evd)
 library(data.table)
 library(doParallel)
 library(foreach)
-# library(chebpol)
 library(nloptr)
 library(mgcv)
 options(error = quote({dump.frames(to.file = TRUE)}))
 
 # seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
-
+seg_id 	<- 1
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
 if(length(args)>0){
@@ -32,7 +31,7 @@ model_name 	<- "MDCEV_share"
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
 
-run_id		<- 8
+run_id		<- 9
 plot.wd		<- getwd()
 make_plot	<- TRUE
 ww			<- 10
@@ -42,7 +41,7 @@ source("0_Allocation_function.R")
 source("ctrfact_sim_functions.r")
 
 # Load estimation data 
-ver.date	<- "2016-04-28"
+ver.date	<- "2016-06-20"
 cpi.adj		<- TRUE
 
 if(cpi.adj){
@@ -115,6 +114,17 @@ X_list0<- setNames( lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_a
 					 fmt_name)
 cat("The average retail attributes in 2007:\n"); print(do.call(rbind, X_list0)); cat("\n")
 
+# The average shares for each income level 
+tmp		<- as.matrix(subset(mydata, year %in% selyr)[,paste("SHR_",gsub(" ", "_", fmt_name), sep="")])
+tmp		<- tmp * subset(mydata, year %in% selyr)$dol
+tmp1	<- subset(mydata, year %in% selyr)$income_midvalue
+# # Share by income level 
+# shr.stat<- apply(tmp, 2, function(x) tapply(x, tmp1, sum))
+# shr.stat<- shr.stat/rowSums(shr.stat)
+# Average share
+shr.stat<- colSums(tmp)
+shr.stat<- rep(1, nrow(sim.unq)) %*% t(shr.stat/sum(shr.stat))
+
 # Expand X_list and price to match the nobs of income 
 price.07	<- rep(1, nrow(sim.unq)) %*% matrix(price.07, nrow = 1)
 colnames(price.07)	<- fmt_name
@@ -128,13 +138,11 @@ for(i in 1:R){
 		tmp1[,(i-1)]	<- sim.unq$Inc07
 		tmp2[,(i-1)]	<- sim.unq$Inc08
 	}
-	X_list07[[i]]	<- cbind(tmp1, rep(1, nrow(sim.unq)) %*% matrix(X_list0[[i]], nrow = 1), sim.unq$Inc07 %*% t(X_list0[[i]]))
-	X_list08[[i]]	<- cbind(tmp2, rep(1, nrow(sim.unq)) %*% matrix(X_list0[[i]], nrow = 1), sim.unq$Inc08 %*% t(X_list0[[i]]))
-	colnames(X_list07[[i]])	<- colnames(X_list08[[i]])	<- c(fmt_name[-beta0_base], selcol, paste("I*", selcol,sep=""))
+
+	X_list07[[i]]	<- cbind(tmp1, lag = shr.stat[,i], rep(1, nrow(sim.unq)) %*% matrix(X_list0[[i]], nrow = 1))
+	X_list08[[i]]	<- cbind(tmp2, lag = shr.stat[,i], rep(1, nrow(sim.unq)) %*% matrix(X_list0[[i]], nrow = 1))
+	colnames(X_list07[[i]])	<- colnames(X_list08[[i]])	<- c(fmt_name[-beta0_base], "lag",selcol)
 }
-# 
-# X_list07	<- lapply(X_list0, function(x) 
-# 				{out <- rep(1, nrow(sim.unq)) %*% matrix(x, nrow = 1); colnames(out) <- names(x); return(out)})
 
 #-------------------#
 # Take random draws #
@@ -182,13 +190,15 @@ cat("Register", mycore, "core parallel computing. \n")
 # Simulate expenditure and expenditure share. 
 pct				<- proc.time()
 sim.base07		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, base = beta0_base, 
-					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw, 
+					share.state = shr.stat[,-beta0_base])
 use.time		<- proc.time() - pct						
 cat("2007 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
 pct				<- proc.time()
 sim.base08		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, 
-					base = beta0_base, X_list = X_list08, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+					base = beta0_base, X_list = X_list08, price = price.07, eps_draw = eps_draw, method = exp.method, 
+					ret.sim = TRUE, par.draw = par_draw, share.state = shr.stat[,-beta0_base])
 use.time		<- proc.time() - pct						
 cat("2008 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
@@ -201,10 +211,13 @@ cat("Summary of baseline income elasticity:\n"); print(tmp); cat("\n")
 # Plot omega over y
 tmp		<- seq(50, 250, 10)
 tmpd1	<- data.frame(lnInc = rep(sim.unq$Inc07, each = length(tmp)), y = rep(tmp, length(sim.unq$Inc07)))
-tmp1	<- omega_deriv(tmpd1)
+tmpd1$Xlag	<- kronecker(rep(1, length(tmp)), shr.stat[,-beta0_base])
 tmpd2	<- data.frame(lnInc = rep(sim.unq$Inc08, each = length(tmp)), y = rep(tmp, length(sim.unq$Inc08)))
+tmpd2$Xlag	<- kronecker(rep(1, length(tmp)), shr.stat[,-beta0_base])
+tmp1	<- omega_deriv(tmpd1)
 tmp2	<- omega_deriv(tmpd2)
-ggtmp	<- rbind(cbind(tmpd1, omega = tmp1, year = 2007), cbind(tmpd2, omega = tmp2, year = 2008))
+ggtmp	<- rbind(cbind(tmpd1[,c("lnInc","y")], omega = tmp1, year = 2007), 
+				 cbind(tmpd2[,c("lnInc","y")], omega = tmp2, year = 2008))
 ggtmp$Income	<- exp(ggtmp$lnInc)
 
 # Plot the simulation baseline -- expenditure allocation by income 
@@ -221,6 +234,7 @@ u		<- matrix(NA, length(tmp), length(lnInc), dimnames = list(y = tmp, lnInc = ln
 for(i in 1:length(lnInc)){
 	f 	<- function(y, ...){
 		newx	<- data.frame(lnInc = lnInc[i], y = y)
+		newx$Xlag	<- rep(1, length(y)) %*% matrix(shr.stat[1,-beta0_base], nrow=1)
 		omega_deriv(newx, ...)
 	}
 	u[,i]<- -exp_fn(tmp, lambda, f, ln_inc = lnInc[i])
@@ -248,7 +262,7 @@ save.image(paste("estrun_",run_id, "/", fname, ".rdata",sep=""))
 #------------------------#
 # Simulation of strategy #
 # Assume only grocery stores change retail attributes. 
-iv.change.vec	<- seq(0.01, .1, by = .01)
+iv.change.vec	<- seq(0.02, .1, by = .02)
 
 #-------------------------------#
 # Simulation of price reduction # 
@@ -269,40 +283,10 @@ sim.prc.ls07	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packa
 		}else{
 			out1	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc07"], lambda = lambda, param_est = shr.par, 
 						base = beta0_base, X_list = X_list07, price = price.new, sim.y = sim.base07$y, 
-						eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
+						eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw, share.state = shr.stat[,-beta0_base])
 		}
 		out1.avg	<- rbind(out1.avg, data.frame(out1$Average, 
 											lnInc = sim.unq[,"Inc07"], retailer = as.character(sel.retail), 
-											Var = 'price', change = iv.change.vec[j] ))
-		out1.alc[j,,,]	<- out1$Allocation
-	}
-	out1	<- list(Average = out1.avg, Allocation = out1.alc)
-	return(out1)
-}
-use.time	<- proc.time() - pct
-cat("Parallel simulation of retail price finishes with", use.time[3]/60, "min.\n")
-
-pct			<- proc.time()
-sim.prc.ls08	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packages=c("mgcv", "nloptr")) %dopar% {
-	out1.avg	<- data.frame()
-	out1.alc	<- array(NA, c(length(iv.change.vec), numsim, nrow(sim.unq), R), 
-						dimnames = list(change = iv.change.vec, iter = 1:numsim, lnInc = sim.unq[,"Inc08"], retail = fmt_name))
-	
-	for(j in 1:length(iv.change.vec)){
-		price.new	<- price.07
-		price.new[,sel.retail]	<- price.07[,sel.retail] * (1 - iv.change.vec[j])
-		if(sim.omega){
-			out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
-						base = beta0_base, X_list = X_list08, price = price.new, 
-						lnInc_lv = lnInc_08, y.nodes = y.nodes, eps_draw = eps_draw, method = exp.method, 
-						interp.method = interp.method, ret.sim = TRUE, alpha = trim.alpha, par.draw = par_draw)
-		}else{
-			out1	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
-						base = beta0_base, X_list = X_list08, price = price.new, sim.y = sim.base08$y, 
-						eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw)
-		}
-		out1.avg	<- rbind(out1.avg, data.frame(out1$Average, 
-											lnInc = sim.unq[,"Inc08"], retailer = as.character(sel.retail), 
 											Var = 'price', change = iv.change.vec[j] ))
 		out1.alc[j,,,]	<- out1$Allocation
 	}

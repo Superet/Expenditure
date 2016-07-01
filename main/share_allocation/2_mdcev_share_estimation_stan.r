@@ -6,7 +6,7 @@ library(reshape2)
 library(evd)
 library(data.table)
 library(doParallel)
-library(nloptr)
+# library(nloptr)
 library(rstan)
 
 rstan_options(auto_write = TRUE)
@@ -23,7 +23,7 @@ if(length(args)>0){
 
 # arr_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 # arr_id	<- 22
-Nsec		<- 20				# Divide the full data by subsections
+Nsec		<- 25	#20			# Divide the full data by subsections
 seg_id	<- ceiling(arr_id/Nsec)
 arr_idx	<- arr_id - (seg_id - 1) * Nsec
 cat("seg_id =", seg_id, ", arr_idx =", arr_idx, ".\n")
@@ -33,9 +33,9 @@ cat("seg_id =", seg_id, ", arr_idx =", arr_idx, ".\n")
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 
 # setwd("/home/brgordon/ccv103/Exercise/run")
-setwd("/kellogg/users/marketing/2661703/Expenditure")
+# setwd("/kellogg/users/marketing/2661703/Expenditure")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
-# setwd("E:/Users/ccv103/Documents/Research/Store switching/run")
+setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
 
 run_id			<- 6#7
 cpi.adj			<- TRUE
@@ -294,7 +294,7 @@ my_init	<- function(){return(init_ls)}
 
 prt		<- proc.time()
 
-CL = makeCluster(2)
+CL = makeCluster(4)
 clusterExport(cl = CL, c("src_code", "data_ls", "save_par", "my_init", "init_ls", "numiter", "numburn", "numthin")) 
 fitls <- parLapply(CL, 1:4, fun = function(cid) {  
   	require(rstan)

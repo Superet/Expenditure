@@ -10,10 +10,11 @@ library(scales)
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd		<- "/Users/chaoqunchen/Desktop"
 
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 run_id		<- 4
 ww			<- 6.5
 ar			<- .8
+setwd(paste("~/Documents/Research/Store switching/processed data/Estimation/estrun_", run_id, sep=""))
 
 # outfile 	<- paste(plot.wd, "/counter1.xlsx", sep="")
 # mywb		<- createWorkbook()
@@ -48,21 +49,6 @@ for(ii in 1:nseg){
 	if(sim.omega){fname	<- paste(fname, "_simomega", sep="") }
 	fname			<- paste(fname, "_sim", numsim, "_", ver.date1, sep="")
 	load(paste(fname, ".rdata",sep=""))
-	# load(paste("estrun_",run_id, "/", fname, ".rdata",sep=""))
-	# 
-	# # NOTE: the structure of sim.X.ls -- list[4 intervention variables][6 retailers][Average, Allocation]
-	# # Stack the baseline average and average simulation results of each intervention
-	# tmp			<- do.call(rbind, lapply(sim.prc.ls, function(x) x$Average))
-	# tmp			<- rbind(sim.X.df, cbind(tmp, Var = "price"))
-	# tmp$income2007	<- exp(tmp$lnInc)/(1 - .1)
-	# tmp1		<- data.frame(sim.base07$Average, lnInc = sim.unq$Inc07, retailer = "", Var = "Base07", income2007 = sim.unq$income2007)
-	# tmp2		<- data.frame(sim.base08$Average, lnInc = sim.unq$Inc08, retailer = "", Var = "Base08", income2007 = sim.unq$income2007)
-	# tmp			<- rbind(tmp, tmp1, tmp2)
-	# 
-	# # Compute number of households in each income level 
-	# inc.tab		<- table(sim.data$income)
-	# tmp$nhh		<- inc.tab[as.character(tmp$income2007)]
-	# sim.df		<- rbind(sim.df, cbind(tmp, IncGrp = names(sim.ls)[ii]))
 	
 	# Combine counterfactual simulation together
 	tmp			<- setNames(vector("list", length(sim.X.ls) +1), c(names(sim.X.ls), "price"))			# A list of interventions
@@ -173,22 +159,19 @@ for(i in 1:nseg){
 }
 sim.dt$Elasticity	<- ifelse(sim.dt$Elasticity == -Inf, NA, sim.dt$Elasticity)
 sim.dt$retailer		<- fmt_name[sim.dt$retailer]
+sim.dt	<- data.table(sim.dt)
 
 # Compute expected value for each Income group - income level by averaging over iterations
-sim.dt	<- data.table(sim.dt)
 agg.dt	<- sim.dt[, list(	Base07 = mean(Base07, trim = trim.alpha, na.rm = TRUE), 
 							Base08 = mean(Base08, trim = trim.alpha, na.rm = TRUE), 
 							Difference = mean(Difference, trim = trim.alpha, na.rm = TRUE), 
-							Diff.se = sd(mytrimfun(Difference, trim.alpha), na.rm = T), 
 							PTC		= mean(PTC, trim = trim.alpha, na.rm = TRUE), 
-							PTC.se	= sd(mytrimfun(PTC, trim.alpha), na.rm = T),
-							Elasticity	= mean(Elasticity, trim = trim.alpha, na.rm = TRUE), 
-							Elast.se	= sd(mytrimfun(Elasticity, trim.alpha), na.rm = TRUE)
+							Elasticity	= mean(Elasticity, trim = trim.alpha, na.rm = TRUE) 
 							), 
 					by = list(IncGrp, income2007, retailer)]	
 
 # Share measure
-shr.dt	<- sim.dt[,':='(Base07 = Base07/sum(Base07)*100, Base08 = Base08/sum(Base08)*100), 
+shr.dt	<- sim.dt[,':='(Base07 = Base07/sum(Base07), Base08 = Base08/sum(Base08)), 
 					by = list(IncGrp, income2007, iter)]
 shr.dt	<- shr.dt[,':='(Difference = Base08 - Base07, 
 						PTC = (Base08 - Base07)/(-iv.change*income2007), 
@@ -197,12 +180,8 @@ shr.dt$Elasticity	<- ifelse(shr.dt$Elasticity == -Inf, NA, shr.dt$Elasticity)
 shr.dt	<- shr.dt[, list(	Base07 = mean(Base07, trim = trim.alpha, na.rm = TRUE), 
 							Base08 = mean(Base08, trim = trim.alpha, na.rm = TRUE), 
 							Difference = mean(Difference, trim = trim.alpha, na.rm = TRUE), 
-							Diff.se = sd(mytrimfun(Difference, trim.alpha), na.rm = T), 
 							PTC		= mean(PTC, trim = trim.alpha, na.rm = TRUE), 
-							PTC.se	= sd(mytrimfun(PTC, trim.alpha), na.rm = T),
-							Elasticity	= mean(Elasticity, trim = trim.alpha, na.rm = TRUE), 
-							Elast.se	= sd(mytrimfun(Elasticity, trim.alpha), na.rm = TRUE)
-							), 
+							Elasticity	= mean(Elasticity, trim = trim.alpha, na.rm = TRUE)), 
 					by = list(IncGrp, income2007, retailer)]
 
 # Merge in income frequency
@@ -228,11 +207,11 @@ cat("Overall average income effect on expenditure (across household variation):\
 tmp.tab	<- agg.dt[, list(Base07 = weight_summary(Base07, nhh, mean), 
 						Base08 = weight_summary(Base08, nhh, mean), 
 						Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se	= weight_se(Diff.se, nhh), 
+						Diff.sd	= weight_summary(Difference, nhh, sd), 
 						PTC = weight_summary(PTC, nhh, mean), 
-						PTC.se = weight_se(PTC.se, nhh),
+						PTC.sd = weight_summary(PTC, nhh, sd),
 						Elasticity = weight_summary(Elasticity, nhh, mean), 
-						Elast.se = weight_se(Elast.se, nhh)), 
+						Elast.sd = weight_summary(Elasticity, nhh, sd)), 
 					by = list(retailer)]
 tmp.tab	<- data.frame(tmp.tab)					
 cat("Averge income effect on expenditure at retailers:\n"); print(cbind(tmp.tab[,1], round(tmp.tab[,-1], 3))); cat("\n")
@@ -240,11 +219,11 @@ cat("Averge income effect on expenditure at retailers:\n"); print(cbind(tmp.tab[
 tmp.tab	<- shr.dt[, list(Base07 = weight_summary(Base07, nhh, mean), 
 						Base08 = weight_summary(Base08, nhh, mean), 
 						Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se	= weight_se(Diff.se, nhh), 
+						Diff.sd	= weight_summary(Difference, nhh, sd), 
 						PTC = weight_summary(PTC, nhh, mean), 
-						PTC.se = weight_se(PTC.se, nhh),
+						PTC.sd = weight_summary(PTC, nhh, sd),
 						Elasticity = weight_summary(Elasticity, nhh, mean), 
-						Elast.se = weight_se(Elast.se, nhh)), 
+						Elast.sd = weight_summary(Elasticity, nhh, sd)), 
 					by = list(retailer)]
 tmp.tab	<- data.frame(tmp.tab)					
 cat("Averge income effect on expenditure share at retailers:\n"); print(cbind(tmp.tab[,1], round(tmp.tab[,-1], 4))); cat("\n")
@@ -253,8 +232,8 @@ cat("Averge income effect on expenditure share at retailers:\n"); print(cbind(tm
 ord		<- tmp.tab[order(tmp.tab$Difference), "retailer"]
 tmp.tab$retailer <- factor(tmp.tab$retailer, levels = ord)
 p		<- ggplot(tmp.tab, aes(x = retailer, y = Difference)) + 
-		geom_bar(stat = "identity", position = position_dodge(width=0.9)) + 
-		geom_errorbar(aes(ymin = Difference-1.96*Diff.se, ymax = Difference + 1.96 * Diff.se), position=position_dodge(width=0.9), width=0.25) + 
+		geom_pointrange(aes(y=Difference, min = Difference-1.96*Diff.sd, ymax = Difference + 1.96 * Diff.sd)) +
+		scale_y_continuous(labels = scales::percent) +
 		labs(ylad = "Share difference") + 
 		coord_flip()
 p.idx	<- p.idx + 1
@@ -286,19 +265,19 @@ plots[[p.idx]]	<- ggplot(ggtmp, aes(IncGrp, value, fill = variable)) + geom_boxp
 tmp.tab	<- agg.dt[, list(Base07 = weight_summary(Base07, nhh, mean), 
 						Base08 = weight_summary(Base07, nhh, mean), 
 						Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se	= weight_se(Diff.se, nhh), 
+						Diff.sd	= weight_summary(Difference, nhh, sd), 
 						PTC = weight_summary(PTC, nhh, mean), 
-						PTC.se = weight_se(PTC.se, nhh),
+						PTC.sd = weight_summary(PTC, nhh, sd),
 						Elasticity = weight_summary(Elasticity, nhh, mean), 
-						Elast.se = weight_se(Elast.se, nhh)), 
+						Elast.sd = weight_summary(Elasticity, nhh, sd)), 
 					by = list(IncGrp, retailer)]
 tmp.tab	<- data.frame(tmp.tab)					
 sel 	<- sapply(1:ncol(tmp.tab), function(i) is.numeric(tmp.tab[,i]))					
 cat("Heterogeneous income effect on expenditure at retailers:\n"); 
 print(cbind(tmp.tab[,!sel], round(tmp.tab[,sel], 4))); cat("\n")
-sel		<- with(tmp.tab, Difference/Diff.se > 1.96)
+sel		<- with(tmp.tab, Difference/Diff.sd > 1.96)
 cat("Number of significant level difference =", sum(sel), ".\n")
-sel		<- with(tmp.tab, Elasticity/Elast.se > 1.96)
+sel		<- with(tmp.tab, Elasticity/Elast.sd > 1.96)
 cat("Number of significant Elasticity =", sum(sel), ".\n")
 
 # Plot expenditure at reatilers by income group
@@ -332,7 +311,6 @@ if(ci.method == "error"){
 				geom_boxplot(aes(weight = nhh), outlier.shape = NA) + 
 				facet_wrap(~retailer, scales = "free") +
 				labs(title = "Impact on expenditure at retail format of 10% decrease of income")
-	# print(p)
 }
 
 # Plot elasticity of expenditure at retailers by income group
@@ -344,27 +322,28 @@ if(ci.method == "error"){
 tmp.tab	<- shr.dt[, list(Base07 = weight_summary(Base07, nhh, mean), 
 						Base08 = weight_summary(Base07, nhh, mean), 
 						Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se	= weight_se(Diff.se, nhh), 
+						Diff.sd	= weight_summary(Difference, nhh, sd), 
 						Elasticity = weight_summary(Elasticity, nhh, mean), 
-						Elast.se = weight_se(Elast.se, nhh)), 
+						Elast.sd = weight_summary(Elasticity, nhh, sd)), 
 					by = list(IncGrp, retailer)]
 tmp.tab	<- data.frame(tmp.tab)					
 sel 	<- sapply(1:ncol(tmp.tab), function(i) is.numeric(tmp.tab[,i]))					
 cat("Heterogeneous income effect on expenditure at retailers:\n"); 
 print(cbind(tmp.tab[,!sel], round(tmp.tab[,sel], 4))); cat("\n")
-sel		<- with(tmp.tab, Difference/Diff.se > 1.96)
+sel		<- with(tmp.tab, Difference/Diff.sd > 1.96)
 cat("Number of significant level difference =", sum(sel), ".\n")
-sel		<- with(tmp.tab, Elasticity/Elast.se > 1.96)
+sel		<- with(tmp.tab, Elasticity/Elast.sd > 1.96)
 cat("Number of significant Elasticity =", sum(sel), ".\n")
 
 # Plot the share change by income group 
 incg.col<- c("red","grey30", "grey50")			# Color of low, median, high income bar
 tmp.tab$retailer	<- factor(tmp.tab$retailer, levels = ord)
 p		<- ggplot(tmp.tab, aes(retailer, Difference, fill = IncGrp, col = IncGrp)) + 
-			geom_bar(stat = "identity", position = position_dodge(width=0.9)) + 
-			geom_errorbar(aes(ymin = Difference-1.96*Diff.se, ymax = Difference + 1.96 * Diff.se, col = IncGrp), position=position_dodge(width=0.9), width=0.25) + 
+			geom_pointrange(aes(y = Difference, ymin = Difference-1.96*Diff.sd, ymax = Difference + 1.96 * Diff.sd, col = IncGrp), 
+					position = position_dodge(width=0.5)) +
 			scale_fill_manual(values = rev(incg.col)) + 
-			scale_color_manual(values = rev(incg.col)) + 
+			scale_color_manual(values = rev(incg.col)) +
+			scale_y_continuous(labels = percent)  +
 			xlab("Channel") + ylab("Share difference")+ coord_flip() + 
 			guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE))
 p.idx	<- p.idx + 1
@@ -383,6 +362,7 @@ ww		<- 9
 # Construct plotting data
 ggtmp	<- data.frame()
 nx		<- 3:length(sim.ls[[1]])
+sel.base	<- "Base08"				# Baseline comparison
 
 # Structure of sim.ls: list[3 income group][2 baseline + 5 variables][6 retailers] -- array[numsim, income level, outcome retailer]
 for(i in nx){
@@ -391,7 +371,7 @@ for(i in nx){
 			tmp		<- array(0, dim(sim.ls[[k]][[i]][[j]]), dimnames = dimnames(sim.ls[[k]][[i]][[j]]))
 			# For each change value, compute the difference of expenditure from the baseline
 			for(l in 1:length(iv.change.vec)){
-				tmp[l,,,]	<- sim.ls[[k]][[i]][[j]][l,,,]	- sim.ls[[k]]$Base08
+				tmp[l,,,]	<- sim.ls[[k]][[i]][[j]][l,,,]	- sim.ls[[k]][[sel.base]]
 			}		
 			tmp		<- tmp[,,,names(sim.ls[[k]][[i]])[j]]					# Only focus on own effect
 			tmp1	<- apply(tmp, c(1,3), mean, trim = trim.alpha, na.rm=T)	
@@ -412,10 +392,10 @@ ggtmp$retailer <- gsub("\\s", "\n", as.character(ggtmp$retailer))
 
 # Combine together overall and income groups
 ggtmp1	<- ggtmp[, list(Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se = weight_se(se, nhh)), 
+						Diff.sd = weight_summary(Difference, nhh, sd)), 
 					by = list(IncGrp, Var, retailer, change)]
 tmp		<- ggtmp[, 	list(Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se = weight_se(se, nhh)), 
+						Diff.sd = weight_summary(Difference, nhh, sd)), 
 					by = list(Var, retailer, change)]
 ggtmp1	<- rbind(ggtmp1, cbind(IncGrp = "Overall", tmp))
 ggtmp1$group	<- ifelse(ggtmp1$IncGrp == "Overall", "Overall", "Income group")
@@ -428,7 +408,7 @@ plots	<- list(NULL)
 my.color	<- c("#66c2a5", "#fc8d62", "#8da0cb", "black")
 for(i in 1:length(var.unq)){
 	plots[[i]]<- 	ggplot(subset(ggtmp1, Var %in% var.unq[i]), aes(change, Difference, col = IncGrp)) + 	
-					geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.se, ymax=Difference + 1.96*Diff.se), 
+					geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.sd, ymax=Difference + 1.96*Diff.sd), 
 									position=position_dodge(width=0.005)) + 
 					geom_line() + 
 					geom_hline(yintercept = 0, linetype = 2, size = .25) + 
@@ -443,22 +423,22 @@ for(i in 1:length(plots)){
 	print(plots[[i]])
 }
 dev.off()
-
-#  Slides buildup
-pdf(paste(plot.wd, "/graph_ctrfact_seq_sim", numsim, "_slide_", ver.date1,".pdf", sep=""), width = 6.5, height = 6.5)
-print(ggplot(subset(ggtmp1, Var == "price" & IncGrp == "Overall" & retailer == "Grocery"), aes(change, Difference)) + 	
-				geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.se, ymax=Difference + 1.96*Diff.se)) + 
-				geom_line() + 
-				geom_hline(yintercept = 0, linetype = 2, size = .25) + 
-				facet_grid(retailer~group, scales = "free") + 
-				labs(x = "Percentage change", y = "Expenditure difference ($)"))
-print(ggplot(subset(ggtmp1, Var == "price" & IncGrp == "Overall"), aes(change, Difference)) + 	
-				geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.se, ymax=Difference + 1.96*Diff.se)) + 
-				geom_line() + 
-				geom_hline(yintercept = 0, linetype = 2, size = .25) + 
-				facet_grid(retailer~group, scales = "free") + 
-				labs(x = "Percentage change", y = "Expenditure difference ($)")	)				
-dev.off()
+# 
+# #  Slides buildup
+# pdf(paste(plot.wd, "/graph_ctrfact_seq_sim", numsim, "_slide_", ver.date1,".pdf", sep=""), width = 6.5, height = 6.5)
+# print(ggplot(subset(ggtmp1, Var == "price" & IncGrp == "Overall" & retailer == "Grocery"), aes(change, Difference)) + 	
+# 				geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.se, ymax=Difference + 1.96*Diff.se)) + 
+# 				geom_line() + 
+# 				geom_hline(yintercept = 0, linetype = 2, size = .25) + 
+# 				facet_grid(retailer~group, scales = "free") + 
+# 				labs(x = "Percentage change", y = "Expenditure difference ($)"))
+# print(ggplot(subset(ggtmp1, Var == "price" & IncGrp == "Overall"), aes(change, Difference)) + 	
+# 				geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.se, ymax=Difference + 1.96*Diff.se)) + 
+# 				geom_line() + 
+# 				geom_hline(yintercept = 0, linetype = 2, size = .25) + 
+# 				facet_grid(retailer~group, scales = "free") + 
+# 				labs(x = "Percentage change", y = "Expenditure difference ($)")	)				
+# dev.off()
 
 # --------------------- #
 # Plot share elasticity #
@@ -474,7 +454,7 @@ for(i in nx){
 			# For each change value, compute the difference of expenditure from the baseline
 			for(l in 1:length(iv.change.vec)){
 				tmp1		<- apply(sim.ls[[k]][[i]][[j]][l,,,], c(1,2), function(x) x/sum(x))
-				tmp0		<- apply(sim.ls[[k]]$Base08, c(1,2), function(x) x/sum(x))
+				tmp0		<- apply(sim.ls[[k]][[sel.base]], c(1,2), function(x) x/sum(x))
 				tmp1		<- aperm(tmp1, c(3, 2, 1))
 				tmp0		<- aperm(tmp0, c(3, 2, 1))
 				tmp[l,,,]	<- tmp1	- tmp0
@@ -503,10 +483,10 @@ ggtmp$retailer <- gsub("\\s", "\n", as.character(ggtmp$retailer))
  
 # Combine together overall and income groups
 ggtmp1	<- ggtmp[, list(Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se = weight_se(se, nhh)), 
+						Diff.sd = weight_summary(Difference, nhh, sd)), 
 					by = list(IncGrp, Var, retailer, change)]
 tmp		<- ggtmp[, 	list(Difference = weight_summary(Difference, nhh, mean), 
-						Diff.se = weight_se(se, nhh)), 
+						Diff.sd = weight_summary(Difference, nhh, sd)), 
 					by = list(Var, retailer, change)]
 ggtmp1	<- rbind(ggtmp1, cbind(IncGrp = "Overall", tmp))
 ggtmp1$group	<- ifelse(ggtmp1$IncGrp == "Overall", "Overall", "Income group")
@@ -518,7 +498,7 @@ plots	<- list(NULL)
 my.color	<- c("#66c2a5", "#fc8d62", "#8da0cb", "black")
 for(i in 1:length(var.unq)){
 	plots[[i]]<- ggplot(subset(ggtmp1, Var %in% var.unq[i]), aes(change, Difference, col = IncGrp)) + 	
-					geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.se, ymax=Difference + 1.96*Diff.se)) + 
+					geom_pointrange(aes(y = Difference, ymin=Difference - 1.96*Diff.sd, ymax=Difference + 1.96*Diff.sd)) + 
 					geom_line() + 
 					geom_hline(yintercept = 0, linetype = 2, size = .25) + 
 					scale_y_continuous(labels=percent) + 

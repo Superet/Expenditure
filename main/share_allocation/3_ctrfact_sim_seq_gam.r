@@ -68,16 +68,86 @@ if(sim.omega){fname	<- paste(fname, "_simomega", sep="") }
 fname			<- paste(fname, "_sim", numsim, "_", as.character(Sys.Date()), sep="")
 cat("Output file name is", fname, ".\n")
 
+# Set simulation parameters
+lambda 	<- coef(sol.top2)
+shr.par	<- coef(sol)
+
+###########################################################
+# Re-simluate inclusive vlaue with changing price vectors # 
+###########################################################
+# Average price
+if(week.price){
+	tmp 		<- dcast(price_dat,	 scantrack_market_descr + year + biweek ~ channel_type, value.var = "bsk_price_paid_2004") 
+	sel			<- sample(1:nrow(tmp), length(lnInc)*numnodes, replace = T)
+	tmp_price	<- as.matrix(tmp[sel,4:(3+R)])
+}else{
+	tmp 		<- dcast(price_dat,	 scantrack_market_descr + year ~ channel_type, value.var = "bsk_price_paid_2004") 
+	sel			<- sample(1:nrow(tmp), length(lnInc)*numnodes, replace = T)
+	tmp_price	<- as.matrix(tmp[sel,3:(2+R)])
+}
+
+# Average retail attributes
+tmpX_list	<- lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_attr, channel_type == x)[,selcol])))		
+
+# Register parallel computing
+mycore 	<- 3
+# cl		<- makeCluster(mycore, type = "FORK")		# Register cores in Mac or Unix
+cl		<- makeCluster(mycore, type = "PSOCK")			# Register cores in Windows
+registerDoParallel(cl)
+cat("Register", mycore, "core parallel computing. \n")
+
+set.seed(687)
+eps_draw	<- matrix(rgev(numsim*R, scale = exp(shr.par["ln_sigma"])), numsim, R)
+
+omega_parallel	<- function(eps_draw){
+	out		<- matrix(NA, length(lnInc), numnodes)
+	for(j in 1:length(lnInc)){
+		tmpX_list1	<- vector("list", R)
+		for(k in 1:R){
+			tmp	<- rep(0, R-1)
+			if(k < beta0_base){	tmp[k] <- lnInc[j]}
+			if(k > beta0_base){ tmp[(k-1)]	<- lnInc[j]}
+			tmpX_list1[[k]]	<- rep(1, numnodes) %*% t(c(tmp, tmpX_list[[k]], tmpX_list[[k]]*lnInc[j]))
+		}
+		prc.idx		<- (j-1)*numnodes + 1:numnodes
+		tmpsol 		<- incl_value_fn(param_est=shr.par, nx=nx, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price[prc.idx,], 
+					R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw) )
+		out[j,]		<- tmpsol$omega
+	}
+	return(out)
+}
+
+pct			<- proc.time()
+tmp			<- foreach(i = 1:numsim) %dopar% {
+	omega_parallel(eps_draw[i,])
+}
+omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(iter = NULL, lnInc = lnInc, y = y.nodes))
+for(i in 1:numsim){
+	omega_draw[i,,]	<- tmp[[i]]
+}
+use.time	<- proc.time() - pct
+cat("Simulation of omega with random draws finishes with", use.time[3]/60, "min.\n")
+cat("--------------------------------------------------------\n")
+
+# NOTE: we trim 5% omega data to smooth things out. 
+if(interp.method == "spline"){
+	tmp	<- apply(omega_draw, c(2,3), mytrimfun, alpha = trim.alpha)
+	tmpdat	<- melt(tmp)
+	names(tmpdat) <- c("iter", "lnInc", "y", "omega")
+	tmp1	<- kronecker(rep(1, numsim), tmp_price)		# Price matrix
+	colnames(tmp1)	<- paste("PRC_", gsub("\\s", "_", colnames(tmp_price)), sep="")
+	tmpdat	<- cbind(tmpdat, tmp1)
+	omega_deriv	<- spl2dfun(tmpdat, fml = as.formula(paste("omega ~ te(lnInc, y)+", paste(colnames(tmp1), collapse="+"), sep="" )) )
+}else{
+	omega_deriv	<- lapply(1:length(lnInc), function(i) chebfun(x = y.nodes, y = tmp[i,], interval = y.interval))
+	names(omega_deriv)	<- lnInc
+}
+
 ###############################
 # Prepare simulation elements # 
 ###############################
 # Data required: parameters, income level, price, retail attributes, and random draws
 # For each simulation scenario, if income, price or retail attributes change, we need to re-simulate inclusive values.
-
-# Set simulation parameters
-lambda 	<- coef(sol.top2)
-shr.par	<- coef(sol)
-
 #-----------------------#
 # Construct income data # 
 # Take the households' income in 2007 as basis 
@@ -101,11 +171,11 @@ cat("dim(sim.unq) =", dim(sim.unq), "\n")
 if(week.price){
 	tmp 		<- dcast(subset(price_dat, year %in% selyr),	 
 						scantrack_market_descr + year + biweek ~ channel_type, value.var = "bsk_price_paid_2004") 
-	price.07	<- setNames( colMeans(as.matrix(tmp[,4:(3+R)]), na.rm=T), fmt_name)
+	price.07	<- setNames( colMeans(as.matrix(tmp[,4:(3+R)]), na.rm=T), paste("PRC_", gsub("\\s", "_", fmt_name), sep=""))
 }else{
 	tmp 		<- dcast(subset(price_dat, year %in% selyr),	 
 						scantrack_market_descr + year ~ channel_type, value.var = "bsk_price_paid_2004") 
-	price.07	<- setNames( colMeans(as.matrix(tmp[,3:(2+R)]), na.rm=T), fmt_name)
+	price.07	<- setNames( colMeans(as.matrix(tmp[,3:(2+R)]), na.rm=T), paste("PRC_", gsub("\\s", "_", fmt_name), sep=""))
 }
 cat("The average price level in 2007:\n"); print(price.07);cat("\n")
 
@@ -117,7 +187,7 @@ cat("The average retail attributes in 2007:\n"); print(do.call(rbind, X_list0));
 
 # Expand X_list and price to match the nobs of income 
 price.07	<- rep(1, nrow(sim.unq)) %*% matrix(price.07, nrow = 1)
-colnames(price.07)	<- fmt_name
+colnames(price.07)	<- paste("PRC_", gsub("\\s", "_", fmt_name), sep="")
 X_list08	<- X_list07	<- setNames(vector("list", R), fmt_name)
 for(i in 1:R){
 	tmp2	<- tmp1	<- matrix(0, nrow(sim.unq), R-1)
@@ -161,24 +231,6 @@ cat("Summary stats of random draws:\n"); print(summary(c(eps_draw))); cat("\n")
 ##############
 # Simulation #
 ##############
-if(interp.method == "spline"){
-	y.nodes		<- quantile(mydata$dol, c(0:50)/50)
-	y.nodes		<- sort(unique(c(y.nodes , seq(600, 1000, 100)) ))
-}else{
-	# Set up Chebyshev interpolation
-	GH_num_nodes<- 100
-	y.interval	<- c(.1, 1000)
-	y.nodes		<- chebknots(GH_num_nodes, interval = y.interval)[[1]]
-}
-numnodes<- length(y.nodes)
-
-# Register parallel computing
-mycore 	<- 3
-# cl		<- makeCluster(mycore, type = "FORK")
-cl		<- makeCluster(mycore, type = "PSOCK")			# Register cores in Windows
-registerDoParallel(cl)
-cat("Register", mycore, "core parallel computing. \n")
-
 # Simulate expenditure and expenditure share. 
 pct				<- proc.time()
 sim.base07		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, base = beta0_base, 
@@ -201,8 +253,12 @@ cat("Summary of baseline income elasticity:\n"); print(tmp); cat("\n")
 # Plot omega over y
 tmp		<- seq(50, 250, 10)
 tmpd1	<- data.frame(lnInc = rep(sim.unq$Inc07, each = length(tmp)), y = rep(tmp, length(sim.unq$Inc07)))
+tmp0 	<- kronecker(rep(1, nrow(tmpd1)), matrix(price.07[1,],nrow=1))
+colnames(tmp0)	<- colnames(price.07)
+tmpd1	<- cbind(tmpd1, tmp0)
 tmp1	<- omega_deriv(tmpd1)
 tmpd2	<- data.frame(lnInc = rep(sim.unq$Inc08, each = length(tmp)), y = rep(tmp, length(sim.unq$Inc08)))
+tmpd2	<- cbind(tmpd2, tmp0)
 tmp2	<- omega_deriv(tmpd2)
 ggtmp	<- rbind(cbind(tmpd1, omega = tmp1, year = 2007), cbind(tmpd2, omega = tmp2, year = 2008))
 ggtmp$Income	<- exp(ggtmp$lnInc)
@@ -220,7 +276,8 @@ tmp		<- seq(100, 110, .2)
 u		<- matrix(NA, length(tmp), length(lnInc), dimnames = list(y = tmp, lnInc = lnInc))
 for(i in 1:length(lnInc)){
 	f 	<- function(y, ...){
-		newx	<- data.frame(lnInc = lnInc[i], y = y)
+		tmp0	<- matrix(price.07[1,], nrow = 1, dimnames = list(NULL, colnames(price.07)))
+		newx	<- data.frame(lnInc = lnInc[i], y = y, tmp0)
 		omega_deriv(newx, ...)
 	}
 	u[,i]<- -exp_fn(tmp, lambda, f, ln_inc = lnInc[i])
@@ -260,7 +317,8 @@ sim.prc.ls07	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packa
 	
 	for(j in 1:length(iv.change.vec)){
 		price.new	<- price.07
-		price.new[,sel.retail]	<- price.07[,sel.retail] * (1 - iv.change.vec[j])
+		sel1		<- paste("PRC_", gsub("\\s", "_", sel.retail), sep="")
+		price.new[,sel1]	<- price.07[,sel1] * (1 - iv.change.vec[j])
 		if(sim.omega){
 			out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc07"], lambda = lambda, param_est = shr.par, 
 						base = beta0_base, X_list = X_list07, price = price.new, 
@@ -290,7 +348,8 @@ sim.prc.ls08	<- foreach(sel.retail = fmt_name, .errorhandling = "remove", .packa
 	
 	for(j in 1:length(iv.change.vec)){
 		price.new	<- price.07
-		price.new[,sel.retail]	<- price.07[,sel.retail] * (1 - iv.change.vec[j])
+		sel1		<- paste("PRC_", gsub("\\s", "_", sel.retail), sep="")
+		price.new[,sel1]	<- price.07[,sel1] * (1 - iv.change.vec[j])
 		if(sim.omega){
 			out1	<- SimOmega_fn(ln_inc = sim.unq[,"Inc08"], lambda = lambda, param_est = shr.par, 
 						base = beta0_base, X_list = X_list08, price = price.new, 

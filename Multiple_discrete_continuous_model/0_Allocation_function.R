@@ -255,7 +255,7 @@ param_assignR	<- function(param, nx, R, base = 0){
 	return(list(beta = beta, beta0 = beta0, gamma = gamma, sigma = sigma))
 }
 
-incl_value_fn <- function(param_est, base, X_list, y, Q, price, R, Ra, qz_cons = 0, exp_outside = TRUE, quant_outside = TRUE, eps_draw = NULL, inits=NULL,...){
+incl_value_fn <- function(param_est, nx, base, X_list, y, Q, price, R, Ra, qz_cons = 0, exp_outside = TRUE, quant_outside = TRUE, eps_draw = NULL, inits=NULL,...){
 # param_est		...	parameter estimates
 # X_array		...	Attributes array, dimension(R*Nobs*nx)
 # y				... A Nobs-dimensional expenditure budget. 

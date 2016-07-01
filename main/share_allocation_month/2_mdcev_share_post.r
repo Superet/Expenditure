@@ -7,16 +7,11 @@ library(stargazer)
 library(lmtest)
 library(mgcv)
 
-setwd("/kellogg/users/marketing/2661703/Exercise/run")
-run_id		<- 2
-make_plot	<- FALSE
-source("outreg function.R")
-
-# setwd("~/Documents/Research/Store switching/processed data")
-# source("../Exercise/main/outreg function.R")
+setwd("~/Documents/Research/Store switching/processed data/Estimation")
 plot.wd		<- "/Users/chaoqunchen/Desktop"
 ww			<- 6.5
 ar			<- .6
+run_id		<- 9
 
 # Read estimation from all segments #
 nseg	<- 3
@@ -25,7 +20,7 @@ exp.est	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 gam.ls	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 shr.par.ls	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 omega.est	<- vector("list", nseg)
-ver.date	<- "2016-02-26"
+ver.date	<- "2016-06-20"
 cpi.adj		<- TRUE
 tmpls		<- ls()
 
@@ -35,11 +30,6 @@ for(ii in 1:nseg){
 	}else{
 		loadf	<- paste("estrun_",run_id,"/MDCEV_est_seg",ii,"_", ver.date,".rdata",sep="")
 	}
-	# if(cpi.adj){
-	# 	loadf	<- paste("MDCEV_cpi_est_seg",ii,"_", ver.date,".rdata",sep="")
-	# }else{
-	# 	loadf	<- paste("MDCEV_est_seg",ii,"_", ver.date,".rdata",sep="")
-	# }
 	load(loadf)
 	shr.est[[ii]]	<- sol
 	exp.est[[ii]]	<- sol.top2
@@ -57,8 +47,8 @@ for(i in 1:length(shr.est)){
 	class(tmp)	<- "coeftest"
 	tmpls[[i]]	<- tmp
 }
-col.lab	<- c("SizeIndex", "ln(UPC per mod)", "ln(Num mod)", "Private label")
-tmplab	<- c(paste("log(I)*", fmt_name[-beta0_base],sep=""), col.lab, paste("log(I)*", col.lab, sep=""), fmt_name[-beta0_base], 
+col.lab	<- c("SizeIndex", "ln(UPC per cat)", "ln(Num cat)", "Private label")
+tmplab	<- c(paste("log(I)*", fmt_name[-beta0_base],sep=""), "s[t-1]", col.lab, fmt_name[-beta0_base], 
 			paste("gamma-", fmt_name, sep=""), "ln(sigma)", "lambda1", "lambda2") 
 
 # Check covariate label 
@@ -73,15 +63,15 @@ stargazer(tmpls, type = "text", column.labels = names(shr.est))
 # Export estimate table 
 stargazer(tmpls, type = "html", title = "Multi-stage model coefficent estimates", 
 			covariate.labels = tmplab, column.labels = names(shr.est),
-			no.space = TRUE, se = se, 
+			no.space = TRUE, 
 			out = paste(plot.wd, "/overall_est.html", sep=""))
 
 stargazer(tmpls, type = "latex", title = "Multi-stage model coefficent estimates", 
 			covariate.labels = tmplab, column.labels = names(shr.est),
-			no.space = TRUE, se = se, 
+			no.space = TRUE,
 			out = paste(plot.wd, "/overall_est.tex", sep=""))
 stargazer(tmpls, type = "latex", title = "Multi-stage model coefficent estimates", 
-			covariate.labels = tmplab, column.labels = names(shr.est), se = se, 
+			covariate.labels = tmplab, column.labels = names(shr.est), 
 			no.space = TRUE)
 
 # Combine the inclusive value plot
@@ -96,5 +86,5 @@ dev.off()
 
 # Save the parameters to a data set
 shr.par.mat	<- do.call(cbind, shr.par.ls)
-save(shr.par.mat, file = "MDCEV_cpiest_shrpar.rdata")
+save(shr.par.mat, file = paste(plot.wd, "/MDCEV_cpiest_shrpar.rdata", sep=""))
 			

@@ -3,10 +3,13 @@ library(reshape2)
 library(ggplot2)
 library(data.table)
 
+# Model 
+# y = beta_0 + beta_1*t
+
 set.seed(9)
-n 	<- 10
-T	<- 20
-rho <- -.4
+n 	<- 10					# Number of individuals
+T	<- 20					# Number of periods
+rho <- -.4					# Correlation between intercept and slope
 ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))
 ab[,2] <- ab[,2] * .1
 x 	<- 1:T
@@ -20,4 +23,4 @@ mydata	<- mydata[,within:=within + mean(y[t==1])]
 ggplot(mydata, aes(x, y)) + 
 	geom_line(aes(group = id), size = .25) + 
 	geom_smooth(method = "lm") + 
-	geom_smooth(data = subset(mydata, t>1) , aes(x, within), method = "lm", color = "red")
+	geom_smooth(data = subset(mydata, t>1) , aes(x, within), method = "lm", color = "red") 

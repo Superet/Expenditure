@@ -7,14 +7,12 @@ library(stargazer)
 library(lmtest)
 library(mgcv)
 
-setwd("/sscc/home/c/ccv103/Exercise/run/estrun_4")
-plot.wd		<- getwd()
-run_id		<- 4
+# setwd("/sscc/home/c/ccv103/Exercise/run/estrun_4")
+# plot.wd		<- getwd()
+run_id		<- 8
 make_plot	<- FALSE
-source("outreg function.R")
 
-# setwd("~/Documents/Research/Store switching/processed data")
-# source("../Exercise/main/outreg function.R")
+setwd("~/Documents/Research/Store switching/processed data/Estimation/estrun_8")
 plot.wd		<- "/Users/chaoqunchen/Desktop"
 ww			<- 6.5
 ar			<- .6
@@ -26,20 +24,21 @@ exp.est	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 gam.ls	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 se.ls	<- setNames(vector("list", nseg), c("Low", "Med", "High"))
 omega.est	<- vector("list", nseg)
-ver.date1	<- "2016-03-06"
-nb			<- 100
+ver.date1	<- "2016-05-25"	#"2016-05-14" #"2016-03-06"
+nb1			<- 100
 cpi.adj		<- TRUE
 tmpls		<- ls()
 
-for(ii in 1:nseg){
-	loadf	<- paste("MDCEV_estbt_seg",ii, "_nb", nb, "_", ver.date1,".rdata",sep="")
+for(jj in 1:nseg){
+	loadf	<- paste("MDCEV_estbt_seg",jj, "_nb", nb1, "_", ver.date1,".rdata",sep="")
 	load(loadf)
-	shr.est[[ii]]	<- sol
-	exp.est[[ii]]	<- sol.top2
-	omega.est[[ii]]	<- omega_deriv
-	se.ls[[ii]]		<- se.bt
-	print(ii)
-	rm(list = setdiff(ls(), c(tmpls, "ii", "tmpls", "R", "fmt_name", "beta0_base")) )
+	shr.est[[jj]]	<- sol
+	exp.est[[jj]]	<- sol.top2
+	omega.est[[jj]]	<- omega_deriv
+	se.ls[[jj]]		<- se.bt
+	#gam.ls[[jj]]	<- gamfit
+	print(jj)
+	rm(list = setdiff(ls(), c(tmpls, "jj", "tmpls", "R", "fmt_name", "beta0_base")) )
 }
 
 # Eestimation coefficient summary
@@ -49,8 +48,8 @@ for(i in 1:length(shr.est)){
 	class(tmp)	<- "coeftest"
 	tmpls[[i]]	<- tmp
 }
-col.lab	<- c("SizeIndex", "ln(UPC per mod)", "ln(Num mod)", "Private label")
-tmplab	<- c(col.lab, paste("log(I)*", col.lab, sep=""), fmt_name[-beta0_base], 
+col.lab	<- c("SizeIndex", "ln(UPC per mod)", "ln(No. category)", "Private label")
+tmplab	<- c(paste("log(I)*", fmt_name[-beta0_base], sep=""), col.lab, paste("log(I)*", col.lab, sep=""), fmt_name[-beta0_base], 
 			paste("gamma-", fmt_name, sep=""), "ln(sigma)", "lambda1", "lambda2") 
 
 # Check covariate label 

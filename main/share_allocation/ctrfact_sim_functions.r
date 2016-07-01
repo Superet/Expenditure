@@ -76,10 +76,10 @@ solveExp_fn	<- function(lambda, omega_fn, ln_inc, method = "FOC", lower = NULL, 
 # ln_inc	...	A scalor of log(income)
 #==============================================================================#
 	if(is.null(lower) & is.null(upper)){
-		init.interval	<- c(50, 250)
+		init.interval	<- c(50, 500)
 	}else{
 		if(is.null(lower)) 	{ lower <- 50 }
-		if(is.null(upper))	{ upper	<- 250 }
+		if(is.null(upper))	{ upper	<- 500 }
 		init.interval	<- c(lower, upper)
 	}
 	switch(method, 
@@ -146,7 +146,7 @@ simExp_fn	<- function(lambda, omega_deriv, ln_inc, method = "FOC", lower = NULL,
 }
 
 SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, price, eps_draw, 
-							sim.y = NULL, method = "FOC", use.bound = FALSE, ret.sim = FALSE, par.draw = NULL){
+							sim.y = NULL, method = "FOC", use.bound = FALSE, ret.sim = FALSE, par.draw = NULL, share.state = NULL){
 # This function simulates expenditure and share, having known omega_fn_ls. 
 
 # omega_deriv	...	A function of 2d spline 
@@ -167,6 +167,7 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 	
 	numsim	<- nrow(eps_draw)	
 	R		<- length(X_list)
+	nx		<- ncol(as.matrix(X_list[[1]]))
 	if(is.null(sim.y)){
 		y		<- matrix(NA, numsim, length(ln_inc))
 	}else{
@@ -184,14 +185,18 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 	lvinc	<- sort(unique(ln_inc))
 	
 	# Set up model matrix
-	nx0			<- ncol(X_list[[1]])		# Number of retail attributes
-	tmpX_list1	<- lapply(X_list, function(x) cbind(x, x*(ln_inc %*% matrix(1, 1, nx0))))
 	for(i in 1:length(lvinc)){
 		sel <- ln_inc == lvinc[i]
 		lower	<- NULL		
+		tmpX_list1	<- lapply(X_list, function(x) x[sel,])
 		# Omega function conditional on income level 
 		f 	<- function(y, ...){
-			newx	<- data.frame(lnInc = lvinc[i], y = y)
+			tmp0	<- data.frame(matrix(price[i,], nrow=1, dimnames = list(NULL, colnames(price))))
+			newx	<- data.frame(lnInc = lvinc[i], y = y, tmp0)
+			if(!is.null(share.state)){
+				Xlag	<- matrix(share.state[i,], nrow = 1)
+				newx$Xlag	<- Xlag
+			}
 			omega_deriv(newx, ...)
 		}
 
@@ -205,12 +210,18 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 		}
 
 		for(j in 1:numsim){				
-			tmpsol 		<- try(incl_value_fn(param_est+shr.draw[j,], base, X_list=tmpX_list1, y=y[j,sel], Q=Inf, price=price, 
+			tmpsol 		<- try(incl_value_fn(param_est+shr.draw[j,], nx, base, X_list=tmpX_list1, y=y[j,sel], Q=Inf, 
+						price=matrix(price[sel,], nrow = sum(sel)), 
 						R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, 
-						eps_draw = rep(1,nrow(price)) %*% t(eps_draw[j,]) ), silent = TRUE)
+						eps_draw = rep(1,sum(sel)) %*% t(eps_draw[j,]) ), silent = TRUE)
 			if(class(tmpsol) != "try-error"){
-				omega[j,sel] 	<- tmpsol$omega			
-				omega1[j,sel]	<- omega_deriv(newx = data.frame(lnInc = lvinc[i], y = y[j,sel]))
+				omega[j,sel] 	<- tmpsol$omega	
+				tmp0			<- data.frame(matrix(price[i,], nrow=1, dimnames = list(NULL, colnames(price))))
+				newx 			<- data.frame(lnInc = lvinc[i], y = y[j,sel], tmp0)		
+				if(!is.null(share.state)){
+					newx$Xlag	<- matrix(share.state[sel,], nrow=1)
+				}
+				omega1[j,sel]	<- omega_deriv(newx)
 				e[j,sel,]		<- tmpsol$e
 			}
 		}			
@@ -251,13 +262,14 @@ SimOmega_fn	<- function(ln_inc, lambda, param_est, base, X_list, price, lnInc_lv
 	numsim		<- nrow(eps_draw)
 	numnodes	<- length(y.nodes)
 	R			<- length(X_list)
+	nx			<- ncol(as.matrix(X_list[[1]]))
 	
 	# Simulate inclusive values under the new retail attributes
 	omega_new	<- array(NA, c(numsim, length(lnInc_lv), numnodes), dimnames = list(NULL, lnInc_lv, y.nodes))
 	for(i in 1:numsim){
 		for(j in 1:length(lnInc_lv)){
 			tmpX_list	<- lapply(X_list, function(x) cbind(x, x*lnInc_lv[j]))
-			tmpsol 		<- try(incl_value_fn(param_est=param_est, base= beta0_base, X_list=tmpX_list, y=y.nodes, Q=Inf, price=rep(1,numnodes) %*% t(price), 
+			tmpsol 		<- try(incl_value_fn(param_est=param_est, nx = nx, base= beta0_base, X_list=tmpX_list, y=y.nodes, Q=Inf, price=rep(1,numnodes) %*% t(price), 
 						R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw[i,]) ), silent = TRUE)
 			if(class(tmpsol) == "try-error"){
 				cat("Error at computing omega at eps_draw[",i,"] and lnInc[",j,"].\n")

@@ -30,16 +30,16 @@ if(length(args)>0){
 }
 
 # seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
-cat("seg_id =", seg_id, "\n")
 
 model_name 		<- "MDCEV_share"
-run_id			<- 8
-# seg_id		<- 1
+run_id			<- 9
+seg_id		<- 1
 make_plot		<- TRUE
 interp.method	<- "spline"			# "cheb"
 trim.alpha		<- 0 #0.05
 cpi.adj			<- TRUE
 week.price		<- FALSE
+cat("seg_id =", seg_id, "\n")
 
 # setwd("~/Documents/Research/Store switching/processed data")
 # plot.wd	<- '~/Desktop'
@@ -47,9 +47,10 @@ week.price		<- FALSE
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 # source("../Exercise/main/share_allocation/ctrfact_sim_functions.r")
 
-setwd("/home/brgordon/ccv103/Exercise/run")
+# setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
 # setwd("/sscc/home/c/ccv103/Exercise/run")
+setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
 
 sourceCpp(paste(model_name, ".cpp", sep=""))
 source("0_Allocation_function.R")
@@ -65,11 +66,7 @@ fname
 #################################
 # Read data and subsetting data #
 #################################
-if(week.price){
-	load("hh_biweek_exp_20150812.rdata")
-}else{
-	load("hh_biweek_exp.rdata")
-}
+load("hh_month_exp.rdata")
 
 # Extract 5% random sample
 # length(unique(hh_exp$household_code))
@@ -80,10 +77,6 @@ if(week.price){
 # Retail formats 
 fmt_name 	<- as.character(sort(unique(fmt_attr$channel_type)))
 R			<- length(fmt_name)
-
-# Convert some date and factor variables
-hh_exp$month <- month(as.Date("2004-1-1", format="%Y-%m-%d") + 14*(hh_exp$biweek-1))
-hh_exp$famsize		<- factor(hh_exp$famsize, levels = c("Single","Two", "Three+"))
 
 # Compute expenditure share
 sel			<- paste("DOL_", gsub("\\s", "_", fmt_name), sep="")
@@ -109,8 +102,22 @@ hh_exp$ln_inc<- log(hh_exp$income_midvalue)
 cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_incomeg)); cat("\n")
 
 # Subset data 
-selcol		<- c("household_code", "biweek", "dol", "year", "month", "income_midvalue", "ln_inc","first_incomeg", "scantrack_market_descr",paste("SHR_", gsub("\\s", "_", fmt_name), sep=""))
+selcol		<- c("household_code", "dol", "year", "month", "income_midvalue", "ln_inc","first_incomeg", "scantrack_market_descr",paste("SHR_", gsub("\\s", "_", fmt_name), sep=""))
 mydata		<- subset(hh_exp[,selcol], as.numeric(first_incomeg) == seg_id & dol > .1 )
+
+# Lag of expenditure share
+mydata		<- data.table(mydata)
+for(i in fmt_name){
+	tmpv1	<- as.name(paste("LAG_", gsub(" ", "_", i), sep=""))
+	tmpv2	<- as.name(paste("SHR_", gsub(" ", "_", i), sep=""))
+	mydata	<- mydata[, eval(tmpv1):=c(NA, eval(tmpv2)[-length(year)]), by = list(household_code)]
+}
+
+# Drop the first observation for each household
+dim(mydata)
+mydata	<- mydata[!is.na(LAG_Grocery),]
+dim(mydata)
+mydata	<- data.frame(mydata)
 
 ################################
 # Organize data for estimation #
@@ -161,7 +168,7 @@ if(week.price){
 	price 	<- dcast(tmp, scantrack_market_descr + year ~ name, value.var = "bsk_price_paid_2004")
 	mydata <- merge(mydata, price, by=c("scantrack_market_descr", "year"), all.x=T)
 }
-ord		<- order(mydata$household_code, mydata$biweek)
+ord		<- order(mydata$household_code, mydata$year, mydata$month)
 mydata	<- mydata[ord,]
 
 # Outcome variables as matrix
@@ -185,13 +192,14 @@ names(tmpn) <- tmp
 sel 	<- with(mydata, paste(scantrack_market_descr,year, sep="-"))
 sel1	<- tmpn[sel]
 selcol	<- c("size_index", "ln_upc_per_mod", "ln_num_module","overall_prvt")
-nx 		<- length(selcol) * 2 + R -1 
+nx 		<- length(selcol) + R 
 beta0_base 	<- which(fmt_name == "Grocery")
 
 X_list 	<- vector("list", length=length(fmt_name))
 for(i in 1:length(fmt_name)){
 	sel2		<- fmt_attr$channel_type == fmt_name[i]
 	tmp			<- fmt_attr[sel2,selcol]
+	tmp0		<- mydata[,paste("LAG_", gsub(" ", "_", fmt_name[i]), sep="")]
 	tmp1 		<- as.matrix(tmp[sel1,])
 	tmp2		<- matrix(0, nrow(shr), R-1)
 	if(i < beta0_base){
@@ -199,7 +207,7 @@ for(i in 1:length(fmt_name)){
 	}else if(i > beta0_base){
 		tmp2[,(i-1)] <- ln_inc
 	}
-	X_list[[i]]	<- cbind(tmp2, tmp1, tmp1 * ln_inc)
+	X_list[[i]]	<- cbind(tmp2, lag = tmp0, tmp1)
 }
 
 ##############
@@ -228,9 +236,9 @@ if(fixsigma){
 						c(rep(0, R-1), -1, -.3, 1, -2, 	.1, .0, -.1, .3, 	-2, -1, -1, -.5, -1, 	3, 15, 4, 4, 7, 37, 0), 
 						c(rep(0, R-1), -1, -.5, 1.5, -4,	.1, -.1,-.5, .5, 	-3, -1, -2, -1, -.8, 	3, 15, 4, 4, 8, 40, 0  ) )	
 }else if(cpi.adj){
-	theta_init	<- list(c(-.2, .03, -.2, -.06, .4, 	.2, .1, .7, 1.3, 	0, .05, -.06, -.03, 	-1.5, .2, 1, .2, -4,  	6, 34, 8, 8, 15, 60, -.45), 
-						c(-.2, -.05,-.2,-.08,.1,	.3, .4, .5, 1, 		0, .02, -.06, -.36, 	0, .6, .8, .5, -1.5, 	6, 35, 8, 8, 18, 70, -.5), 
-						c(-.3,-.12,-.38,-.15,.1,	.1, .4, .37, -.3, 	-.01, .02, -.04, .1, 	-1, .7, .5, 1.4, -1.2, 	5, 37, 8, 9, 20, 80, -.5 ) )
+	theta_init	<- list(c(-.2, .03, -.2, -.06, .1, 	2, .2, .1, .2, 1.3, 		1, -.2, 1, 1, -2,  	6, 34, 8, 8, 15, 60, -.45), 
+						c(-.2, -.05,-.2,-.08,.1,	1.9, .3, .4, .5, 1, 		0, -.6, .8, .5, -1.5, 	6, 35, 8, 8, 18, 70, -.5), 
+						c(-.3,-.12,-.38,-.15,.1,	1.8, .1, .4, .37, -.3, 	-1, .7, -.5, 1.4, -1.2, 	5, 37, 8, 9, 20, 80, -.5 ) )
 	
 }else{
 	theta_init	<- list(c(rep(0, R-1), -1, -.1, 1, -1.5, 	.1, .1, -.1, .1, 	-1, -1, -1, -.5, -1,  5, 20, 4, 4, 6, 50, -.3), 
@@ -305,7 +313,8 @@ tmpX_list	<- lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_attr, ch
 
 # Register parallel computing
 mycore 	<- 3
-cl		<- makeCluster(mycore, type = "FORK")
+# cl		<- makeCluster(mycore, type = "FORK")
+cl		<- makeCluster(mycore, type = "PSOCK")			# Register cores in Windows
 registerDoParallel(cl)
 cat("Register", mycore, "core parallel computing. \n")
 
@@ -315,16 +324,17 @@ shr.par	<- coef(sol)
 set.seed(687)
 numsim 		<- 1000
 eps_draw	<- matrix(rgev(numsim*R, scale = exp(shr.par["ln_sigma"])), numsim, R)
+lag_nodes	<- shr[sample(1:nrow(shr), numsim),]
 
-omega_parallel	<- function(eps_draw){
+omega_parallel	<- function(eps_draw, lags){
 	out		<- matrix(NA, length(lnInc), numnodes)
 	for(j in 1:length(lnInc)){
 		tmpX_list1	<- vector("list", R)
 		for(k in 1:R){
-			tmp	<- rep(0, R)
+			tmp	<- rep(0, R-1)
 			if(k < beta0_base){	tmp[k] <- lnInc[j]}
 			if(k > beta0_base){ tmp[(k-1)]	<- lnInc[j]}
-			tmpX_list1[[k]]	<- rep(1, numnodes) %*% t(c(tmp, tmpX_list[[k]], tmpX_list[[k]]*lnInc[j]))
+			tmpX_list1[[k]]	<- rep(1, numnodes) %*% t(c(tmp, lags[k], tmpX_list[[k]]))
 		}
 		tmpsol 		<- incl_value_fn(param_est=shr.par, nx=nx, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price, 
 					R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw) )
@@ -334,8 +344,8 @@ omega_parallel	<- function(eps_draw){
 }
 
 pct			<- proc.time()
-tmp			<- foreach(i = 1:numsim) %dopar% {
-	omega_parallel(eps_draw[i,])
+tmp			<- foreach(i = 1:numsim, .packages= c("nloptr")) %dopar% {
+	omega_parallel(eps_draw[i,], lags = lag_nodes[i,])
 }
 omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(iter = NULL, lnInc = lnInc, y = y.nodes))
 for(i in 1:numsim){
@@ -353,8 +363,9 @@ if(interp.method == "spline"){
 	tmp	<- apply(omega_draw, c(2,3), mytrimfun, alpha = trim.alpha)
 	tmpdat	<- melt(tmp)
 	names(tmpdat) <- c("iter", "lnInc", "y", "omega")
-	omega_deriv	<- spl2dfun(tmpdat)
-	gamfit		<- spl2dfun(tmpdat, return.fit = TRUE)
+	tmpdat$Xlag	<- lag_nodes[tmpdat$iter,-beta0_base]						# Note that lags are perfectly correlated 
+	omega_deriv	<- spl2dfun(tmpdat, fml = omega ~ te(lnInc, y) + Xlag)
+	gamfit		<- spl2dfun(tmpdat, fml = omega ~ te(lnInc, y) + Xlag, return.fit = TRUE)
 }else{
 	omega_deriv	<- lapply(1:length(lnInc), function(i) chebfun(x = y.nodes, y = tmp[i,], interval = y.interval))
 	names(omega_deriv)	<- lnInc
@@ -364,11 +375,14 @@ if(interp.method == "spline"){
 if(make_plot){
 	ggtmp	<- melt(apply(omega_draw, c(2, 3), mean, na.rm = T))
 	names(ggtmp)	<- c("lnInc", "y", "omega")
+	ggtmp$lnInc		<- round(ggtmp$lnInc, 3)
 	
 	tmp1	<- seq(80, 120, 1)
 	tmpdat	<- data.frame(lnInc = rep(lnInc, each = length(tmp1)), y = rep(tmp1, length(lnInc)))
+	tmpdat$Xlag <- rep(1, length(tmp1)*length(lnInc)) %*% t(lag_nodes[1,-beta0_base])
 	tmp2	<- omega_deriv(tmpdat)
 	ggtmp1	<- cbind(tmpdat, omega = tmp2)
+	ggtmp1$lnInc	<- round(ggtmp1$lnInc, 3)
 	
 	pdf(paste("estrun_",run_id,"/omega_seg",seg_id,"_", Sys.Date(),".pdf",sep=""), width = 10, height = 6)
 	print(ggplot(ggtmp, aes(y, omega)) + geom_line() + facet_wrap(~lnInc, scales = "free_y") + 
@@ -397,6 +411,7 @@ M_fn	<- function(lambda, omega_deriv, y, ln_inc, dT = NULL){
 		}
 	}else{
 		newx	<- data.frame(lnInc = ln_inc, y = y)
+		newx$Xlag<- as.matrix(mydata[,paste("LAG_", gsub(" ", "_", fmt_name[-beta0_base]), sep="")])
 		o.deriv	<- omega_deriv(newx, deriv = 1)
 	}
 	m1	<- (lambda[1] + lambda[2] * ln_inc)* o.deriv - 1
@@ -464,13 +479,13 @@ cat("Top level estimation finishes.\n")
 ####################
 # Save the results #
 ####################
-rm(list=c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","MDCEV_ll_fnC",
+rm(list= intersect(ls(), c("hh_exp", "Allocation_constr_fn","Allocation_fn","Allocation_nlop_fn","incl_value_fn","i","MDCEV_ll_fnC",
 		  "MDCEV_LogLike_fnC","MDCEV_wrapper","tmp","tmp1","tmp2","tmp_sol","sel","sel1","sel2","param_assign","tmpX_list", 
 		  "use.time", "pct", "uP_fn","uPGrad_fn", "theta_init", "make_plot", "ord","panelist","tmpidx","tmpn","cl", 
 		  "tmp_sol1", "GMM_fn", "M_fn", "init", "m", "mycore", "param_assignR", "ggtmp", "ggtmp1", "tmpdat",
-		  "interp.method", "trim.alpha", "mysplfun", "mytrimfun", "expFOC_fn", "exp_fn", "solveExp_fn", 
+		  "interp.method", "trim.alpha", "mysplfun", "mytrimfun", "expFOC_fn", "exp_fn", "solveExp_fn","dT","i", "j", "k",  
 		  "simExp_fn", "SimWrapper_fn", "SimOmega_fn", "cheb.1d.basis", "cheb.basis", "chebfun", "omega_parallel", 
-		  "lastFuncGrad", "lastFuncParam", "args"))
+		  "lastFuncGrad", "lastFuncParam", "args", "plot.wd", "tmpv1", "tmpv2")))
 
 save.image(file = fname)
 

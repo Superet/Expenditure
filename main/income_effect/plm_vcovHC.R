@@ -56,7 +56,8 @@ vcovHC.plm.new <-function(x,method=c("arellano","white1","white2"),
     method <- match.arg(method)
     type <- match.arg(type)
     model <- x$args$model
-    if (!model %in% c("random", "within", "pooling", "fd")) {
+    # if (!model %in% c("random", "within", "pooling", "fd")) {
+    if (!model %in% c("random", "within", "fd", "pooling")) {
         stop("Model has to be either random, within or pooling model")
     }
 	if(cluster == "define" & is.null(clustervec)){
