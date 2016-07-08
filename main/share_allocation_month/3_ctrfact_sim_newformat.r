@@ -23,7 +23,7 @@ cat("seg_id =", seg_id, ".\n")
 # setwd("~/Documents/Research/Store switching/processed data/Estimation")
 # plot.wd	<- '~/Desktop'
 # source("../../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
-# source("../../Exercise/main/share_allocation/ctrfact_sim_functions.r")
+# source("../../Exercise/main/share_allocation_month/ctrfact_sim_functions.r")
 
 # setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
@@ -31,7 +31,7 @@ cat("seg_id =", seg_id, ".\n")
 # setwd("E:/Users/ccv103/Documents/Research/Store switching/run")
 setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
 
-run_id		<- 9
+run_id		<- 10
 
 plot.wd		<- getwd()
 make_plot	<- TRUE
@@ -42,7 +42,7 @@ source("0_Allocation_function.R")
 source("ctrfact_sim_functions.r")
 
 # Load estimation data 
-ver.date	<- "2016-06-20"
+ver.date	<- "2016-06-30"
 cpi.adj		<- TRUE
 
 if(cpi.adj){
@@ -59,7 +59,7 @@ week.price		<- FALSE
 interp.method	<- "spline"					# Spline interpolation or Chebyshev interpolation
 exp.method		<- "Utility"				# Utility maximization or finding roots for first order condition
 trim.alpha		<- 0.05
-numsim			<- 1000	#numsim1		#<- 1000
+numsim			<- 300
 draw.par		<- FALSE
 sim.omega		<- FALSE
 fname			<- paste("ctrfact_newf_seg",seg_id,sep="")
@@ -83,20 +83,27 @@ shr.par	<- coef(sol)
 # Take the households' income in 2007 as basis 
 selyr	<- 2007
 tmp		<- data.table(subset(mydata, year %in% selyr))
-tmp		<- tmp[,list(income = unique(income_midvalue)), by = list(household_code, year)]
-sim.data<- data.frame(tmp)[,c("household_code","income")]
-sim.unq		<- data.frame(income2007 = unique(sim.data[,-1]))
+tmp		<- tmp[,list(income = unique(income_midvalue)), by = list(zip3, household_code, year)]
+sim.data<- data.frame(tmp)[,c("household_code","income","zip3")]
+sim.unq		<- data.frame(unique(sim.data[,-1]))
+names(sim.unq)	<- gsub("income", "income2007", names(sim.unq))
 
 # Counterfactual scenario: income is lower by 10%. 
-my.change		<- .1
+my.change		<- 0 #	.1
 lnInc_08		<- lnInc + log(1 - my.change)
 sim.unq$income2008	<- (1 - my.change) * sim.unq$income2007		
 sim.unq$Inc07	<- log(sim.unq[,"income2007"])
 sim.unq$Inc08	<- log(sim.unq[,"income2008"])
-sim.unq			<- sim.unq[order(sim.unq$income2007),]
+sim.unq			<- sim.unq[order(sim.unq$income2007, sim.unq$zip3),]
 cat("dim(sim.unq) =", dim(sim.unq), "\n")
 
 #----------------------------#
+# Accessibility nodes
+tmp			<- dcast(subset(penetrat, channel_type %in% fmt_name), zip3 ~ channel_type, value.var = "penetration")
+acs			<- as.matrix(tmp[,-1])
+rownames(acs)	<- tmp$zip3
+acs_nodes		<- acs[as.character(sim.unq$zip3),]
+
 # Average price in year 2007
 if(week.price){
 	tmp 		<- dcast(subset(price_dat, year %in% selyr),	 
@@ -115,17 +122,6 @@ X_ls0	<- setNames( lapply(fmt_name, function(x) colMeans(as.matrix(subset(fmt_at
 					 fmt_name)
 cat("The average retail attributes in 2007:\n"); print(do.call(rbind, X_ls0)); cat("\n")
 
-# The average shares for each income level 
-tmp		<- as.matrix(subset(mydata, year %in% selyr)[,paste("SHR_",gsub(" ", "_", fmt_name), sep="")])
-tmp		<- tmp * subset(mydata, year %in% selyr)$dol
-tmp1	<- subset(mydata, year %in% selyr)$income_midvalue
-# # Share by income level 
-# shr.stat<- apply(tmp, 2, function(x) tapply(x, tmp1, sum))
-# shr.stat<- shr.stat/rowSums(shr.stat)
-# Average share
-shr.stat<- colSums(tmp)
-shr.stat<- rep(1, nrow(sim.unq)) %*% t(shr.stat/sum(shr.stat))
-
 # Expand X_list and price to match the nobs of income 
 price.07	<- rep(1, nrow(sim.unq)) %*% matrix(price0, nrow = 1)
 colnames(price.07)	<- fmt_name
@@ -133,15 +129,16 @@ X_list08	<- X_list07	<- setNames(vector("list", R), fmt_name)
 for(i in 1:R){
 	tmp2	<- tmp1	<- matrix(0, nrow(sim.unq), R-1)
 	if(i<beta0_base){
-		tmp1[,i]	<- sim.unq$Inc07
-		tmp2[,i]	<- sim.unq$Inc08
+		tmp1[,i]	<- 0			# Recession = 0 for year = 2007
+		tmp2[,i]	<- 1			# Recession = 1 for year = 2008
 	}else if(i>beta0_base){
-		tmp1[,(i-1)]	<- sim.unq$Inc07
-		tmp2[,(i-1)]	<- sim.unq$Inc08
+		tmp1[,(i-1)]	<- 0
+		tmp2[,(i-1)]	<- 1
 	}
-	X_list07[[i]]	<- cbind(tmp1, lag = shr.stat[,i], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[i]], nrow = 1))
-	X_list08[[i]]	<- cbind(tmp2, lag = shr.stat[,i], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[i]], nrow = 1))
-	colnames(X_list07[[i]])	<- colnames(X_list08[[i]])	<- c(fmt_name[-beta0_base], "lag",selcol)
+
+	X_list07[[i]]	<- cbind(tmp1, acs_nodes[,i], rep(1, nrow(sim.unq)) %*% t(X_ls0[[i]]), matrix(0, nrow(sim.unq), length(selcol)+1))
+	X_list08[[i]]	<- cbind(tmp2, acs_nodes[,i], rep(1, nrow(sim.unq)) %*% t(X_ls0[[i]]), acs_nodes[,i], rep(1, nrow(sim.unq)) %*% t(X_ls0[[i]]))
+	colnames(X_list07[[i]])	<- colnames(X_list08[[i]])	<- c(fmt_name[-beta0_base], "access", selcol, paste("rec*",c("access", selcol), sep=""))
 }
 
 #-------------------#
@@ -159,6 +156,13 @@ if(draw.par){
 ##############
 # Simulation #
 ##############
+# Register parallel computing
+mycore 	<- 4
+# cl		<- makeCluster(mycore, type = "FORK")
+cl		<- makeCluster(mycore, type = "PSOCK")			# Register cores in Windows
+registerDoParallel(cl)
+cat("Register", mycore, "core parallel computing. \n")
+
 if(interp.method == "spline"){
 	y.nodes		<- quantile(mydata$dol, c(0:50)/50)
 	y.nodes		<- sort(unique(c(y.nodes , seq(600, 1000, 100)) ))
@@ -172,16 +176,24 @@ numnodes<- length(y.nodes)
 
 # Simulate expenditure and expenditure share. 
 pct				<- proc.time()
-sim.base07		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc07, lambda = lambda, param_est = shr.par, base = beta0_base, 
-					X_list = X_list07, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, 
-					par.draw = par_draw, share.state = shr.stat[,-beta0_base])
+sim.base07		<- foreach(i = 1:nrow(sim.unq), .combine = rbind, .packages=c("nloptr","mgcv")) %dopar%{
+	tmpX	<- lapply(X_list07, function(x) matrix(x[i,], nrow = 1))
+	out		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq[i,"Inc07"], lambda = lambda, param_est = shr.par, base = beta0_base, 
+						X_list = tmpX, price = matrix(price.07[i,], nrow=1), eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw, 
+						share.state = matrix(acs_nodes[i,], nrow = 1))
+	return(cbind(out$Average, obs = i))
+}
 use.time		<- proc.time() - pct						
 cat("2007 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
 pct				<- proc.time()
-sim.base08		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq$Inc08, lambda = lambda, param_est = shr.par, base = beta0_base, 
-					X_list = X_list08, price = price.07, eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, 
-					par.draw = par_draw, share.state = shr.stat[,-beta0_base])
+sim.base08		<- foreach(i = 1:nrow(sim.unq), .combine = rbind, .packages=c("nloptr","mgcv")) %dopar%{
+	tmpX	<- lapply(X_list08, function(x) matrix(x[i,], nrow = 1))
+	out		<- SimWrapper_fn(omega_deriv1, ln_inc = sim.unq[i,"Inc08"], lambda = lambda, param_est = shr.par, base = beta0_base, 
+						X_list = tmpX, price = matrix(price.07[i,], nrow=1), eps_draw = eps_draw, method = exp.method, ret.sim = TRUE, par.draw = par_draw, 
+						share.state = matrix(acs_nodes[i,], nrow = 1))
+	return(cbind(out$Average, obs = i))
+}
 use.time		<- proc.time() - pct						
 cat("2008 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 
@@ -193,74 +205,90 @@ cat("2008 Baseline simulation finishes with", use.time[3]/60, "min.\n")
 # b(2): if price inherents the intercept
  
 ret.a	<- c("Discount Store")
-inherent.price	<- c(TRUE, FALSE)
-newf.sim07	<- newf.sim <- setNames(vector("list", length(ret.a)*2), paste(rep(ret.a, each =2), "_prc", c(1,0), sep = ""))
+sim.scn	<- c("Itself", "Small")
+newf.sim07	<- newf.sim <- setNames(vector("list", length(ret.a)*length(sim.scn)), paste(ret.a, sim.scn, sep="_"))
 eps_draw_new	<- cbind(eps_draw, rgev(numsim, scale = exp(shr.par["ln_sigma"])) )
 
-for(i in 1:length(ret.a)){
-	cat(" ---------------------------------------------------------------------- \n")
-	pct		<- proc.time()
-	# Set new parameters
-	sel		<- which(fmt_name == ret.a[i])
-	beta1_7	<- ifelse(sel==beta0_base, 0, ifelse(sel<beta0_base, shr.par[paste("beta_", sel, sep="")], shr.par[paste("beta_", sel-1, sep="")]))
-	beta0_7	<- ifelse(sel==beta0_base, 0, shr.par[paste("beta0_", sel,sep="")])
-	shr.par.new	<- c(shr.par[1:(R-1)], beta1_7, shr.par[R:nx], shr.par[grep("beta0", names(shr.par))], beta0_7, 
-					shr.par[grep("gamma", names(shr.par))], shr.par[paste("gamma_", sel, sep="")], shr.par[grep("sigma",names(shr.par))])
-	cat("The parameter vector for adding a new format from", ret.a[i], "is:\n"); print(shr.par.new); cat("\n")
-	
-	for(j in 1:length(inherent.price)){
-		# Set new attributes
-		X.new08	<- X.new07	<- setNames(vector("list", R+1), c(fmt_name, "new"))
-		for(k in 1:R){
-				tmp2	<- tmp1	<- matrix(0, nrow(sim.unq), R)
-				if(k<beta0_base){
-					tmp1[,k]	<- sim.unq$Inc07
-					tmp2[,k]	<- sim.unq$Inc08
-				}else if(k>beta0_base){
-					tmp1[,(k-1)]	<- sim.unq$Inc07
-					tmp2[,(k-1)]	<- sim.unq$Inc08
-				}
-				X.new07[[k]]	<- cbind(tmp1, lag = shr.stat[,k], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1) )
-				X.new08[[k]]	<- cbind(tmp2, lag = shr.stat[,k], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1) )
-				colnames(X.new07[[k]])	<- colnames(X.new08[[k]])	<- c(fmt_name[-beta0_base], "new", "lag", selcol)
-			}
-		tmp2	<- tmp1	<- matrix(0, nrow(sim.unq), R)
-		if(sel!=beta0_base){
-			tmp1[,R]	<- sim.unq$Inc07
-			tmp2[,R]	<- sim.unq$Inc08
-		}
-		tmp		<- X_ls0[["Convenience Store"]]
-		tmp["overall_prvt"]	<- X_ls0[[ret.a[i]]]["overall_prvt"]
-		X.new07[[(R+1)]]	<- cbind(tmp1, lag = 0, rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1))
-		X.new08[[(R+1)]]	<- cbind(tmp2, lag = 0, rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1))
+cat(" ---------------------------------------------------------------------- \n")
+pct		<- proc.time()
+# Set new parameters
+sel		<- which(fmt_name == ret.a)
+beta1_7	<- ifelse(sel==beta0_base, 0, ifelse(sel<beta0_base, shr.par[paste("beta_", sel, sep="")], shr.par[paste("beta_", sel-1, sep="")]))
+beta0_7	<- ifelse(sel==beta0_base, 0, shr.par[paste("beta0_", sel,sep="")])
+shr.par.new	<- c(shr.par[1:(R-1)], beta1_7, shr.par[R:nx], shr.par[grep("beta0", names(shr.par))], beta0_7, 
+				shr.par[grep("gamma", names(shr.par))], shr.par[paste("gamma_", sel, sep="")], shr.par[grep("sigma",names(shr.par))])
+cat("The parameter vector for adding a new format from", ret.a, "is:\n"); print(shr.par.new); cat("\n")
 
-		# Set prices 
-		price.new		<- price.07
-		if(inherent.price[j]){
-			price.new	<- cbind(price.new, new = price.07[,ret.a[i]])
-		}else{
-			price.new	<- cbind(price.new, new = price.07[,"Convenience Store"])
+for(j in 1:length(sim.scn)){
+	# Set new attributes
+	X.new08	<- X.new07	<- setNames(vector("list", R+1), c(fmt_name, "new"))
+	for(k in 1:R){
+			tmp2	<- tmp1	<- matrix(0, nrow(sim.unq), R)
+			if(k<beta0_base){
+				tmp1[,k]	<- 0
+				tmp2[,k]	<- 1
+			}else if(k>beta0_base){
+				tmp1[,(k-1)]	<- 0
+				tmp2[,(k-1)]	<- 1
+			}
+			X.new07[[k]]	<- cbind(tmp1, acs_nodes[,k], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1), matrix(0, nrow(sim.unq), length(selcol)+1) )
+			X.new08[[k]]	<- cbind(tmp2, acs_nodes[,k], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1), 
+			 							  acs_nodes[,k], rep(1, nrow(sim.unq)) %*% matrix(X_ls0[[k]], nrow = 1))
+			colnames(X.new07[[k]])	<- colnames(X.new08[[k]])	<- c(fmt_name[-beta0_base], "new", "access", selcol, paste("rec*",c("access", selcol), sep=""))
 		}
-		
-		sidx	<- (i-1)*2 + j
-		newf.sim07[[sidx]]	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc07"], 
-					lambda = lambda, param_est = shr.par.new, 
-					base = beta0_base, X_list = X.new07, price = price.new, sim.y = sim.base07$y, 
-					eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw, share.state = shr.stat[,-beta0_base])
-		newf.sim[[sidx]]	<- SimWrapper_fn(omega_deriv = omega_deriv, ln_inc = sim.unq[,"Inc08"], 
-					lambda = lambda, param_est = shr.par.new, 
-					base = beta0_base, X_list = X.new08, price = price.new, sim.y = sim.base08$y, 
-					eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw, share.state = shr.stat[,-beta0_base])
+	
+	# The attributes for the new format 	
+	tmp2	<- tmp1	<- matrix(0, nrow(sim.unq), R)
+	if(sel!=beta0_base){
+		tmp1[,R]	<- 0
+		tmp2[,R]	<- 1
 	}
-	use.time	<- proc.time() - pct
-	cat("Counterfactual with", ret.a[i], "finishes with", use.time[3]/60, "min.\n")
+	if(sim.scn[j] == "Itself"){
+		tmp		<- X_ls0[[ret.a]]
+	}else{
+		tmp		<- X_ls0[["Convenience Store"]]
+		tmp["overall_prvt"]	<- X_ls0[[ret.a]]["overall_prvt"]
+	}
+	X.new07[[(R+1)]]	<- cbind(tmp1, acs_nodes[,sel], rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1), matrix(0, nrow(sim.unq), length(selcol)+1) )
+	X.new08[[(R+1)]]	<- cbind(tmp2, acs_nodes[,sel], rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1), 
+									   acs_nodes[,sel], rep(1, nrow(sim.unq)) %*% matrix(tmp, nrow = 1) )
+
+	# Set prices 
+	price.new		<- price.07
+	price.new	<- cbind(price.new, new = price.07[,ret.a])
+	
+	sidx	<- j		
+	# newf.sim07[[sidx]]	<-foreach(i = 1:nrow(sim.unq), .combine = rbind, .packages=c("nloptr","mgcv")) %dopar%{
+	# 				tmpX	<- lapply(X.new07, function(x) matrix(x[i,], nrow = 1))
+	# 				out		<- SimWrapper_fn(omega_deriv, ln_inc = sim.unq[i,"Inc07"], lambda = lambda, param_est = shr.par.new, base = beta0_base, 
+	# 									X_list = tmpX, price = matrix(price.new[i,], nrow=1), sim.y = matrix(sim.base07[i,"Exp"], numsim, 1),
+	# 									eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw, 
+	# 									share.state = matrix(acs_nodes[i,], nrow = 1))
+	# 				return(cbind(out$Average, obs = i))
+	# 			}				
+	newf.sim[[sidx]]	<-foreach(i = 1:nrow(sim.unq), .combine = rbind, .packages=c("nloptr","mgcv")) %dopar%{
+					tmpX	<- lapply(X.new08, function(x) matrix(x[i,], nrow = 1))
+					out		<- SimWrapper_fn(omega_deriv1, ln_inc = sim.unq[i,"Inc08"], lambda = lambda, param_est = shr.par.new, base = beta0_base, 
+										X_list = tmpX, price = matrix(price.new[i,], nrow=1), sim.y = matrix(sim.base08[i,"Exp"], numsim, 1),
+										eps_draw = eps_draw_new, method = exp.method, ret.sim = TRUE, par.draw = par_draw, 
+										share.state = matrix(acs_nodes[i,], nrow = 1))
+					return(cbind(out$Average, obs = i))
+				}
 }
+use.time	<- proc.time() - pct
+cat("Counterfactual with", ret.a[i], "finishes with", use.time[3]/60, "min.\n")
+
+stopCluster(cl)
+cat("Stop clustering. \n")
 
 # Compare the difference 
 fmt_name1	<- c(fmt_name, "new")
-inc.tab	<- table(mydata[mydata$year==2007,c("income_midvalue")])
-tmp1	<- sim.base08$Average
-tmp2	<- newf.sim[["Discount Store_prc1"]]$Average
+inc.tab	<- data.table(subset(mydata, year %in% selyr))
+inc.tab	<- inc.tab[,list(n = length(unique(household_code))), by = list(income_midvalue, zip3)]
+inc.tab	<- as.numeric(inc.tab[order(inc.tab$income_midvalue, inc.tab$zip3), n])
+# table(mydata[mydata$year==2007,c("income_midvalue")])
+tmp1	<- sim.base08
+tmp2	<- newf.sim[[1]]
 mkt1	<- c(sapply(1:R, function(i) sum(tmp1[,fmt_name[i]]*inc.tab)), 0)
 mkt2	<- sapply(1:(R+1), function(i) sum(tmp2[,fmt_name1[i]]*inc.tab))
 mkt.dif	<- setNames(mkt2/sum(mkt2)-mkt1/sum(mkt1), fmt_name1)

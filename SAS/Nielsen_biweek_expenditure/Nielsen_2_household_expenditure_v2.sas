@@ -404,7 +404,7 @@ data tmp2(keep = household_code first_income);
 run; 
 
 data tmp;
-	merge tmp1(keep = household_code panel_year scantrack_market_descr 
+	merge tmp1(keep = household_code panel_year scantrack_market_descr panelist_zip_code
 			income_real household_size type_of_residence male_head_employment female_head_employment age_and_presence_of_children)
 		  tmp2; 
 	by household_code; 		
