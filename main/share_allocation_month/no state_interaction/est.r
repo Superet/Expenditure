@@ -19,7 +19,6 @@ library(foreach)
 library(plm)
 library(nloptr)
 library(mgcv)
-library(zipcode)
 options(error = quote({dump.frames(to.file = TRUE)}))
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -33,7 +32,7 @@ if(length(args)>0){
 # seg_id	<- as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
 
 model_name 		<- "MDCEV_share"
-run_id			<- 10
+run_id			<- 9
 seg_id		<- 1
 make_plot		<- TRUE
 interp.method	<- "spline"			# "cheb"
@@ -46,7 +45,7 @@ cat("seg_id =", seg_id, "\n")
 # plot.wd	<- '~/Desktop'
 # sourceCpp(paste("../Exercise/Multiple_discrete_continuous_model/", model_name, ".cpp", sep=""))
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
-# source("../Exercise/main/share_allocation_month/ctrfact_sim_functions.r")
+# source("../Exercise/main/share_allocation/ctrfact_sim_functions.r")
 
 # setwd("/home/brgordon/ccv103/Exercise/run")
 # setwd("/kellogg/users/marketing/2661703/Exercise/run")
@@ -68,8 +67,6 @@ fname
 # Read data and subsetting data #
 #################################
 load("hh_month_exp.rdata")
-panelists	<- read.csv("2_panelists.csv", header = T)
-penetrat	<- read.csv("iri_channel_penetration.csv", header = T)
 
 # Extract 5% random sample
 # length(unique(hh_exp$household_code))
@@ -91,46 +88,37 @@ if(cpi.adj){
 	hh_exp$income_midvalue	<- hh_exp$income_midvalue/hh_exp$cpi
 }
 hh_exp$ln_inc<- log(hh_exp$income_midvalue)
-panelists$zip	<- clean.zipcodes(panelists$panelist_zip_code)
-panelists$zip3	<- as.numeric(substr(panelists$zip, 1, 3))
-length(unique(panelists$zip3))
-length(unique(intersect(panelists$zip3, penetrat$zip3)))
-hh_exp		<- merge(hh_exp, panelists[, c("household_code", "zip3")], by = "household_code", all.x=T)
-sum(is.na(hh_exp$zip3))
-if(sum(is.na(hh_exp$zip3))>0){
-	hh_exp	<- subset(hh_exp, !is.na(zip3))
-}
+hh_exp$rec		<- 1*(hh_exp$year >= 2008)
+
+# Segment households based on their initial income level 
+# panelist	<- data.table(hh_exp)
+# setkeyv(panelist, c("household_code","year","biweek"))
+# panelist	<- panelist[,list(income = first_income[1], first_famsize = famsize[1]), by=list(household_code)]
+# tmp			<- quantile(panelist$income, c(0, .33, .67, 1))
+# num_grp		<- 3
+# panelist	<- panelist[, first_incomeg := cut(panelist$income, tmp, labels = paste("T", 1:num_grp, sep=""), include.lowest = T)]
+# hh_exp		<- merge(hh_exp, data.frame(panelist)[,c("household_code", "first_incomeg")], by = "household_code", all.x=T )
+# hh_exp$first_incomeg	<- factor(hh_exp$first_incomeg, levels = c("T1", "T2", "T3"))
+# cat("Table of initial income distribution:\n"); print(table(panelist$first_incomeg)); cat("\n")
 cat("Table of segments in the expenditure data:\n"); print(table(hh_exp$first_incomeg)); cat("\n")
 
-# Change the name of channel types 
-(tmp	<- setNames(fmt_name, c("Convenience", "Mass", "Dollar_variety", "Drug", "Conventional_supermarkets", "Wholesale_clubs")))
-levels(penetrat$channel_type)	<- sapply(levels(penetrat$channel_type), function(x) ifelse(x%in% names(tmp), tmp[x], x))
-levels(penetrat$channel_type)
-
 # Subset data 
-selcol		<- c("household_code", "dol", "year", "month", "income_midvalue", "ln_inc","first_incomeg", "scantrack_market_descr","zip3",
-				paste("SHR_", gsub("\\s", "_", fmt_name), sep=""))
+selcol		<- c("household_code", "dol", "year", "month", "rec", "income_midvalue", "ln_inc","first_incomeg", "scantrack_market_descr",paste("SHR_", gsub("\\s", "_", fmt_name), sep=""))
 mydata		<- subset(hh_exp[,selcol], as.numeric(first_incomeg) == seg_id & dol > .1 )
-mydata$rec	<- 1 * (mydata$year >= 2008)
 
-# Drop the households who did not get matched penetration
-tmp		<- unique(panelists$zip3)
-sel		<- tmp[!tmp %in% penetrat$zip3] 
-mydata	<- subset(mydata, !zip3 %in% sel)
+# Lag of expenditure share
+mydata		<- data.table(mydata)
+for(i in fmt_name){
+	tmpv1	<- as.name(paste("LAG_", gsub(" ", "_", i), sep=""))
+	tmpv2	<- as.name(paste("SHR_", gsub(" ", "_", i), sep=""))
+	mydata	<- mydata[, eval(tmpv1):=c(NA, eval(tmpv2)[-length(year)]), by = list(household_code)]
+}
 
-# # Lag of expenditure share
-# mydata		<- data.table(mydata)
-# for(i in fmt_name){
-# 	tmpv1	<- as.name(paste("LAG_", gsub(" ", "_", i), sep=""))
-# 	tmpv2	<- as.name(paste("SHR_", gsub(" ", "_", i), sep=""))
-# 	mydata	<- mydata[, eval(tmpv1):=c(NA, eval(tmpv2)[-length(year)]), by = list(household_code)]
-# }
-# 
-# # Drop the first observation for each household
-# dim(mydata)
+# Drop the first observation for each household
+dim(mydata)
 # mydata	<- mydata[!is.na(LAG_Grocery),]
-# dim(mydata)
-# mydata	<- data.frame(mydata)
+dim(mydata)
+mydata	<- data.frame(mydata)
 
 ################################
 # Organize data for estimation #
@@ -196,12 +184,6 @@ price	<- as.matrix(mydata[,sel])
 tmp 	<- price * 1 *(shr> 0)
 s1_index<- apply(tmp, 1, which.max)
 
-# Accessability matrix
-tmp			<- dcast(subset(penetrat, channel_type %in% fmt_name), zip3 ~ channel_type, value.var = "penetration")
-acs			<- as.matrix(tmp[,-1])
-rownames(acs)	<- tmp$zip3
-acs			<- acs[as.character(mydata$zip3),]
-
 # Match retailers' attributes
 tmp1	<- unique(fmt_attr$year)
 tmp2	<- unique(fmt_attr$scantrack_market_descr)
@@ -211,21 +193,22 @@ names(tmpn) <- tmp
 sel 	<- with(mydata, paste(scantrack_market_descr,year, sep="-"))
 sel1	<- tmpn[sel]
 selcol	<- c("size_index", "ln_upc_per_mod", "ln_num_module","overall_prvt")
-nx 		<- (length(selcol)+1)*2 + R - 1
+nx 		<- length(selcol)*2 + R - 1
 beta0_base 	<- which(fmt_name == "Grocery")
 
 X_list 	<- vector("list", length=length(fmt_name))
 for(i in 1:length(fmt_name)){
 	sel2		<- fmt_attr$channel_type == fmt_name[i]
 	tmp			<- fmt_attr[sel2,selcol]
-	tmp1 		<- cbind(access = acs[,i], as.matrix(tmp[sel1,]))
+	# tmp0		<- mydata[,paste("LAG_", gsub(" ", "_", fmt_name[i]), sep="")]
+	tmp1 		<- as.matrix(tmp[sel1,])
 	tmp2		<- matrix(0, nrow(shr), R-1)
 	if(i < beta0_base){
 		tmp2[,i]	<- mydata$rec
 	}else if(i > beta0_base){
 		tmp2[,(i-1)] <- mydata$rec
 	}
-	X_list[[i]]	<- cbind(tmp2, tmp1, mydata$rec*tmp1)
+	X_list[[i]]	<- cbind(tmp2, tmp1, tmp1*mydata$rec)
 }
 
 ##############
@@ -254,9 +237,9 @@ if(fixsigma){
 						c(rep(0, R-1), -1, -.3, 1, -2, 	.1, .0, -.1, .3, 	-2, -1, -1, -.5, -1, 	3, 15, 4, 4, 7, 37, 0), 
 						c(rep(0, R-1), -1, -.5, 1.5, -4,	.1, -.1,-.5, .5, 	-3, -1, -2, -1, -.8, 	3, 15, 4, 4, 8, 40, 0  ) )	
 }else if(cpi.adj){
-	theta_init	<- list(c(-.2, .03, -.2, -.06, .1, 	1, .2, .1, .2, 1.3, 	rep(-.1, length(selcol)+1), 1, -.2, 1, 1, -2,  		6, 34, 8, 8, 15, 60, -.45), 
-						c(-.2, -.05,-.2,-.08,.1,	1, .3, .4, .5, 1, 		rep(-.1, length(selcol)+1), 0, -.6, .8, .5, -1.5, 	6, 35, 8, 8, 18, 70, -.5), 
-						c(-.3,-.12,-.38,-.15,.1,	1, .1, .4, .37, -.3, 	rep(-.1, length(selcol)+1), -1, .7, -.5, 1.4, -1.2, 5, 37, 8, 9, 20, 80, -.5 ) )
+	theta_init	<- list(c(-.2, .03, -.2, -.06, .1, 	.2, .1, .2, 1.3, 		rep(-.1, length(selcol)), 1, -.2, 1, 1, -2,  	6, 34, 8, 8, 15, 60, -.45), 
+						c(-.2, -.05,-.2,-.08,.1,	 .3, .4, .5, 1, 		rep(-.1, length(selcol)),0, -.6, .8, .5, -1.5, 	6, 35, 8, 8, 18, 70, -.5), 
+						c(-.3,-.12,-.38,-.15,.1,	.1, .4, .37, -.3, 	rep(-.1, length(selcol)),	-1, .7, -.5, 1.4, -1.2, 	5, 37, 8, 9, 20, 80, -.5 ) )
 	
 }else{
 	theta_init	<- list(c(rep(0, R-1), -1, -.1, 1, -1.5, 	.1, .1, -.1, .1, 	-1, -1, -1, -.5, -1,  5, 20, 4, 4, 6, 50, -.3), 
@@ -342,9 +325,9 @@ shr.par	<- coef(sol)
 set.seed(687)
 numsim 		<- 1000
 eps_draw	<- matrix(rgev(numsim*R, scale = exp(shr.par["ln_sigma"])), numsim, R)
-acs_nodes	<- acs[sample(1:nrow(acs), numsim),]
+lag_nodes	<- shr[sample(1:nrow(shr), numsim),]
 
-omega_parallel	<- function(eps_draw, acs, rec ){
+omega_parallel	<- function(eps_draw, rec){
 	out		<- matrix(NA, length(lnInc), numnodes)
 	for(j in 1:length(lnInc)){
 		tmpX_list1	<- vector("list", R)
@@ -352,8 +335,7 @@ omega_parallel	<- function(eps_draw, acs, rec ){
 			tmp	<- rep(0, R-1)
 			if(k < beta0_base){	tmp[k] <- rec}
 			if(k > beta0_base){ tmp[(k-1)]	<- rec}
-			tmp1	<- c(acs[k], tmpX_list[[k]])
-			tmpX_list1[[k]]	<- rep(1, numnodes) %*% t(c(tmp, tmp1, tmp1*rec))
+			tmpX_list1[[k]]	<- rep(1, numnodes) %*% t(c(tmp, tmpX_list[[k]], tmpX_list[[k]]*rec))
 		}
 		tmpsol 		<- incl_value_fn(param_est=shr.par, nx=nx, base= beta0_base, X_list=tmpX_list1, y=y.nodes, Q=Inf, price=tmp_price, 
 					R=R, Ra=R, qz_cons = 0, exp_outside = FALSE, quant_outside = FALSE, eps_draw = rep(1, numnodes) %*% t(eps_draw) )
@@ -364,16 +346,16 @@ omega_parallel	<- function(eps_draw, acs, rec ){
 
 pct			<- proc.time()
 tmp			<- foreach(i = 1:numsim, .packages= c("nloptr")) %dopar% {
-	omega_parallel(eps_draw[i,], acs = acs_nodes[i,], rec = 0)
+	omega_parallel(eps_draw[i,], rec = 0)
 }
-tmp1		<- foreach(i = 1:numsim, .packages= c("nloptr")) %dopar% {
-	omega_parallel(eps_draw[i,], acs = acs_nodes[i,], rec = 1)
+tmp1			<- foreach(i = 1:numsim, .packages= c("nloptr")) %dopar% {
+	omega_parallel(eps_draw[i,], rec = 1)
 }
 
-omega_draw1	<-	omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(iter = NULL, lnInc = lnInc, y = y.nodes))
+omega_draw1	<- omega_draw	<- array(NA, c(numsim, length(lnInc), numnodes), dimnames = list(iter = NULL, lnInc = lnInc, y = y.nodes))
 for(i in 1:numsim){
-	omega_draw[i,,]	<- tmp[[i]]
-	omega_draw1[i,,]<- tmp1[[i]]
+	omega_draw[i,,]		<- tmp[[i]]
+	omega_draw1[i,,]	<- tmp1[[i]]
 }
 
 use.time	<- proc.time() - pct
@@ -387,14 +369,12 @@ if(interp.method == "spline"){
 	tmp	<- apply(omega_draw, c(2,3), mytrimfun, alpha = trim.alpha)
 	tmpdat	<- melt(tmp)
 	names(tmpdat) <- c("iter", "lnInc", "y", "omega")
-	tmpdat$Xacs	<- acs_nodes[tmpdat$iter,]						# Note that lags are perfectly correlated 
-	omega_deriv	<- spl2dfun(tmpdat, fml = omega ~ te(lnInc, y) + Xacs)
-
+	omega_deriv	<- spl2dfun(tmpdat, fml = omega ~ te(lnInc, y) )
+	
 	tmp	<- apply(omega_draw1, c(2,3), mytrimfun, alpha = trim.alpha)
 	tmpdat	<- melt(tmp)
 	names(tmpdat) <- c("iter", "lnInc", "y", "omega")
-	tmpdat$Xacs	<- acs_nodes[tmpdat$iter,]						# Note that lags are perfectly correlated 
-	omega_deriv1<- spl2dfun(tmpdat, fml = omega ~ te(lnInc, y) + Xacs)
+	omega_deriv1<- spl2dfun(tmpdat, fml = omega ~ te(lnInc, y) )
 }else{
 	omega_deriv	<- lapply(1:length(lnInc), function(i) chebfun(x = y.nodes, y = tmp[i,], interval = y.interval))
 	names(omega_deriv)	<- lnInc
@@ -407,9 +387,9 @@ if(make_plot){
 	names(ggtmp)	<- c("lnInc", "y", "omega")
 	ggtmp$lnInc		<- round(ggtmp$lnInc, 3)
 	
-	tmp1	<- seq(80, 120, 1)
+	tmp1	<- seq(350, 400, 1)
 	tmpdat	<- data.frame(lnInc = rep(lnInc, each = length(tmp1)), y = rep(tmp1, length(lnInc)))
-	tmpdat$Xacs <- rep(1, length(tmp1)*length(lnInc)) %*% t(acs_nodes[1,])
+	tmpdat$Xlag <- rep(1, length(tmp1)*length(lnInc)) %*% t(lag_nodes[1,-beta0_base])
 	tmp2	<- omega_deriv(tmpdat)
 	ggtmp1	<- cbind(tmpdat, omega = tmp2)
 	ggtmp1$lnInc	<- round(ggtmp1$lnInc, 3)
@@ -421,16 +401,17 @@ if(make_plot){
 	print(ggplot(ggtmp1, aes(y, omega)) + geom_line() + 
 			facet_wrap(~lnInc, scales = "free") + labs(title = "Omega function")
 		)
-	print(vis.gam(gamfit))
+	# print(vis.gam(gamfit))
 	dev.off()
 }
 
-rm(list = c("tmpdat"))
 save.image(file = fname)
 
 ###################################
 # Upper level expenditue decision # 
 ###################################
+rec		<- mydata$rec
+
 o.deriv	<- rep(NA, length(y))
 if(interp.method == "cheb"){
 	for(i in 1:length(lnInc)){
@@ -439,36 +420,40 @@ if(interp.method == "cheb"){
 	}
 }else{
 	newx	<- data.frame(lnInc = ln_inc, y = y)
-	newx$Xacs<- acs
+	# newx$Xlag<- as.matrix(mydata[,paste("LAG_", gsub(" ", "_", fmt_name[-beta0_base]), sep="")])
 	sel		<- mydata$rec == 0
 	o.deriv[sel]	<- omega_deriv(newx[sel,], deriv = 1)
 	o.deriv[!sel]	<- omega_deriv1(newx[!sel,], deriv = 1)
 }
 
-M_fn	<- function(lambda, o.deriv, y, ln_inc){
+M_fn	<- function(lambda, omega_deriv, y, ln_inc, dT = NULL){
 # Moment function: lambda * omega'(y,Inc) - 1 = 0
-	m1	<- (lambda[1] + lambda[2] * ln_inc)* o.deriv - 1
+	m1	<- (lambda[1] + lambda[2] * rec)* o.deriv - 1
 	m	<- cbind(m1, m1*ln_inc)
 	mbar<- colMeans(m)
-	return(list(moment = mbar, m = m))
+	return(list(moment = mbar, omega.derive = o.deriv, m = m))
 }
 
-GMM_fn	<- function(lambda, o.deriv, y, ln_inc, W = NULL){
+GMM_fn	<- function(lambda, omega_deriv, y, ln_inc, dT, W = NULL){
 # We use unit diagnial matrix as the weighting matric in GMM
-	mm 	<- M_fn(lambda, o.deriv, y, ln_inc)
-	m	<- mm$moment
-	if(is.null(W)){
-		W	<- diag(length(m))
+	if(lambda[1]+lambda[2] <= 0){
+		return(NA)
+	}else{
+		mm 	<- M_fn(lambda, omega_deriv, y, ln_inc, dT = dT)
+		m	<- mm$moment
+		if(is.null(W)){
+			W	<- diag(length(m))
+		}
+		obj	<- - t(m) %*% W %*% m				# negative moment function for maxLik
+		return(obj)
 	}
-	obj	<- - t(m) %*% W %*% m				# negative moment function for maxLik
-	return(obj)
 }
 
-lsol	<- lm(1/o.deriv ~ ln_inc)
+lsol	<- lm(1/o.deriv ~ factor(rec))
 pct		<- proc.time()
 init	<- matrix(c(coef(lsol), 
-					.1, -.02, 
-					-.01, .01), 
+					.1, -.2, 
+					.3, -.1), 
 					3, 2, byrow = T)
 colnames(init)	<- c("lambda1", "lambda2")
 dT		<- NULL
@@ -479,8 +464,8 @@ system.time(tmp <- GMM_fn(init[1,], omega_deriv, y, ln_inc, dT))
 
 tmp_sol	<- tmp_sol1 <- list(NULL)
 for(i in 1:nrow(init)){
-	tmp_sol[[i]]	<- maxLik(GMM_fn, start=init[i,], method="BFGS", o.deriv = o.deriv, y = y, ln_inc = ln_inc)
-	tmp_sol1[[i]]	<- maxLik(GMM_fn, start=init[i,], method="NM", o.deriv = o.deriv, y = y, ln_inc = ln_inc)
+	tmp_sol[[i]]	<- maxLik(GMM_fn, start=init[i,], method="BFGS", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc, dT = dT)
+	tmp_sol1[[i]]	<- maxLik(GMM_fn, start=init[i,], method="NM", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc, dT = dT)
 }
 
 # Choose the solution with max(-MM)
@@ -503,10 +488,10 @@ summary(sol.top)
 cat("Top level estimation finishes with", use.time[3]/60, "min.\n")
 
 # 2nd step with updated W 
-m			<- M_fn(lambda = coef(sol.top), o.deriv = o.deriv, y = y , ln_inc = ln_inc)
+m			<- M_fn(lambda = coef(sol.top), omega_deriv = omega_deriv, y = y , ln_inc = ln_inc, dT = dT)
 W			<- solve(var(m$m))
 cat("Optimal weighting matrix is:\n"); print(W); cat("\n")
-sol.top2	<- maxLik(GMM_fn, start=coef(sol.top), method="BFGS", o.deriv = o.deriv, y = y, ln_inc = ln_inc, W = W)
+sol.top2	<- maxLik(GMM_fn, start=coef(sol.top), method="BFGS", omega_deriv = omega_deriv, y = y, ln_inc = ln_inc, dT = dT, W = W)
 summary(sol.top2)
 cat("Top level estimation finishes.\n")
 

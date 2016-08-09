@@ -31,7 +31,7 @@ cat("seg_id =", seg_id, ".\n")
 # setwd("E:/Users/ccv103/Documents/Research/Store switching/run")
 setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
 
-run_id		<- 10
+run_id		<- 9
 
 plot.wd		<- getwd()
 make_plot	<- TRUE
@@ -42,7 +42,7 @@ source("0_Allocation_function.R")
 source("ctrfact_sim_functions.r")
 
 # Load estimation data 
-ver.date	<- "2016-06-30"
+ver.date	<- "2016-07-07"
 cpi.adj		<- TRUE
 
 if(cpi.adj){
@@ -83,7 +83,7 @@ shr.par	<- coef(sol)
 # Take the households' income in 2007 as basis 
 selyr	<- 2007
 tmp		<- data.table(subset(mydata, year %in% selyr))
-tmp		<- tmp[,list(income = unique(income_midvalue)), by = list(zip3, household_code, year)]
+tmp		<- tmp[,list(income = unique(income_midvalue)), by = list(household_code, year)]
 sim.data<- data.frame(tmp)[,c("household_code","income","zip3")]
 sim.unq		<- data.frame(unique(sim.data[,-1]))
 names(sim.unq)	<- gsub("income", "income2007", names(sim.unq))
@@ -96,13 +96,6 @@ sim.unq$Inc07	<- log(sim.unq[,"income2007"])
 sim.unq$Inc08	<- log(sim.unq[,"income2008"])
 sim.unq			<- sim.unq[order(sim.unq$income2007, sim.unq$zip3),]
 cat("dim(sim.unq) =", dim(sim.unq), "\n")
-
-#----------------------------#
-# Accessibility nodes
-tmp			<- dcast(subset(penetrat, channel_type %in% fmt_name), zip3 ~ channel_type, value.var = "penetration")
-acs			<- as.matrix(tmp[,-1])
-rownames(acs)	<- tmp$zip3
-acs_nodes		<- acs[as.character(sim.unq$zip3),]
 
 # Average price in year 2007
 if(week.price){

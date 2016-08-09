@@ -6,6 +6,7 @@ library(Rcpp)
 library(RcppArmadillo)
 library(maxLik)
 library(evd)
+library(nloptr)
 
 setwd("~/Documents/Research/Store switching/Exercise/Multiple_discrete_continuous_model")
 model_name <- "MDCEV_a1b1"

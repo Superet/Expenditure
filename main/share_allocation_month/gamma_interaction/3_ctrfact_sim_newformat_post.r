@@ -14,7 +14,7 @@ if(length(args)>0){
     }
 }
 
-# setwd("~/Documents/Research/Store switching/processed data")
+# setwd("~/Documents/Research/Store switching/processed data/Estimation")
 # plot.wd	<- '~/Desktop'
 # source("../Exercise/Multiple_discrete_continuous_model/0_Allocation_function.R")
 # source("../Exercise/main/share_allocation/ctrfact_sim_functions.r")
@@ -24,20 +24,20 @@ if(length(args)>0){
 # setwd("/sscc/home/c/ccv103/Exercise/run")
 setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
 
-setwd("~/Documents/Research/Store switching/processed data/Estimation")
-run_id		<- 9
+# setwd("~/Documents/Research/Store switching/processed data/Estimation")
+run_id		<- 11
 
 ###########################
 # Read counterfactal data # 
 ###########################
 # Read estimation from all segments #
 nseg	<- 3
-seg.name	<- c("Low", "Med", "High")
+seg.name	<- c("Low", "Medium", "High")
 sim.ls	<- setNames(vector("list", length = nseg), seg.name)
 simavg.ls	<- setNames(vector("list", length = nseg), seg.name)
 my.simdata	<- data.frame()
-numsim		<- 1000
-ver.date1	<- "2016-06-25" 
+numsim		<- 500		#1000
+ver.date1	<- "2016-07-24"		#"2016-06-25" 
 cpi.adj		<- TRUE
 annual		<- TRUE
 annual.week	<- 26
@@ -262,9 +262,9 @@ grid.arrange(plots[[1]], plots[[2]], plots[[3]], nrow = 1, widths = c(.45, .45, 
 # Simulation results of adding a new format #
 #############################################
 # Evaluate the effect by focusing on the 2008 income level.
-sel.scn		<- c("Discount Store_prc1")			# Counterfactual scenarios we foucs on 
+sel.scn		<- "Discount Store_Small"	#"Discount Store_prc1"	# Counterfactual scenarios we foucs on 
 sel.base	<- "Base08"				# Fix baseline
-scn.name	<- c("Discount Stores", "Grocery")
+scn.name	<- c("Discount Stores")
 
 # Compute the changes in expenditure at retail formats in the simulation 
 ggtmp		<- data.frame()
@@ -330,9 +330,9 @@ ggtmp1	<- ggtmp[,list(Difference = weight_summary(value, nhh, mean),
 ggtmp2	<- ggtmp[,list(Difference = weight_summary(value, nhh, mean),
 						ymin = weight_summary(value, nhh, quantile, prob = .025), 
 						ymax = weight_summary(value, nhh, quantile, prob = .975)), 
-				 by = list(scenario, IncGrp, retailer)]				
-ggtmp1$retailer <- factor(ggtmp1$retailer, levels = fmt_name1)
-ggtmp2$retailer <- factor(ggtmp2$retailer, levels = fmt_name1)
+				 by = list(scenario, IncGrp, retailer)]								
+ggtmp1$retailer <- factor(ggtmp1$retailer, levels = ggtmp1[order(Difference),retailer])
+ggtmp2$retailer <- factor(ggtmp2$retailer, levels = ggtmp1[order(Difference),retailer])
 
 # Plot the share change
 plots	<- list(NULL)
@@ -357,11 +357,20 @@ grid.arrange(plots[[1]], plots[[2]], plots[[3]], nrow = 1, widths = c(.45, .45, 
 dev.off()
 
 pdf(paste(plot.wd, "/graph_newf_shr_discount.pdf", sep=""), width = 6.5, height = 6.5*.6)
+# ggplot(subset(ggtmp1, scenario=="Discount Stores"), aes(retailer, Difference)) + 
+# 				geom_pointrange(aes(y = Difference, ymin = ymin, ymax = ymax), size = pnt.size) +
+# 				geom_hline(yintercept = 0, size = .25, linetype = 2) + 
+# 				scale_y_continuous(labels = scales::percent) +
+# 				xlab("Retail format") + ylab("Change in expenditure share")+ coord_flip() + 
+#				theme_bw()
+
 ggplot(subset(ggtmp1, scenario=="Discount Stores"), aes(retailer, Difference)) + 
-				geom_pointrange(aes(y = Difference, ymin = ymin, ymax = ymax), size = pnt.size) +
+				# geom_pointrange(aes(y = Difference, ymin = ymin, ymax = ymax), size = pnt.size) +
+				geom_bar(stat = "identity") + 
 				geom_hline(yintercept = 0, size = .25, linetype = 2) + 
 				scale_y_continuous(labels = scales::percent) +
-				xlab("Retail format") + ylab("Change in expenditure share")+ coord_flip()
+				xlab("Retail format") + ylab("Change in expenditure share")+ coord_flip() + 
+				theme_bw()				
 dev.off()
 
 #############################################

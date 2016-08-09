@@ -44,7 +44,7 @@ mytrimfun<- function (x, alpha = 0.05){
 	}
 }
 
-expFOC_fn <- function(y, lambda, omega_fn, ln_inc){
+expFOC_fn <- function(y, lambda, omega_fn, ln_inc, rec){
 # First order condition of optimal expenditure for one single observation
 
 # y			... Expenditure scalor
@@ -52,11 +52,11 @@ expFOC_fn <- function(y, lambda, omega_fn, ln_inc){
 # omega_fn	...	Spline function for a given income level within an income group
 # ln_inc	... A scalor of log(income)
 #==============================================================================#
-	foc	<- (lambda[1] + lambda[2] * ln_inc) * omega_fn(y, deriv = 1) - 1
+	foc	<- (lambda[1] + lambda[2] * rec) * omega_fn(y, deriv = 1) - 1
 	return(foc)
 }
 
-exp_fn <- function(y, lambda, omega_fn, ln_inc){
+exp_fn <- function(y, lambda, omega_fn, ln_inc,rec){
 # Utility function expenditure for one single observation
 
 # y			... Expenditure scalor
@@ -64,11 +64,11 @@ exp_fn <- function(y, lambda, omega_fn, ln_inc){
 # omega_fn	...	Spline function for a given income level within an income group
 # ln_inc	... A scalor of log(income)
 #==============================================================================#
-	out	<- (lambda[1] + lambda[2] * ln_inc) * omega_fn(y) + (exp(ln_inc) - y)
+	out	<- (lambda[1] + lambda[2] * rec) * omega_fn(y) + (exp(ln_inc) - y)
 	return(-out)
 }
 
-solveExp_fn	<- function(lambda, omega_fn, ln_inc, method = "FOC", lower = NULL, upper = NULL){
+solveExp_fn	<- function(lambda, omega_fn, ln_inc, rec,method = "FOC", lower = NULL, upper = NULL){
 # Solve for the optimal expediture given parameter lambda and a given omega function, at a single value of log(income)	
 
 # lambda	... A vector of utility paraemter of purchase utility
@@ -76,7 +76,7 @@ solveExp_fn	<- function(lambda, omega_fn, ln_inc, method = "FOC", lower = NULL, 
 # ln_inc	...	A scalor of log(income)
 #==============================================================================#
 	if(is.null(lower) & is.null(upper)){
-		init.interval	<- c(50, 500)
+		init.interval	<- c(50, 1000)
 	}else{
 		if(is.null(lower)) 	{ lower <- 100 }
 		if(is.null(upper))	{ upper	<- 1000 }
@@ -84,14 +84,14 @@ solveExp_fn	<- function(lambda, omega_fn, ln_inc, method = "FOC", lower = NULL, 
 	}
 	switch(method, 
 		FOC = {
-			sol	<- try(uniroot(expFOC_fn, init.interval, lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc), silent = TRUE)
+			sol	<- try(uniroot(expFOC_fn, init.interval, lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc, rec= rec), silent = TRUE)
 			# The root solution is sensitive to the solution range. 
 			# So we search for wider range gradually
 			if(class(sol) == "try-error"){
 				maxpt	<- seq(1000, 1500, by = 100)
 				i 		<- 1
 				while(i <= length(maxpt) & class(sol) == "try-error"){
-					sol	<- try(uniroot(expFOC_fn, c(1, maxpt[i]), lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc), silent = TRUE)
+					sol	<- try(uniroot(expFOC_fn, c(1, maxpt[i]), lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc, rec= rec), silent = TRUE)
 					i	<- i + 1
 				}
 				if(class(sol) == "try-error"){
@@ -106,10 +106,10 @@ solveExp_fn	<- function(lambda, omega_fn, ln_inc, method = "FOC", lower = NULL, 
 		}, 
 		
 		Utility = {			
-			sol	<- try(optimize(exp_fn, interval = init.interval, lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc), silent = TRUE)
+			sol	<- try(optimize(exp_fn, interval = init.interval, lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc, rec = rec), silent = TRUE)
 			if(class(sol) == "try-error" ){
 				interval	<- c(1, 500)
-				sol	<- try(optimize(exp_fn, interval = interval, lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc), silent = TRUE)
+				sol	<- try(optimize(exp_fn, interval = interval, lambda = lambda, omega_fn = omega_fn, ln_inc = ln_inc, rec= rec), silent = TRUE)
 				if(class(sol) == "try-error"){
 					out <- 0
 					cat("Expenditure solution was not found at ln_inc =", ln_inc, ".\n")
@@ -125,7 +125,7 @@ solveExp_fn	<- function(lambda, omega_fn, ln_inc, method = "FOC", lower = NULL, 
 	return(out)
 }
 
-simExp_fn	<- function(lambda, omega_deriv, ln_inc, method = "FOC", lower = NULL, upper = NULL){
+simExp_fn	<- function(lambda, omega_deriv, ln_inc, rec, method = "FOC", lower = NULL, upper = NULL){
 # A function to simulate optimal expenditure for a vector log(income)
 
 # lambda		... A vector of utility parameters for purchase utility
@@ -140,12 +140,12 @@ simExp_fn	<- function(lambda, omega_deriv, ln_inc, method = "FOC", lower = NULL,
 			newx	<- data.frame(lnInc = lvinc[i], y = y)
 			omega_deriv(newx, ...)
 		}
-		out[sel]	<- solveExp_fn(lambda, f, lvinc[i], method, lower = lower, upper = upper)
+		out[sel]	<- solveExp_fn(lambda, f, lvinc[i], rec, method, lower = lower, upper = upper)
 	}
 	return(out)
 }
 
-SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, price, eps_draw, 
+SimWrapper_fn	<- function(omega_deriv, ln_inc, rec, lambda, param_est, base, X_list, price, eps_draw, 
 							sim.y = NULL, method = "FOC", use.bound = FALSE, ret.sim = FALSE, par.draw = NULL, share.state = NULL){
 # This function simulates expenditure and share, having known omega_fn_ls. 
 
@@ -194,8 +194,8 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 			tmp0	<- data.frame(matrix(price[i,], nrow=1, dimnames = list(NULL, colnames(price))))
 			newx	<- data.frame(lnInc = lvinc[i], y = y, tmp0)
 			if(!is.null(share.state)){
-				Xacs	<- matrix(share.state[i,], nrow = 1)
-				newx$Xacs	<- Xacs
+				Xlag	<- matrix(share.state[i,], nrow = 1)
+				newx$Xlag	<- Xlag
 			}
 			omega_deriv(newx, ...)
 		}
@@ -203,9 +203,9 @@ SimWrapper_fn	<- function(omega_deriv, ln_inc, lambda, param_est, base, X_list, 
 		# Note that expenditure y is independent of eps_draw
 		if(is.null(sim.y)){
 			if(is.null(par.draw)){
-				y[,sel]	<- solveExp_fn(lambda, f, lvinc[i], method = method, lower = lower)		# This is a scalor
+				y[,sel]	<- solveExp_fn(lambda, f, lvinc[i], rec = rec[i], method = method, lower = lower)		# This is a scalor
 			}else{
-				y[,sel]	<- apply(lambda.draw, 1, function(x) solveExp_fn(lambda+x, f, lvinc[i], method = method, lower = lower) )
+				y[,sel]	<- apply(lambda.draw, 1, function(x) solveExp_fn(lambda+x, f, lvinc[i], rec = rec[i], method = method, lower = lower) )
 			}
 		}
 

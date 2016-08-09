@@ -119,6 +119,10 @@ tmp3[seq(1,nrow(tmp3),2),]	<- tmp1
 tmp3[seq(2,nrow(tmp3),2),]	<- paste("(", tmp2, ")", sep="")
 stargazer(tmp3, summary = FALSE)
 
+# Variance decomposition
+hh_exp$ymonth	<- paste(hh_exp$year, hh_exp$month, sep="-")
+tmpfit	<- anova(lm(dol ~ factor(household_code) + factor(year), data = hh_exp))
+
 ################################################
 # Variation of independent variables -- income # 
 ################################################
