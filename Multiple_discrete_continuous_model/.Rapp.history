@@ -1,731 +1,851 @@
-par(mfrow = c(5, 3))#
-for(i in 1:13){#
-	acf(tmp[,1,i])#
-}
-tmp <- extract(sim, "mu", permuted = F)
-dim(tmp)
-par(mfrow = c(2, 3))#
-for(i in 1:6){#
-	acf(tmp[,1,i])#
-}
-tmp <- extract(sim, "tau", permuted = F)
-par(mfrow = c(2, 3))#
-for(i in 1:6){#
-	acf(tmp[,1,i])#
-}
-save_par
-tmp <- extract(sim, "gamma", permuted = F)
-par(mfrow = c(2, 3))#
-for(i in 1:6){#
-	acf(tmp[,1,i])#
-}
-tmp <- extract(sim, "gamma", permuted = F)
-dim(tmp)
-par(mfrow = c(2, 3))#
-for(i in 1:6){#
-	acf(tmp[,1,i])#
-}
-numchain	<- 4#
-numiter		<- 750#
-numburn		<- 250#
-numthin		<- 2
-(numiter - numburn)/numthin
-# Set stan simulation parameters #
-numchain	<- 4#
-numiter		<- 1250#
-numburn		<- 250#
-numthin		<- 4
-(numiter - numburn)/numthin
-?stan
-library(rstan)
-?stan
-# Set stan simulation parameters #
-numchain	<- 4#
-numiter		<- 2000#
-numburn		<- 1000#
-numthin		<- 4
-(numiter - numburn)/numthin
-load("/Users/chaoqunchen/Desktop/MDCEV_stan_cpi_seg1_sub2_chain4_iter500_burn250_thin1.rdata")
-str(fmt_attr)
-length(unique(fmt_attr$scantrack_market_descr))
-load("/Users/chaoqunchen/Desktop/MDCEV_stan_cpi_seg2_sub20_chain4_iter2500_burn1250_thin5.rdata")
-library(rstan)
-plot(sim)
-colMeans(extract(sim)$beta)
-colMeans(extract(sim)$mu)
-colMeans(extract(sim)$tau)
-fmt_name
-shr.par
-colMeans(extract(sim)$gamma)
-colMeans(extract(sim)$sigma)
-mean(extract(sim)$sigma)
-exp(-.36)
-25*25
-4.25/(75.5*.9)
-matrix(c(1, rho, rho, 1), 2,2)
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- mvrnorm(n, rep(0, 0), matrix(c(1, rho, rho, 1), 2,2))
-library(MASS)
-ab	<- mvrnorm(n, rep(0, 0), matrix(c(1, rho, rho, 1), 2,2))
-library(mvtnorm)
-ab	<- rmvnorm(n, rep(0, 0), matrix(c(1, rho, rho, 1), 2,2))
-library(mvtnorm)
-matrix(c(1, rho, rho, 1), 2,2)
-ab	<- rmvnorm(n, rep(0, 0), matrix(c(1, rho, rho, 1), 2,2))
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))
-ab
-ab	<- rmvnorm(n, rep(1, 2), matrix(c(1, rho, rho, 1), 2,2))
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + rnorm(T))
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + rnorm(T))
-y
-y 	<- sapply(1:n, function(i) ab[i,1] + ab[i,2]*x + rnorm(T))
-length(y)
-mydata <- data.frame(id = rep(1:n, each = T), t = rep(1:T, n), x = x, y = y)
-head(mydata)
-library(reshape2)#
+?df_pop_zip
+?choroplethrZip
+help(package="choroplethrZip")
+data(zip.map)
+head(zip.map)
+ggtmp <- subset(zip.map, ZCTA5CE10 %in% c(60201, 60202, 60660))
+head(ggtmp)
+ggplot(ggtmp, aes(longitude, latitude, group = zipcode)) + geom_polygon(color = "black")
 library(ggplot2)
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + rnorm(T))#
-mydata <- melt(y)
-haead(mydata)
-head(mydata)
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)
-head(mydata)
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id))
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id))
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id))
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id)) + #
-	geom_smooth(method = "lm")
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm")
-library(data.table)
-mydata	<- data.table(mydata)
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]
-head(mydata)
-mydata	<- mydata[,within:=within + mean(y[t==1])]
-head(mydata)
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-n 	<- 10#
-T	<- 20#
-rho <- .4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-library(mvtnorm)#
-library(reshape2)#
-library(ggplot2)#
-library(data.table)#
-#
-set.seed(6)#
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-set.seed(11)#
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-set.seed(20)#
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-library(mvtnorm)#
-library(reshape2)#
-library(ggplot2)#
-library(data.table)#
-#
-set.seed(1111)#
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-set.seed(9)#
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-n 	<- 10#
-T	<- 20#
-rho <- 0#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-set.seed(9)#
-n 	<- 10#
-T	<- 20#
-rho <- -.4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(aes(x, within), method = "lm", color = "red")
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(data = subset(mydata, t>1) , aes(x, within), method = "lm", color = "red")
-set.seed(9)#
-n 	<- 10#
-T	<- 20#
-rho <- .4#
-ab	<- rmvnorm(n, rep(0, 2), matrix(c(1, rho, rho, 1), 2,2))#
-ab[,2] <- ab[,2] * .1#
-x 	<- 1:T#
-y 	<- lapply(1:n, function(i) ab[i,1] + ab[i,2]*x + 0)#
-mydata <- melt(y)#
-mydata <- data.frame(id = mydata$L1, t = rep(1:T, n), x = x, y = mydata$value)#
-mydata	<- data.table(mydata)#
-mydata	<- mydata[,within:= c(0, y[-1] - y[-length(y)]), by = list(id)]#
-mydata	<- mydata[,within:=within + mean(y[t==1])]#
-#
-ggplot(mydata, aes(x, y)) + #
-	geom_line(aes(group = id), size = .25) + #
-	geom_smooth(method = "lm") + #
-	geom_smooth(data = subset(mydata, t>1) , aes(x, within), method = "lm", color = "red")
-3.44/54.98
-638*.35/100
-load("/Users/chaoqunchen/Downloads/expenditure results/reg_cpi/cluster se/cluster/expenditure_reg_sht_cpi_2016-04-04.rdata")
-ggtmp1	<- subset(regrs1, model == "HomoPrice" & substr(DV,1,3) == "SHR" & Var == "ln_income")
-head(ggtp1)
-head(ggtmp1)
-dim(ggtmp1)
-ggtmp1
-ggtmp1$Retail	<- factor(as.character(ggtmp1$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), #
-						labels = fmt_name[-1])#
-ord		<- order(ggtmp1$Estimate)#
-ggtmp1$Retail 	<- factor(ggtmp1$Retail, levels = ggtmp1[ord,"Retail"])#
-ord		<- levels(ggtmp1$Retail)
-ggtmp1
-head(mydat)
-head(mydata)
-dv_vec
-dv_mat
-colMeans(mydata[,dv_mat])
-colMeans(mydata[,dv_mat], na.rm = T)
-.3/8
-.09/6.5
-648*.3/100
-648*.09/100
-1.3/2.5
-2.8/54
-648*1.3/100
-648*2.8/100
-library(ggplot2)#
-library(reshape2)#
-library(data.table)#
-library(plm)#
-library(gridExtra)#
-library(scales)#
-library(systemfit)#
-library(stargazer)#
-library(gridExtra)
-# Homogenous income effect for expenditure in SUR regressions#
-ggtmp1	<- subset(regrs1, model == "HomoPrice" & substr(DV,1,3) == "SHR" & Var == "ln_income")#
-ggtmp1$Retail	<- factor(as.character(ggtmp1$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), #
-						labels = fmt_name[-1])#
-ord		<- order(ggtmp1$Estimate)#
-ggtmp1$Retail 	<- factor(ggtmp1$Retail, levels = ggtmp1[ord,"Retail"])#
-ord		<- levels(ggtmp1$Retail)#
-#
-# Heterogenous income effect for expenditure in SUR regressions#
-ggtmp2	<- subset(regrs1, model == "HeterPrice" & substr(DV,1,3) == "SHR" & substr(Var,1,9) == "ln_income")#
-ggtmp2$Retail	<- factor(as.character(ggtmp2$DV), levels = paste("SHR.", gsub("\\s", ".", fmt_name[-1]), sep=""), #
-						labels = fmt_name[-1])						#
-ggtmp2$IncGrp	<- changelab(ggtmp2$Var, paste("ln_income",c("","_med","_high"),sep=""), c("Low", "Med", "High"))#
-ggtmp2$IncGrp	<- factor(ggtmp2$IncGrp, levels = rev(levels(ggtmp2$IncGrp)), ordered = TRUE)#
-ggtmp2$Retail 	<- factor(ggtmp2$Retail, levels = ord)#
-#
-# For median and high income group, the estiamtes are difference relative to low-income group#
-# So, we add the baseline (the estimate for low-income group) to the difference#
-sel		<- ggtmp2$Var == "ln_income"#
-tmp		<- ggtmp2[sel,"Estimate"]#
-names(tmp)	<- ggtmp2[sel,"DV"]#
-tmp1	<- tmp[as.character(ggtmp2$DV)]#
-tmp1[sel]	<- 0#
-ggtmp2$Estimate1	<- ggtmp2$Estimate + tmp1#
-tmp		<- ggtmp2[sel,"Std..Error"]#
-names(tmp)	<- ggtmp2[sel,"DV"]#
-tmp1	<- tmp[as.character(ggtmp2$DV)]#
-tmp1[sel]	<- 0#
-ggtmp2$StdErr	<- sqrt(ggtmp2$Std..Error^2 + tmp1^2)#
-tmp		<- ggtmp2[sel,"cls_se"]#
-names(tmp)	<- ggtmp2[sel,"DV"]#
-tmp1	<- tmp[as.character(ggtmp2$DV)]#
-tmp1[sel]	<- 0#
-ggtmp2$Cluster_se	<- sqrt(ggtmp2$cls_se^2 + tmp1^2)#
-# Find the range of estimates#
-mylim		<- range(c(with(ggtmp1, Estimate - 1.96*Std..Error), with(ggtmp1, Estimate + 1.96*Std..Error), #
-					   with(ggtmp2, Estimate1-1.96*StdErr), with(ggtmp2, Estimate1 + 1.96 * StdErr)))#
-cat("y axis range is", mylim, "\n")
-plots	<- list(NULL)#
-plots[[1]]	<- ggplot(ggtmp1, aes(Retail, Estimate)) + #
-			geom_pointrange(aes(y = Estimate, ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error), width=0.25) + #
-			ylim(mylim) + #
-			xlab("Retail format") + coord_flip()#
-plots[[2]]	<- ggplot(ggtmp2, aes(Retail, Estimate1, col = IncGrp)) + #
-			geom_pointrange(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr, col = IncGrp), #
-					position=position_dodge(width=0.3)) + #
-			scale_color_grey(name="Income\ngroup", start = 0, end = .6) +  #
-			ylim(mylim) + #
-			xlab("Retail format") + ylab("Estimate")+ coord_flip() + #
-			guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE)) #
-plots[[3]]	<- get_legend(plots[[2]])#
-plots[[2]]	<- plots[[2]] + theme(legend.position="none")
-get_legend<-function(myggplot){#
-  tmp <- ggplot_gtable(ggplot_build(myggplot))#
-  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")#
-  legend <- tmp$grobs[[leg]]#
-  return(legend)#
-}
-plots	<- list(NULL)#
-plots[[1]]	<- ggplot(ggtmp1, aes(Retail, Estimate)) + #
-			geom_pointrange(aes(y = Estimate, ymin = Estimate-1.96*Std..Error, ymax = Estimate + 1.96 * Std..Error), width=0.25) + #
-			ylim(mylim) + #
-			xlab("Retail format") + coord_flip()#
-plots[[2]]	<- ggplot(ggtmp2, aes(Retail, Estimate1, col = IncGrp)) + #
-			geom_pointrange(aes(ymin = Estimate1-1.96*StdErr, ymax = Estimate1 + 1.96 * StdErr, col = IncGrp), #
-					position=position_dodge(width=0.3)) + #
-			scale_color_grey(name="Income\ngroup", start = 0, end = .6) +  #
-			ylim(mylim) + #
-			xlab("Retail format") + ylab("Estimate")+ coord_flip() + #
-			guides(fill = guide_legend(reverse = TRUE), color = guide_legend(reverse = TRUE)) #
-plots[[3]]	<- get_legend(plots[[2]])#
-plots[[2]]	<- plots[[2]] + theme(legend.position="none")
-grid.arrange(plots[[1]], plots[[2]], plots[[3]], nrow = 1, widths = c(.45, .45, .1))
-head(ggtmp2)
-ggtmp2	<- subset(regrs1, model == "HeterPrice" & substr(DV,1,3) == "SHR" & substr(Var,1,9) == "ln_income")
-dim(ggtmp2)
-ggtmp2
-638*.36/100
-2.62/41.98
-# Explore utility function with corner and interior solutions. #
-#
-# U = gamma1*psi1*log(x1/gamma1+1) + gamma2*psi2*log(x2/gamma2+1)#
-# Budget constraint: x1+x2=y#
-#
-library(ggplot2)#
-#
-u <- function(gamma,psi,x1,x2){#
-	gamma[1]*psi[1]*log(x1/gamma[1]+1) + gamma[2]*psi[2]*log(x2/gamma[2]+1)#
-}#
-#
-x2.fn <- function(x1,ubar,gamma,psi){#
-	(exp((ubar-gamma[1]*psi[1]*log(x1/gamma[1]+1))/(gamma[2]*psi[2]) ) - 1)*gamma[2]#
-}#
-#
-y <- 3#
-psi.list <- list(c(1,1),c(.5,1.5))#
-gamma.list <- list(c(.1,.1),c(1,1))#
-#
-x1 <- seq(-1,5,.005)#
-ggtmp <- NULL#
-ubar <- matrix(c(.555,1.83,#
-				 .582,2.1),2,2,byrow=T)					# The utility at tangent#
-for(ip in 1:length(psi.list)){#
-	for(ig in 1:length(gamma.list)){#
-		x2 <- x2.fn(x1,ubar=ubar[ip,ig],gamma=gamma.list[[ig]],psi=psi.list[[ip]])#
-		tmp <- data.frame(x1=x1,x2=x2,psi=ip,gamma=ig,group="optimal")#
-		ggtmp <- rbind(ggtmp,tmp)#
-	}#
-}#
-#
-ubar <- matrix(c(.3,.5,#
-				 .4,1),2,2,byrow=T)					# The utility at lower level#
-for(ip in 1:length(psi.list)){#
-	for(ig in 1:length(gamma.list)){#
-		x2 <- x2.fn(x1,ubar=ubar[ip,ig],gamma=gamma.list[[ig]],psi=psi.list[[ip]])#
-		tmp <- data.frame(x1=x1,x2=x2,psi=ip,gamma=ig,group="lower")#
-		ggtmp <- rbind(ggtmp,tmp)#
-	}#
-}#
-#
-ggtmp$psi <- factor(ggtmp$psi,levels=1:2,labels=c("psi[1]==1~psi[2]==1","psi[1]==.5~psi[2]==1.5"))#
-ggtmp$gamma <- factor(ggtmp$gamma,levels=1:2,labels=c("gamma[1]==.1~gamma[2]==.1","gamma[1]==1~gamma[2]==1"))
-ggplot(ggtmp,aes(x1,x2)) + geom_line(aes(group=group)) + #
-		geom_abline(intercept=3,slope=-1,linetype=3) + #
-		ylim(c(-1,5)) + xlim(c(-1,5)) + #
-		geom_hline(yintercept=0,size=.5,linetype=2) +#
-		geom_vline(xintercept=0,size=.5,linetype=2) +#
-		facet_grid(psi~gamma,labeller=label_parsed) +#
-		theme_bw() +#
-		theme(panel.grid=element_blank())
-# A new demonstration#
-y <- 3#
-psi.list <- list(c(1.5,.5),c(1,1),c(.5,1.5))#
-gamma <- c(1,1)#
-#
-x1 <- seq(-1,5,.005)#
-ggtmp <- NULL#
-ubar <- c(2.11,1.83,2.11)				# The utility at tangent#
-for(ip in 1:length(psi.list)){#
-	x2 <- x2.fn(x1,ubar=ubar[ip],gamma=gamma,psi=psi.list[[ip]])#
-	tmp <- data.frame(x1=x1,x2=x2,psi=ip)#
-	ggtmp <- rbind(ggtmp,tmp)#
-}#
-ggtmp$psi <- factor(ggtmp$psi,levels=1:3,labels=c("psi[1]==1.5~psi[2]==.5","psi[1]==1~psi[2]==1","psi[1]==.5~psi[2]==1.5"))
-ggplot(ggtmp,aes(x1,x2)) + geom_line() + #
-		geom_abline(intercept=3,slope=-1,linetype=3) + #
-		ylim(c(-1,5)) + xlim(c(-1,5)) + #
-		geom_hline(yintercept=0,size=.5,linetype=2) +#
-		geom_vline(xintercept=0,size=.5,linetype=2) +#
-		facet_grid(.~psi,labeller=label_parsed) +#
-		theme_bw() +#
-		theme(panel.grid=element_blank())
-pdf("~/Desktop/graph_CES_utility.pdf",width=6.5,height=6.5*.6)#
-ggplot(ggtmp,aes(x1,x2)) + geom_line() + #
-		geom_abline(intercept=3,slope=-1,linetype=3) + #
-		ylim(c(-1,5)) + xlim(c(-1,5)) + #
-		geom_hline(yintercept=0,size=.5,linetype=2) +#
-		geom_vline(xintercept=0,size=.5,linetype=2) +#
-		facet_grid(.~psi,labeller=label_parsed) +#
-		theme_bw() +#
-		theme(panel.grid=element_blank())#
-dev.off()
-load("/Users/chaoqunchen/Desktop/MDCEV_stan_cpi_seg2_sub20_chain4_iter2500_burn1250_thin5.rdata")
-numsim
+ggplot(ggtmp, aes(longitude, latitude, group = zipcode)) + geom_polygon(color = "black")
+ggplot(ggtmp, aes(long, lat, group = ZCTA5CE10)) + geom_polygon(color = "black")
+ggplot(ggtmp, aes(long, lat, group = ZCTA5CE10)) + geom_polygon(color = "black", fill = "white")
+?ttest
+?t.test
+t.test(1:10, y = c(7:20))      # P = .00001855
+a <- t.test(1:10, y = c(7:20))      # P = .00001855
+a
+str()
+str(a)
+a[c("statistic", "p.value")]
+a[[c("statistic", "p.value")]]
+a[c("statistic", "p.value")]
+head(sim07)
+a$estimate
+sqrt*11516
+sqrt(11516)
+eta <- .04#
+delta <- .1#
+delta*(1-eta*delta)/(delta*(1-eta))
+delta*(1+eta*delta)/(delta*(1+eta))
+eta <- .4#
+delta <- .1#
+delta*(1-eta*delta)/(delta*(1-eta))#
+delta*(1+eta*delta)/(delta*(1+eta))
+eta <- .5#
+delta <- .1#
+delta*(1-eta*delta)/(delta*(1-eta))#
+delta*(1+eta*delta)/(delta*(1+eta))
+eta <- -.5#
+delta <- -.1#
+delta*(1-eta*delta)/(delta*(1-eta))#
+delta*(1+eta*delta)/(delta*(1+eta))
+eta <- .5#
+delta <- .1#
+delta*(1-eta*delta)/(delta*(1-eta))#
+delta*(1+eta*delta)/(delta*(1+eta))
+64*.6
+load('~/Documents/TA work/text analysis/review.sample.large.rdata')
 ls()
-numiter
-library(rstan)
-plot(sim)
-arr_id
-## load data and fit model#
-data(Mandible)#
-fm <- lm(length ~ age, data=Mandible, subset=(age <= 28))#
+#############################################
+# Summary statistics (except reveiew text) ##
+#############################################
+cat("Number of reviews:", nrow(df), "\n")#
+cat("Number of products being reviewed:", length(unique(df$asin)), "\n")#
+cat("Number of reviewers:", length(unique(df$reviewerID)), "\n")#
+tmp	<- table(df$reviewerID)#
+cat("Summary statistics of reviewers' reviews:\n"); print(summary(as.numeric(tmp))); cat("\n")#
+hist(as.numeric(tmp), xlab = "Number of reviews across reviewers", breaks = 200, main = "Histogram of number of reviews across reviewers")
+# Distribution of review store #
+# pdf(paste(plot.wd,"/graph_rating_hist.pdf",sep=""), width = ww, height = ww*ar)#
+hist(df$overall, xlab = "Score", freq = F, main = paste("Histogram of product rating \nfrom category of ", focal.cat, sep=""))#
+# dev.off()#
+quartz()#
+hist(test.df$overall, xlab = "Score", freq = F, main = paste("Histogram of product rating from category of ", test.cat, sep=""))
+# Select two categories -- focal category and test category#
+focal.cat 	<- "Tablets"#
+test.cat	<- "Instant video"
+# Distribution of review store #
+# pdf(paste(plot.wd,"/graph_rating_hist.pdf",sep=""), width = ww, height = ww*ar)#
+hist(df$overall, xlab = "Score", freq = F, main = paste("Histogram of product rating \nfrom category of ", focal.cat, sep=""))#
+# dev.off()#
+quartz()#
+hist(test.df$overall, xlab = "Score", freq = F, main = paste("Histogram of product rating from category of ", test.cat, sep=""))
+hist(df$Nword_text, xlab = "Word counts of review text", freq = F, breaks = 200, xlim= c(0, 500),#
+		main = paste("Histogram of word counts of review text\n from category of ", focal.cat, sep=""))
+par(mfrow = c(2, 1))	#
+hist(test.df$Nword_sum, xlab = "Word counts of review summary", #
+		main = paste("Histogram of word counts of review text\n from category of ", test.cat, sep=""))#
+hist(test.df$Nword_text, xlab = "Word counts of review text", #
+		main = paste("Histogram of word counts of review text\n from category of ", test.cat, sep=""))
+##################
+# Text cleaning # #
+##################
+# Convert to lower case #
+my.corp 	<- tm_map(my.corp, content_transformer(tolower), lazy = TRUE)
+library(tm)#
+library(SnowballC)#
+library(graph)#
+library(Rgraphviz)#
+library(wordcloud)#
+library(tm.lexicon.GeneralInquirer)#
+library(pROC)#
+library(glmnet)#
+library(doParallel)#
+library(foreach)#
+library(jsonlite)#
+library(RTextTools)#
+library(topicmodels)#
+library(ggplot2)
+##################
+# Text cleaning # #
+##################
+# Convert to lower case #
+my.corp 	<- tm_map(my.corp, content_transformer(tolower), lazy = TRUE)
+# Remove URL#
+removeURL	<- function(x) gsub("http[^[:space:]]*", "", x)#
+my.corp		<- tm_map(my.corp, content_transformer(removeURL), lazy = TRUE)
+# Remove English stop words#
+# One can specify more stop words#
+cat("Default stop words include:\n"); print(stopwords()); cat("\n")#
+mystopw		<- c(stopwords(), "that","one","can","just")#
+my.corp		<- tm_map(my.corp, removeWords, mystopw, lazy = TRUE)#
+my.corp		<- tm_map(my.corp, removeWords, mystopw)
+# Stemming the text#
+my.corp		<- tm_map(my.corp, stemDocument) #
+inspect(my.corp[1])
+#-------------------------------------------# #
+# Clean review of video games#
+# Convert to lower case #
+test.corp 	<- tm_map(test.corp, content_transformer(tolower))#
 #
-## the following commands lead to the same tests:#
-summary(fm)#
-coeftest(fm)#
+# Remove URL#
+removeURL	<- function(x) gsub("http[^[:space:]]*", "", x)#
+test.corp		<- tm_map(test.corp, content_transformer(removeURL))#
 #
-## a z test (instead of a t test) can be performed by#
-coeftest(fm, df = Inf)
-library(lmtest)
-## load data and fit model#
-data(Mandible)#
-fm <- lm(length ~ age, data=Mandible, subset=(age <= 28))#
+# Remove English stop words#
+test.corp		<- tm_map(test.corp, removeWords, mystopw)#
 #
-## the following commands lead to the same tests:#
-summary(fm)#
-coeftest(fm)#
+# Remove punctuation and white space#
+test.corp 	<- tm_map(test.corp, removePunctuation)#
+test.corp		<- tm_map(test.corp, stripWhitespace)#
 #
-## a z test (instead of a t test) can be performed by#
-coeftest(fm, df = Inf)
-nx
-# Outcome variables as matrix#
-sel		<- paste("SHR_", gsub("\\s", "_", fmt_name), sep="")#
-shr		<- as.matrix(mydata[,sel])#
-y		<- as.vector(mydata$dol)#
-ln_inc	<- mydata$ln_inc#
-sel		<- paste("PRC_", gsub("\\s", "_", fmt_name), sep="")#
-price	<- as.matrix(mydata[,sel])#
-#
-# Select the index that has the positive expenditure#
-tmp 	<- price * 1 *(shr> 0)#
-s1_index<- apply(tmp, 1, which.max)#
-#
-# Match retailers' attributes#
-tmp1	<- unique(fmt_attr$year)#
-tmp2	<- unique(fmt_attr$scantrack_market_descr)#
-tmp		<- paste(rep(tmp2, each=length(tmp1)), rep(tmp1, length(tmp2)), sep="-")#
-tmpn	<- 1:length(tmp)		#
-names(tmpn) <- tmp#
-sel 	<- with(mydata, paste(scantrack_market_descr,year, sep="-"))#
-sel1	<- tmpn[sel]#
-selcol	<- c("size_index", "ln_upc_per_mod", "ln_num_module","overall_prvt")#
-nx 		<- length(selcol) * 2 + R-1#
-#
-X_list 	<- vector("list", length=length(fmt_name))#
-for(i in 1:length(fmt_name)){#
-	sel2		<- fmt_attr$channel_type == fmt_name[i]#
-	tmp			<- fmt_attr[sel2,selcol]#
-	tmp1 		<- as.matrix(tmp[sel1,])#
-	tmp2		<- matrix(0, nrow(shr), R-1)#
-	if(i < beta0_base){#
-		tmp2[,i]	<- ln_inc#
-	}else if(i > beta0_base){#
-		tmp2[,(i-1)] <- ln_inc#
-	}#
-	X_list[[i]]	<- cbind(tmp2, tmp1, tmp1 * ln_inc)#
+# Stemming the text#
+test.corp		<- tm_map(test.corp, stemDocument)#
+inspect(test.corp[1])
+###########################################
+# Exploratory analysis of frequent words ##
+###########################################
+BigramTokenizer <- function(x){#
+	unlist(lapply(ngrams(words(x), 2), paste, collapse = " "), use.names = FALSE)#
 }
-# following shows how tensor pruduct deals nicely with #
-# badly scaled covariates (range of x 5% of range of z )#
-require(mgcv)#
-test1 <- function(x,z,sx=0.3,sz=0.4) { #
-  x <- x*20#
-  (pi**sx*sz)*(1.2*exp(-(x-0.2)^2/sx^2-(z-0.3)^2/sz^2)+#
-  0.8*exp(-(x-0.7)^2/sx^2-(z-0.8)^2/sz^2))#
+# Frequency workds and association in the focal category#
+dtm		<- DocumentTermMatrix(my.corp, control = list(stopwords = TRUE))#
+dim(dtm)
+tmp  	<- colSums(as.matrix(dtm))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]
+nFreqt	<- 500						# Number of terms we focus on#
+freq.term<- tmp[ord[1:nFreqt]]		# Top frequent terms
+wordcloud(names(tmp), tmp, scale = c(5, .5), max.words = 150, colors = brewer.pal(6, "Dark2"), random.order = F)	# Word cloud
+plot(dtm, terms = names(freq.term)[1:25], corThreshold = 0.4)		# Plot word network
+# Word cloud of the reviews with raing of 1-3#
+sel		<- df$overall == 1#
+tmp		<- colSums(as.matrix(dtm[sel,]))#
+sel1	<- df$overall == 5#
+tmp1	<- colSums(as.matrix(dtm[sel1,]))
+wordcloud(names(tmp), tmp, scale = c(3, .5), max.words = 100, colors = brewer.pal(6, "Dark2"), random.order = F)
+wordcloud(names(tmp1), tmp1, scale = c(3, .5), max.words = 100, colors = brewer.pal(6, "Dark2"), random.order = F)
+# Frequency workds and association in the test category#
+test.dtm	<- DocumentTermMatrix(test.corp)#
+dim(test.dtm)#
+tmp  	<- colSums(as.matrix(test.dtm))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]#
+nFreqt	<- 500							# Number of terms we focus on#
+test.freq.term<- tmp[ord[1:nFreqt]]		# Top frequent terms#
+quartz()#
+wordcloud(names(tmp), tmp, scale = c(5, .5), max.words = 100, colors = brewer.pal(6, "Dark2"))	# Word cloud#
+plot(test.dtm, terms = names(test.freq.term)[1:25], corThreshold = 0.15)		# Plot word network
+# Set the common words#
+# Note that common terms are very generic words#
+com.term<- intersect(names(freq.term), names(test.freq.term))#
+length(com.term)#
+sel1		<- names(freq.term) %in% com.term#
+head(freq.term[sel1])#
+sel2		<- names(test.freq.term) %in% com.term#
+head(test.freq.term[sel2])#
+print(com.term)
+# Further reduce the size of common words: top 50 terms in the sum of frequency in both #
+n.com	<- 50#
+tmp1	<- freq.term[sel1]#
+tmp1	<- tmp1[com.term]#
+tmp2	<- test.freq.term[sel2]#
+tmp2	<- tmp2[com.term]#
+tmp		<- tmp1 + tmp2#
+tmp		<- tmp[order(tmp, decreasing = T )]#
+com.term<- names(tmp)[n.com]
+# Subset terms ##
+# Option 1: Remove sparse terms#
+dtms 	<- removeSparseTerms(dtm, .995)#
+dim(dtms)
+# This function collects phrases from texts#
+BigramTokenizer <- function(x){#
+	unlist(lapply(ngrams(words(x), 2), paste, collapse = " "), use.names = FALSE)#
 }#
-n <- 500#
-old.par <- par(mfrow=c(2,2))#
-x <- runif(n)/20;z <- runif(n);#
-xs <- seq(0,1,length=30)/20;zs <- seq(0,1,length=30)#
-pr <- data.frame(x=rep(xs,30),z=rep(zs,rep(30,30)))#
-truth <- matrix(test1(pr$x,pr$z),30,30)#
-f <- test1(x,z)#
-y <- f + rnorm(n)*0.2#
-b1 <- gam(y~s(x,z))
-persp(xs,zs,truth);title("truth")#
-vis.gam(b1);title("t.p.r.s")
-b2 <- gam(y~te(x,z))#
-vis.gam(b2);title("tensor product")
-b3 <- gam(y~ ti(x) + ti(z) + ti(x,z))#
-vis.gam(b3);title("tensor anova")
-6.11/67.9
-14.93/238
+#
+tmp		<- DocumentTermMatrix(my.corp, control = list(tokenize = BigramTokenizer, stopwords = TRUE))#
+dim(tmp)			# Too large a matrix#
+dtm2	<- removeSparseTerms(tmp, .995)#
+dim(dtm2)#
+tmp  	<- colSums(as.matrix(dtm2))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]
+wordcloud(names(tmp), tmp, scale = c(3, .5), max.words = 100, colors = brewer.pal(6, "Dark2"), random.order = F)	# Word cloud
+plot(dtm2, terms = findFreqTerms(dtm2, lowfreq = 400), corThreshold = 0.1)		# Plot word network
+# Because bi-gram terms are much more specific to a category, there are fewer common terms.#
+cat("Common bi-gram terms in both categories:\n"); intersect(dimnames(dtm2)$Terms, dimnames(test.dtm2)$Terms); cat("\n")
+# Frequency workds and association in the test category#
+tmp		<- DocumentTermMatrix(test.corp, control = list(tokenize = BigramTokenizer, stopwords = TRUE))#
+dim(tmp)#
+test.dtm2	<- removeSparseTerms(tmp, .995)#
+dim(test.dtm2)#
+tmp  	<- colSums(as.matrix(test.dtm2))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]#
+wordcloud(names(tmp), tmp, scale = c(5, .5), max.words = 100, colors = brewer.pal(6, "Dark2"))	# Word cloud
+# Because bi-gram terms are much more specific to a category, there are fewer common terms.#
+cat("Common bi-gram terms in both categories:\n"); intersect(dimnames(dtm2)$Terms, dimnames(test.dtm2)$Terms); cat("\n")
+############################
+# Review score prediction # #
+############################
+set.seed(666)#
+#
+#-------------------------------------##
+# Use frequent words to do prediction # #
+# Split food review data to in-sample and out-of-sample #
+sel		<- is.na(df$overall)
+sum(sel)#
+idx.in	<- sample(1:nrow(df), .7*nrow(df))				# Index of in-sample data#
+idx.out	<- setdiff(1:nrow(df), idx.in)					# Index of out-of-sample data#
+y.in	<- ifelse(df[idx.in,"overall"] >= 4, 1, 0)#
+y.out	<- ifelse(df[idx.out,"overall"] >= 4, 1, 0)#
+X.in	<- as.matrix(dtms[idx.in,])#
+X.out	<- as.matrix(dtms[idx.out,])
+mycore 	<- 4
+mycore 	<- 2
+cl		<- makeCluster(mycore, type = "FORK")
+registerDoParallel(cl)#
+cat("Register", mycore, "core parallel computing. \n")
+# Variable selection of 1-gram model#
+cv0			<- cv.glmnet(x = X.in, y = y.in, family = "binomial", alpha = 1, standardize=FALSE, intercept=TRUE, nfolds=5, parallel=TRUE) #
+lgtm0		<- glmnet(x=X.in, y=y.in, family="binomial", alpha=1, standardize=FALSE, intercept=TRUE, lambda=cv0$lambda.min)#
+table(sign(as.vector(coef(lgtm0)[-1])))#
+sel 		<- coef(lgtm0)[-1] != 0#
+X.in		<- X.in[,sel]#
+X.out		<- X.out[,sel]
+# Model matrix for testing category#
+test.y	<- test.df$overall#
+test.X	<- as.matrix(test.dtm)#
+tmp		<- setdiff(colnames(X.in), colnames(test.X))#
+tmp1	<- matrix(0, nrow(test.X), length(tmp), dimnames = list(NULL, tmp))#
+test.X	<- cbind(test.X, tmp1)#
+test.X	<- test.X[,colnames(X.in)]#
+#
+# Variable selection of bigram model #
+X2.in		<- as.matrix(dtm2)[idx.in,]#
+cv1			<- cv.glmnet(x = X2.in, y = y.in, family = "binomial", alpha = 1, standardize=FALSE, intercept=TRUE, nfolds=5, parallel=TRUE) #
+lgtm1		<- glmnet(x=X2.in, y=y.in, family="binomial", alpha=1, standardize=FALSE, intercept=TRUE, lambda=cv1$lambda.min)#
+table(sign(as.vector(coef(lgtm1))))#
+sel 		<- coef(lgtm1)[-1] !=0#
+X2.in		<- X2.in[,sel]#
+X2.out		<- as.matrix(dtm2)[idx.out,sel]
+test.X2	<- as.matrix(test.dtm)#
+tmp		<- setdiff(colnames(X2.in), colnames(test.X2))#
+tmp1	<- matrix(0, nrow(test.X2), length(tmp), dimnames = list(NULL, tmp))#
+test.X2	<- cbind(test.X2, tmp1)#
+test.X2	<- test.X2[,colnames(X2.in)]
+#---------------------------------------------##
+# Model 1: Bivariate model using 1-gram terms ##
+logit.fit1 	<- glmnet(x=X.in, y=y.in, family="binomial", alpha=1, standardize=FALSE, intercept=TRUE, lambda=cv0$lambda.min)#
+table(sign(as.vector(coef(logit.fit1))))
+# Which words are important#
+tmp		<- exp(as.vector(coef(logit.fit1)[-1]))#
+names(tmp)	<- dimnames(coef(logit.fit1))[[1]][-1]#
+tmp		<- sort(tmp)#
+tmp.tab	<- rbind(data.frame(odds = head(tmp, 10), valence = "Negative"), data.frame(odds = tail(tmp, 10), valence = "Positive"))#
+tmp.tab$Term <- rownames(tmp.tab)#
+tmp.tab	<- tmp.tab[,c("valence", "Term", "odds")]#
+cat("Odds of the most predictive words are:\n"); print(tmp.tab); cat("\n")
+# Re-make word-cloud with colored valence#
+tmp1	<- list(Positive = names(tmp)[tmp >= 1], Negative = names(tmp)[tmp < 1], Insignificant = setdiff(dimnames(dtms)$Terms, names(tmp)))  #
+tmp.freq<- colSums(as.matrix(dtms))#
+tmp.tab1 <- tmp.tab	<- matrix(0, length(tmp.freq), 3, dimnames = list(names(tmp.freq), names(tmp1)))#
+for(i in 1:3){#
+	tmp.tab[tmp1[[i]],i]	<- tmp.freq[tmp1[[i]]]#
+	if(i != 3){#
+		tmp.tab1[tmp1[[i]],i]	<- abs(log(tmp[tmp1[[i]]]))#
+	}#
+}#
+tmp.tab1[,3]	<- min(tmp.tab1[tmp.tab1[,1]>0,1])#
+plot.n	<- 50#
+sel		<- c(names(tmp)[c(1:plot.n, length(tmp)-seq(0,plot.n-1))], (rownames(tmp.tab)[order(tmp.tab[,3], decreasing = T)])[1:plot.n])#
+sel1	<- names(tmp)[c(1:plot.n, length(tmp)-seq(0,plot.n-1))]#
+ord <- order(tmp.freq[setdiff(names(tmp), sel1)], decreasing = T)#
+sel1	<- c(sel1, names(tmp.freq[setdiff(names(tmp), sel1)][ord])[1:(3*plot.n)])
+comparison.cloud(tmp.tab1[sel1,], random.order=FALSE, scale = c(2.5, .4), title.size = 1.5)
+# Prediction: #
+yhat1		<- predict(logit.fit1, X.out, type = "response")#
+test.hat1	<- predict(logit.fit1, test.X, type = "response")#
+cls.thresh	<- .5#
+(cfm			<- table(Prediction = 1*(yhat1 >= cls.thresh), True = y.out))#
+cat("Precision = True positive/(True positive + False positive) =", cfm[2,2],"/(", cfm[2,2], "+", cfm[2,1],") =",#
+ 	cfm[2,2]/(cfm[2,1]+cfm[2,2]), "\n")#
+cat("Recall = True positive/(True positive + False negative) =", cfm[2,2],"/(", cfm[2,2], "+", cfm[1,2],") =",#
+ 	cfm[2,2]/(cfm[1,2]+cfm[2,2]), "\n")
+# Example#
+summary(yhat1)#
+sel		<- list(pp = which(yhat1 > .99 & y.out == 1), nn = which(yhat1 < .1 & y.out == 0), #
+				pn = which(yhat1 > .99 & y.out == 0), np = which(yhat1 < .1 & y.out == 1))#
+sel1	<- lapply(sel, function(x) idx.out[x])#
+sel2	<- sapply(sel1, function(i) i[df[i,"Nword_text"] == min(df[i,"Nword_text"])])#
+df[sel2,]#
+tmp		<- as.matrix(dtms[sel1,])#
+apply(tmp, 1, function(x) names(x)[order(x, decreasing = T)][1:20])
+stopCluster(cl)
+###################
+# Share of Voice # #
+###################
+brand	<- list(Apple = c("appl", "ipad", "ipod", "iphone", paste("ios", 4:7, sep="")), #
+				Samsung = c("samsung", "galaxi", "samgung", "samsaung", "samsug", "galaxt", "gallaxi"), #
+				Amazon = c("kindl", "fire", "kindel", "kindlefir", "kindledx", "kindleapp", "kindlecon"), #
+				Motorola = c("zoom", "moto", "motorola", "motoro", "motorolacom", "motorolla", "mototorola", "motoxoom", "xoomverizon", paste("xoom", 1:4, sep="")) )#
+brand	<- lapply(brand, function(x) x[x %in% dimnames(dtms)$Terms])				#
+k 		<- 3
+# Drop the observations with empty entry in the matrix#
+sel 	<- rowSums(as.matrix(dtms)) > 0#
+sum(sel)#
+tmpdtm	<- dtms[sel,]#
+tmpdf	<- df[sel,]#
+lda.fit	<- LDA(dtms[sel,], k, control = list(seed = 666))#
+terms(lda.fit, 20)
+# Classify documents #
+post1	<- posterior(lda.fit, dtms[sel,])$topics#
+sel1	<- apply(post1, 2, function(x) order(x, decreasing =T)[1:2])#
+apply(sel1, 2, function(i) tmpdf[i,"reviewText"])#
+tpk1	<- topics(lda.fit)
+# Compute share of voice#
+range(tmpdf$reviewTime)#
+event.date <- as.Date("2011-3-11", format = "%Y-%m-%d")#
+sel		<- tmpdf$reviewTime <= event.date#
+sov		<- sov.bf	<- sov.aft	<- matrix(NA, length(brand), k, dimnames = list(names(brand), NULL))#
+for(i in 1:k){#
+	sel1<- tpk1 == i#
+	for(j in 1:length(brand)){#
+		sov[j,i]	<- sum(apply(tmpdtm[sel1,brand[[j]]], 1, function(x) 1*any(x>0)))#
+		sov.bf[j,i]	<- sum(apply(tmpdtm[(sel & sel1), brand[[j]]], 1, function(x) 1*any(x>0)))#
+		sov.aft[j,i]<- sum(apply(tmpdtm[(!sel & sel1), brand[[j]]], 1, function(x) 1*any(x>0)))#
+	}#
+}#
+tmp	<- as.vector(table(tpk1))#
+sov	<- rbind(sov, Other = tmp - colSums(sov))#
+sov.shr	<- sov / (rep(1, nrow(sov)) %*% t(tmp))#
+sov.shr	<- rbind(sov.shr, Total = tmp/sum(tmp))#
+cat("Share of voice: \n"); print(sov.shr); cat("\n")
+# SOV trends#
+tmp		<- as.vector(table(tpk1[sel]))#
+sov.bf	<- rbind(sov.bf, Other = tmp - colSums(sov.bf))#
+sov.bf.shr	<- sov.bf / (rep(1, nrow(sov.bf)) %*% t(tmp))#
+sov.bf.shr	<- rbind(sov.bf.shr, Total = tmp/sum(tmp))#
+#
+tmp		<- as.vector(table(tpk1[!sel]))#
+sov.aft	<- rbind(sov.aft, Other = tmp - colSums(sov.aft))#
+sov.aft.shr	<- sov.aft / (rep(1, nrow(sov.aft)) %*% t(tmp))#
+sov.aft.shr	<- rbind(sov.aft.shr, Total = tmp/sum(tmp))#
+#
+cat("Share of voice before event: \n"); print(sov.bf.shr); cat("\n")#
+cat("Share of voice after event: \n"); print(sov.aft.shr); cat("\n")
+# NOTES for the installation of some packages#
+# install.packages("tm.lexicon.GeneralInquirer", repos="http://datacube.wu.ac.at", type="source")#
+#
+library(tm)#
+library(SnowballC)#
+library(graph)#
+library(Rgraphviz)#
+library(wordcloud)#
+library(tm.lexicon.GeneralInquirer)#
+library(pROC)#
+library(glmnet)#
+library(doParallel)#
+library(foreach)#
+library(jsonlite)#
+library(RTextTools)#
+library(topicmodels)#
+library(ggplot2)
+# Select two categories -- focal category and test category#
+focal.cat 	<- "Tablets"#
+test.cat	<- "Instant video"
+load('~/Documents/TA work/text analysis/review.sample.large.rdata')
+#############################################
+# Summary statistics (except reveiew text) ##
+#############################################
+cat("Number of reviews:", nrow(df), "\n")#
+cat("Number of products being reviewed:", length(unique(df$asin)), "\n")#
+cat("Number of reviewers:", length(unique(df$reviewerID)), "\n")#
+tmp	<- table(df$reviewerID)#
+cat("Summary statistics of reviewers' reviews:\n"); print(summary(as.numeric(tmp))); cat("\n")#
+hist(as.numeric(tmp), xlab = "Number of reviews across reviewers", breaks = 200, main = "Histogram of number of reviews across reviewers")
+hist(df$overall, xlab = "Score", freq = F, main = paste("Histogram of product rating \nfrom category of ", focal.cat, sep=""))
+hist(test.df$overall, xlab = "Score", freq = F, main = paste("Histogram of product rating from category of ", test.cat, sep=""))
+par(mfrow = c(2, 1))#
+hist(df$Nword_sum, xlab = "Word counts of review summary", freq = F,#
+		main = paste("Histogram of word counts of review summary\n from category of ", focal.cat, sep=""))#
+hist(df$Nword_text, xlab = "Word counts of review text", freq = F, breaks = 200, xlim= c(0, 500),#
+		main = paste("Histogram of word counts of review text\n from category of ", focal.cat, sep=""))
+par(mfrow = c(2, 1))	#
+hist(test.df$Nword_sum, xlab = "Word counts of review summary", #
+		main = paste("Histogram of word counts of review text\n from category of ", test.cat, sep=""))#
+hist(test.df$Nword_text, xlab = "Word counts of review text", #
+		main = paste("Histogram of word counts of review text\n from category of ", test.cat, sep=""))
+##################
+# Text cleaning # #
+##################
+# Convert to lower case #
+my.corp 	<- tm_map(my.corp, content_transformer(tolower), lazy = TRUE)#
+#
+# Remove URL#
+removeURL	<- function(x) gsub("http[^[:space:]]*", "", x)#
+my.corp		<- tm_map(my.corp, content_transformer(removeURL), lazy = TRUE)#
+#
+# Remove English stop words#
+# One can specify more stop words#
+cat("Default stop words include:\n"); print(stopwords()); cat("\n")#
+mystopw		<- c(stopwords(), "that","one","can","just")#
+my.corp		<- tm_map(my.corp, removeWords, mystopw, lazy = TRUE)#
+my.corp		<- tm_map(my.corp, removeWords, mystopw)#
+#
+# Remove punctuation and white space#
+my.corp 	<- tm_map(my.corp, removePunctuation, lazy = TRUE)#
+my.corp		<- tm_map(my.corp, stripWhitespace, lazy = TRUE)#
+#
+# Stemming the text#
+my.corp		<- tm_map(my.corp, stemDocument) #
+inspect(my.corp[1])#
+#
+#-------------------------------------------# #
+# Clean review of video games#
+# Convert to lower case #
+test.corp 	<- tm_map(test.corp, content_transformer(tolower))#
+#
+# Remove URL#
+removeURL	<- function(x) gsub("http[^[:space:]]*", "", x)#
+test.corp		<- tm_map(test.corp, content_transformer(removeURL))#
+#
+# Remove English stop words#
+test.corp		<- tm_map(test.corp, removeWords, mystopw)#
+#
+# Remove punctuation and white space#
+test.corp 	<- tm_map(test.corp, removePunctuation)#
+test.corp		<- tm_map(test.corp, stripWhitespace)#
+#
+# Stemming the text#
+test.corp		<- tm_map(test.corp, stemDocument)#
+inspect(test.corp[1])
+###########################################
+# Exploratory analysis of frequent words ##
+##########################################    #
+# Frequency workds and association in the focal category#
+# This converts the text document to word matrix (each row is a document, and each column is a key word)#
+dtm		<- DocumentTermMatrix(my.corp, control = list(stopwords = TRUE))#
+dim(dtm)
+# Find the mostly used words#
+tmp  	<- colSums(as.matrix(dtm))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]#
+nFreqt	<- 500						# Number of terms we focus on#
+freq.term<- tmp[ord[1:nFreqt]]		# Top frequent terms
+wordcloud(names(tmp), tmp, scale = c(5, .5), max.words = 150, colors = brewer.pal(6, "Dark2"), random.order = F)	# Word cloud
+# --------------##
+# Test category ##
+# Frequency workds and association in the test category#
+test.dtm	<- DocumentTermMatrix(test.corp)#
+dim(test.dtm)#
+tmp  	<- colSums(as.matrix(test.dtm))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]#
+nFreqt	<- 500							# Number of terms we focus on#
+test.freq.term<- tmp[ord[1:nFreqt]]		# Top frequent terms#
+quartz()#
+wordcloud(names(tmp), tmp, scale = c(5, .5), max.words = 100, colors = brewer.pal(6, "Dark2"))	# Word cloud#
+plot(test.dtm, terms = names(test.freq.term)[1:25], corThreshold = 0.15)		# Plot word network
+# ---------------------##
+# Set the common words ##
+# Note that common terms are very generic words#
+com.term<- intersect(names(freq.term), names(test.freq.term))#
+length(com.term)#
+sel1		<- names(freq.term) %in% com.term#
+head(freq.term[sel1])#
+sel2		<- names(test.freq.term) %in% com.term#
+head(test.freq.term[sel2])#
+print(com.term)
+# Further reduce the size of common words: top 50 terms in the sum of frequency in both #
+n.com	<- 50#
+tmp1	<- freq.term[sel1]#
+tmp1	<- tmp1[com.term]#
+tmp2	<- test.freq.term[sel2]#
+tmp2	<- tmp2[com.term]#
+tmp		<- tmp1 + tmp2#
+tmp		<- tmp[order(tmp, decreasing = T )]#
+com.term<- names(tmp)[n.com]#
+#
+# Subset terms ##
+# Option 1: Remove sparse terms#
+dtms 	<- removeSparseTerms(dtm, .995)#
+dim(dtms)
+tmp		<- t(as.matrix(dtms))#
+ tmp1	<- dist(scale(tmp))#
+ myfit	<- hclust(tmp1, method = "ward.D")#
+ plot(myfit)#
+ rect.hclust(myfit, k = 5)
+#########################################
+# Bi-gram analysis of frequent phrases ##
+#########################################
+# This function collects phrases from texts#
+BigramTokenizer <- function(x){#
+	unlist(lapply(ngrams(words(x), 2), paste, collapse = " "), use.names = FALSE)#
+}#
+#
+# Frequency workds and association in the focal category#
+tmp		<- DocumentTermMatrix(my.corp, control = list(tokenize = BigramTokenizer, stopwords = TRUE))#
+dim(tmp)			# Too large a matrix#
+dtm2	<- removeSparseTerms(tmp, .995)#
+dim(dtm2)#
+tmp  	<- colSums(as.matrix(dtm2))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]
+wordcloud(names(tmp), tmp, scale = c(3, .5), max.words = 100, colors = brewer.pal(6, "Dark2"), random.order = F)	# Word cloud
+# Frequency workds and association in the test category#
+tmp		<- DocumentTermMatrix(test.corp, control = list(tokenize = BigramTokenizer, stopwords = TRUE))#
+dim(tmp)#
+test.dtm2	<- removeSparseTerms(tmp, .995)#
+dim(test.dtm2)#
+tmp  	<- colSums(as.matrix(test.dtm2))#
+ord		<- order(tmp, decreasing = T)#
+tmp[ord[1:5]]#
+wordcloud(names(tmp), tmp, scale = c(5, .5), max.words = 100, colors = brewer.pal(6, "Dark2"))	# Word cloud
 getwd()
-basename()
-basename(getwd())
-dirname(getwd())
-list.files()
-?do.call
-library(rstan)
-## Not run: #
-showClass("stanfit")#
-ecode <- '#
-  parameters {#
-    real<lower=0> y[2];#
-  } #
-  model {#
-    y ~ exponential(1);#
-  }#
-'#
-fit <- stan(model_code = ecode, iter = 10, chains = 1)#
-fit2 <- stan(fit = fit)
-print(fit2)#
-plot(fit2)
-ainfo <- get_adaptation_info(fit2)
-ainfo
-sp <- get_sampler_params(fit2)#
-sp2 <- get_sampler_params(fit2, inc_warmup = FALSE)#
-head(sp[[1]])
-lp <- log_prob(fit, c(1, 2))#
-grad <- grad_log_prob(fit, c(1, 2))#
-lp2 <- attr(grad, "log_prob") # should be the same as "lp"
-n <- get_num_upars(fit)
-n
-y1 <- list(y = rep(1, 2))
-ny
-uy
-y1star <- constrain_pars(fit, uy)
-uy <- unconstrain_pars(fit, y1) #
-## uy should be c(0, 0) since here the log transformation is used#
-y1star <- constrain_pars(fit, uy)
-16+16+8
-load("/Users/chaoqunchen/Desktop/ctrfact_seq_seg3_sim1000_2016-04-30.rdata")
-ls()
-6.38*.02
-library(rstan)
-?stan
-2/32
-65*.7
-49.85/797.60
-n <- 200
-x <- runif(n)
-x
-xm <- cbind(x, 1-x)
-cor(xm)
-sd(rnorm(30))
-sd(rnorm(50))
-6.11/67.90
-sample(c("m", "h"), 1)
-638*.49
-638*.49/100
-40.5/55
-d <- structure(list(r = structure(c(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L,#
-     1L, 1L, 2L, 2L, 2L, 2L, 2L, 2L, 2L, 2L, 2L, 2L), .Label = c("r1","r2"),#
-     class = "factor"), s = structure(c(1L, 1L, 1L, 1L, 1L, #
-     2L, 2L, 2L, 2L, 2L, 1L, 1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L, 2L), #
-    .Label = c("s1","s2"), class = "factor"), rs = structure(c(1L, 1L,#
-     1L,1L, 1L,2L, 2L, 2L, 2L, 2L, 3L, 3L, 3L, 3L, 3L, 4L, 4L, 4L, 4L, 4L),#
-    .Label = c("r1s1","r1s2", "r2s1", "r2s2"), class = "factor"), #
-     y = c(19.3788027518437, 23.832287726332, 26.2533235300492,#
-     15.962906892112, 24.2873740664331, 28.5181676764727, 25.2757801195961,#
-     25.3601044326474, 25.3066440027202, 24.3298865128677, 32.5684219007394,#
-     31.0048406654209, 31.671238316086, 34.1933764518288, 36.8784821769123,#
-     41.6691435168277, 40.4669714825801, 39.2664137501106, 39.4884849591932,#
-     49.247505535468)), .Names = c("r","s", "rs", "y"), #
-     row.names = c(NA, -20L), class = "data.frame")
-lm0 <- lm(y ~ r*s, data=d)#
-lm1 <- lm(y ~ r + s + r:s, data=d)
-lm2 <- lm(y ~ r + s + rs, data=d)
-lm1
-lm2
-a <- model.matrix(y~r:s, data = d)
-head(a)
-b <- model.matrix(y~r*s, data = d)
-head(b)
-head(d)
-d$x <- runif(nrow(d))
-c <- model.matrix(y ~ x*r:s, data = d)
-head(c)
-c <- model.matrix(y ~ x:r:s, data = d)
-head(c)
-c <- model.matrix(y ~ x:r:s - 1, data = d)
-head(c)
-head(d)
-(468.36-448.69)/448.69
-s <- c(448.69, 468.36, 487.65, 487.19, 495.17)
-diff(s)
-diff(s)/s[-length(s)]
-s <- c(s, 519.4)
-diff(s)/s[-length(s)]
-dat <- read.csv("~/Documents/Research/Store switching/processed data/2_panelists.csv",header = T)
-dim(dat)
-head(dat)
-library(foreach)
-?foreach
-5193*.99
-5193*.995
-5193*.995 - 5193
-800/1200
-2/3
-2/3*210
-?which
-260*.8
-260*.2
-163*.2
-212*.2
-library(foreach)
-?foreach
-a <- c(1)
-a[1]
+#########################################
+# Save cleaned data for later analysis ##
+#########################################
+save(df, test.df, dtm, dtms, test.dtm, dtm2, test.dtm2, file = "reveie.processed.rdata")
+library(tm)#
+library(SnowballC)#
+library(graph)#
+library(Rgraphviz)#
+library(wordcloud)#
+library(tm.lexicon.GeneralInquirer)#
+library(pROC)#
+library(glmnet)#
+library(doParallel)#
+library(foreach)#
+library(jsonlite)#
+library(RTextTools)#
+library(topicmodels)#
+library(ggplot2)
+load('~/Desktop/reveie.processed.rdata')
+# Select two categories -- focal category and test category#
+focal.cat 	<- "Tablets"#
+test.cat	<- "Instant video"
+############################
+# Review score prediction # #
+############################
+#-------------------------------------##
+# Use frequent words to do prediction # #
+# Split food review data to in-sample and out-of-sample #
+sel		<- is.na(df$overall)#
+sum(sel)#
+idx.in	<- sample(1:nrow(df), .7*nrow(df))				# Index of in-sample data#
+idx.out	<- setdiff(1:nrow(df), idx.in)					# Index of out-of-sample data#
+y.in	<- ifelse(df[idx.in,"overall"] >= 4, 1, 0)#
+y.out	<- ifelse(df[idx.out,"overall"] >= 4, 1, 0)#
+X.in	<- as.matrix(dtms[idx.in,])#
+X.out	<- as.matrix(dtms[idx.out,])
+mycore 	<- 2#
+ cl		<- makeCluster(mycore, type = "FORK")			# MAC system#
+#cl		<- makeCluster(mycore)								# Windows system#
+registerDoParallel(cl)#
+cat("Register", mycore, "core parallel computing. \n")
+# Variable selection of 1-gram data#
+cv0			<- cv.glmnet(x = X.in, y = y.in, family = "binomial", alpha = 1, standardize=FALSE, intercept=TRUE, nfolds=5, parallel=TRUE) #
+lgtm0		<- glmnet(x=X.in, y=y.in, family="binomial", alpha=1, standardize=FALSE, intercept=TRUE, lambda=cv0$lambda.min)
+table(sign(as.vector(coef(lgtm0)[-1])))
+sel 		<- coef(lgtm0)[-1] != 0							# Select the variables with none-zero coefficients#
+X.in		<- X.in[,sel]#
+X.out		<- X.out[,sel]
+# Model matrix for testing category#
+test.y	<- test.df$overall#
+test.X	<- as.matrix(test.dtm)#
+tmp		<- setdiff(colnames(X.in), colnames(test.X))		# Add the words that show up in the focal category but not in the test category#
+tmp1	<- matrix(0, nrow(test.X), length(tmp), dimnames = list(NULL, tmp))#
+test.X	<- cbind(test.X, tmp1)#
+test.X	<- test.X[,colnames(X.in)]
+# Variable selection of bigram model #
+X2.in		<- as.matrix(dtm2)[idx.in,]#
+cv1			<- cv.glmnet(x = X2.in, y = y.in, family = "binomial", alpha = 1, standardize=FALSE, intercept=TRUE, nfolds=5, parallel=TRUE) #
+lgtm1		<- glmnet(x=X2.in, y=y.in, family="binomial", alpha=1, standardize=FALSE, intercept=TRUE, lambda=cv1$lambda.min)#
+table(sign(as.vector(coef(lgtm1))))#
+sel 		<- coef(lgtm1)[-1] !=0#
+X2.in		<- X2.in[,sel]#
+X2.out		<- as.matrix(dtm2)[idx.out,sel]#
+#
+test.X2	<- as.matrix(test.dtm)#
+tmp		<- setdiff(colnames(X2.in), colnames(test.X2))#
+tmp1	<- matrix(0, nrow(test.X2), length(tmp), dimnames = list(NULL, tmp))#
+test.X2	<- cbind(test.X2, tmp1)#
+test.X2	<- test.X2[,colnames(X2.in)]
+############################
+# Review score prediction # #
+############################
+#---------------------------------------------##
+# Model 1: Bivariate model using 1-gram terms ##
+logit.fit1 	<- glmnet(x=X.in, y=y.in, family="binomial", alpha=1, standardize=FALSE, intercept=TRUE, lambda=cv0$lambda.min)#
+table(sign(as.vector(coef(logit.fit1))))
+# Which words are important#
+tmp		<- exp(as.vector(coef(logit.fit1)[-1]))#
+names(tmp)	<- dimnames(coef(logit.fit1))[[1]][-1]#
+tmp		<- sort(tmp)#
+tmp.tab	<- rbind(data.frame(odds = head(tmp, 10), valence = "Negative"), data.frame(odds = tail(tmp, 10), valence = "Positive"))#
+tmp.tab$Term <- rownames(tmp.tab)#
+tmp.tab	<- tmp.tab[,c("valence", "Term", "odds")]#
+cat("Odds of the most predictive words are:\n"); print(tmp.tab); cat("\n")
+# Re-make word-cloud with colored valence#
+tmp1	<- list(Positive = names(tmp)[tmp >= 1], Negative = names(tmp)[tmp < 1], Insignificant = setdiff(dimnames(dtms)$Terms, names(tmp)))  #
+tmp.freq<- colSums(as.matrix(dtms))#
+tmp.tab1 <- tmp.tab	<- matrix(0, length(tmp.freq), 3, dimnames = list(names(tmp.freq), names(tmp1)))#
+for(i in 1:3){#
+	tmp.tab[tmp1[[i]],i]	<- tmp.freq[tmp1[[i]]]#
+	if(i != 3){#
+		tmp.tab1[tmp1[[i]],i]	<- abs(log(tmp[tmp1[[i]]]))#
+	}#
+}#
+tmp.tab1[,3]	<- min(tmp.tab1[tmp.tab1[,1]>0,1])#
+plot.n	<- 50#
+sel		<- c(names(tmp)[c(1:plot.n, length(tmp)-seq(0,plot.n-1))], (rownames(tmp.tab)[order(tmp.tab[,3], decreasing = T)])[1:plot.n])#
+sel1	<- names(tmp)[c(1:plot.n, length(tmp)-seq(0,plot.n-1))]#
+ord <- order(tmp.freq[setdiff(names(tmp), sel1)], decreasing = T)#
+sel1	<- c(sel1, names(tmp.freq[setdiff(names(tmp), sel1)][ord])[1:(3*plot.n)])
+comparison.cloud(tmp.tab1[sel1,], random.order=FALSE, scale = c(2.5, .4), title.size = 1.5)
+str(tmp1)
+# Prediction: #
+yhat1		<- predict(logit.fit1, X.out, type = "response")#
+test.hat1	<- predict(logit.fit1, test.X, type = "response")#
+cls.thresh	<- .5#
+(cfm			<- table(Prediction = 1*(yhat1 >= cls.thresh), True = y.out))#
+cat("Precision = True positive/(True positive + False positive) =", cfm[2,2],"/(", cfm[2,2], "+", cfm[2,1],") =",#
+ 	cfm[2,2]/(cfm[2,1]+cfm[2,2]), "\n")#
+cat("Recall = True positive/(True positive + False negative) =", cfm[2,2],"/(", cfm[2,2], "+", cfm[1,2],") =",#
+ 	cfm[2,2]/(cfm[1,2]+cfm[2,2]), "\n")
+# Example#
+summary(yhat1)#
+sel		<- list(pp = which(yhat1 > .99 & y.out == 1), nn = which(yhat1 < .1 & y.out == 0), #
+				pn = which(yhat1 > .99 & y.out == 0), np = which(yhat1 < .1 & y.out == 1))#
+sel1	<- lapply(sel, function(x) idx.out[x])#
+sel2	<- sapply(sel1, function(i) i[df[i,"Nword_text"] == min(df[i,"Nword_text"])])#
+df[sel2,]#
+tmp		<- as.matrix(dtms[sel1,])#
+apply(tmp, 1, function(x) names(x)[order(x, decreasing = T)][1:20])
+sel2	<- sapply(sel1, function(i) idx.out[df[i,"Nword_text"] == min(df[i,"Nword_text"])])#
+df[sel2,]
+str(sel2)
+sel2	<- sapply(sel1, function(i) i[df[i,"Nword_text"] == min(df[i,"Nword_text"])])
+tmp		<- as.matrix(dtms[sel1,])
+str(sel1)
+tmp		<- as.matrix(dtms[unlist(sel1),])
+apply(tmp, 1, function(x) names(x)[order(x, decreasing = T)][1:20])
+#----------------------------------------------##
+# Model 2: Bivariate model using bi-gram terms # #
+X3.in 	<- cbind(X.in, X2.in)			# Use both 1-gram and 2-gram words as predictors#
+logit.fit2 	<- glmnet(x=X3.in, y=y.in, family="binomial", alpha=0, standardize=FALSE, intercept=TRUE, lambda=cv0$lambda.min)#
+table(sign(as.vector(coef(logit.fit2))))
+# Which words are important#
+tmp		<- exp(as.vector(coef(logit.fit2)[-1]))#
+names(tmp)	<- dimnames(coef(logit.fit2))[[1]][-1]#
+tmp		<- sort(tmp)#
+tmp.tab	<- rbind(data.frame(odds = head(tmp, 10), valence = "Negative"), data.frame(odds = tail(tmp, 10), valence = "Positive"))#
+tmp.tab$Term <- rownames(tmp.tab)#
+tmp.tab	<- tmp.tab[,c("valence", "Term", "odds")]#
+cat("The most predictive words are:\n"); print(tmp.tab); cat("\n")
+# Prediction: #
+yhat2			<- predict(logit.fit2, cbind(X.out, X2.out), type = "response")#
+test.hat2		<- predict(logit.fit2, cbind(test.X, test.X2), type = "response")
+plot(roc(y.out, yhat1), main = "AUC for logit prediction")#
+plot(roc(y.out, yhat2), add = TRUE, col = "blue")#
+plot(roc(test.y, test.hat1), add = TRUE, col = "green")#
+legend("bottomright", legend = c("1-gram", "1-gram+2-gram", test.cat), col=c(par("fg"), "blue", "green"), lwd=2)
+stopCluster(cl)
+###################
+# Share of Voice # #
+###################
+brand	<- list(Apple = c("appl", "ipad", "ipod", "iphone", paste("ios", 4:7, sep="")), #
+				Samsung = c("samsung", "galaxi", "samgung", "samsaung", "samsug", "galaxt", "gallaxi"), #
+				Amazon = c("kindl", "fire", "kindel", "kindlefir", "kindledx", "kindleapp", "kindlecon"), #
+				Motorola = c("zoom", "moto", "motorola", "motoro", "motorolacom", "motorolla", "mototorola", "motoxoom", "xoomverizon", paste("xoom", 1:4, sep="")) )#
+brand	<- lapply(brand, function(x) x[x %in% dimnames(dtms)$Terms])				#
+k 		<- 3
+str(bran)
+str(brand)
+# Drop the observations with empty entry in the matrix#
+sel 	<- rowSums(as.matrix(dtms)) > 0#
+sum(sel)#
+tmpdtm	<- dtms[sel,]#
+tmpdf	<- df[sel,]#
+#
+# Fit LDA#
+lda.fit	<- LDA(dtms[sel,], k, control = list(seed = 666))#
+terms(lda.fit, 20)
+# Classify documents #
+post1	<- posterior(lda.fit, dtms[sel,])$topics#
+sel1	<- apply(post1, 2, function(x) order(x, decreasing =T)[1:2])#
+apply(sel1, 2, function(i) tmpdf[i,"reviewText"])#
+tpk1	<- topics(lda.fit)
+str(tpk1)
+str(sel1)
+# Compute share of voice#
+range(tmpdf$reviewTime)#
+event.date <- as.Date("2011-3-11", format = "%Y-%m-%d")#
+sel		<- tmpdf$reviewTime <= event.date#
+sov		<- sov.bf	<- sov.aft	<- matrix(NA, length(brand), k, dimnames = list(names(brand), NULL))
+sov		<- sov.bf	<- sov.aft	<- matrix(NA, length(brand), k, dimnames = list(names(brand), NULL))#
+for(i in 1:k){#
+	sel1<- tpk1 == i#
+	for(j in 1:length(brand)){#
+		sov[j,i]	<- sum(apply(tmpdtm[sel1,brand[[j]]], 1, function(x) 1*any(x>0)))#
+		sov.bf[j,i]	<- sum(apply(tmpdtm[(sel & sel1), brand[[j]]], 1, function(x) 1*any(x>0)))#
+		sov.aft[j,i]<- sum(apply(tmpdtm[(!sel & sel1), brand[[j]]], 1, function(x) 1*any(x>0)))#
+	}#
+}
+str(sov)
+sov
+tmp	<- as.vector(table(tpk1))#
+sov	<- rbind(sov, Other = tmp - colSums(sov))#
+sov.shr	<- sov / (rep(1, nrow(sov)) %*% t(tmp))#
+sov.shr	<- rbind(sov.shr, Total = tmp/sum(tmp))#
+cat("Share of voice: \n"); print(sov.shr); cat("\n")
+# SOV trends#
+tmp		<- as.vector(table(tpk1[sel]))#
+sov.bf	<- rbind(sov.bf, Other = tmp - colSums(sov.bf))#
+sov.bf.shr	<- sov.bf / (rep(1, nrow(sov.bf)) %*% t(tmp))#
+sov.bf.shr	<- rbind(sov.bf.shr, Total = tmp/sum(tmp))#
+#
+tmp		<- as.vector(table(tpk1[!sel]))#
+sov.aft	<- rbind(sov.aft, Other = tmp - colSums(sov.aft))#
+sov.aft.shr	<- sov.aft / (rep(1, nrow(sov.aft)) %*% t(tmp))#
+sov.aft.shr	<- rbind(sov.aft.shr, Total = tmp/sum(tmp))#
+#
+cat("Share of voice before event: \n"); print(sov.bf.shr); cat("\n")#
+cat("Share of voice after event: \n"); print(sov.aft.shr); cat("\n")
+stopCluster(cl)
+library(mgcv)
+?gam
+help(package = "mgcv")
+load("/Users/chaoqunchen/Desktop/MDCEV_est_seg1_2016-08-28.rdata")
 library(maxLik)
-?maxLik
-library(stargazer)
-?stargazer
+summary(sol)
+coef(sol)
+coef(sol)[1:10]
+coef(sol)[11:20]
+coef(sol)[21:30]
+coef(sol)[21:32]
+coef(sol)[33:42]
+length(coef(sol))
+coef(sol)
+dim(hh_month)
+load('~/Documents/Research/Store switching/Processed_data/hh_month_exp_2016-09-07.rdata')
+dim(hh_month)
+length(unique(hh_month$household_code))
+56/32
+library(plot3D)
+install.packages("plot3D")
+library(plot3D)
+?surf3D
+X       <- seq(0, pi, length.out = 50)#
+ Y       <- seq(0, 2*pi, length.out = 50)#
+ M       <- mesh(X, Y)#
+ phi     <- M$x#
+ theta   <- M$y#
+#
+# x, y and z grids#
+ r <- sin(4*phi)^3 + cos(2*phi)^3 + sin(6*theta)^2 + cos(6*theta)^4#
+ x <- r * sin(phi) * cos(theta)#
+ y <- r * cos(phi)#
+ z <- r * sin(phi) * sin(theta)#
+#
+# full colored image#
+ surf3D(x, y, z, colvar = y, colkey = FALSE, shade = 0.5,#
+        box = FALSE, theta = 60)
+surf3D(x, y, z, resfac = 2)
+perspbox(z = volcano, bty = "b", ticktype = "detailed", d = 2, #
+          main  = "bty = 'b'")
+# box as in 'persp'#
+ perspbox(z = volcano, bty = "f", ticktype = "detailed", #
+          d = 2, main  = "bty = 'f'")
+perspbox(z = diag(2), bty = "u", ticktype = "detailed", #
+          col.panel = "gold", col.axis = "white",  #
+          scale = FALSE, expand = 0.4, #
+          col.grid = "grey", main = "user-defined")
+surf3D(y, x, z, colvar = colvar, phi = 0, bty = "b2", #
+        lighting = TRUE, ltheta = 40)
+M  <- mesh(seq(0, 2*pi, length.out = 50), #
+            seq(0,   pi, length.out = 50))#
+ u  <- M$x ; v  <- M$y#
+#
+ x <- cos(u)*sin(v)#
+ y <- sin(u)*sin(v)#
+ z <- cos(v)#
+#
+ colvar <- sin(u*6) * sin(v*6)#
+#
+ surf3D(y, x, z, colvar = colvar, phi = 0, bty = "b2", #
+        lighting = TRUE, ltheta = 40)
+surf3D(y,x, z, bty="b2")
+surf3D(y,x, z, bty="f")
+par(mfrow = c(2,3))#
+surf3D(y,x, z, bty="f")#
+surf3D(y,x, z, bty="b")#
+surf3D(y,x, z, bty="b2")#
+surf3D(y,x, z, bty="g")#
+surf3D(y,x, z, bty="bl")
+surf3D(y,x, z, bty="b2", phi = 0)
+surf3D(y,x, z, bty="b2", phi = 90)
+surf3D(y,x, z, bty="b2", phi = 60)
+surf3D(y,x, z, bty="b2", phi = 0)
+surf3D(y,x, z, bty="b2", phi = 0, theta = 20)
+surf3D(y,x, z, bty="b2", phi = 0, theta = 60)
+surf3D(y,x, z, bty="b2", phi = 0, theta = 45)
+surf3D(y,x, z, bty="b2", phi = 45, theta = 45)
+1.25/30
+1.25/20
+library(mgcv)
+?gam
+10/45
+delta <- .1
+eta <- -.6
+eta <- -.5
+(1+delta*eta)/(1-eta)
+delta <- -.1
+(1+delta*eta)/(1-eta)
+232*.8
+eta <- -.05
+delta <- .1
+delta <- -.1
+(1+delta*eta)/(1-eta)
+(1+delta*eta)/(1+eta)
+eta <- -.5
+(1+delta*eta)/(1+eta)
+(1+delta*eta)/(1-eta)
+delta <- .1
+(1+delta*eta)/(1-eta)
+sample(1:3, 1)
 # MDCEV simulation #
 #
 library(reshape2)#
@@ -737,86 +857,15 @@ library(evd)#
 library(nloptr)#
 #
 setwd("~/Documents/Research/Store switching/Exercise/Multiple_discrete_continuous_model")#
-model_name <- "MDCEV_share"#
-#
-# sourceCpp(paste(model_name, ".cpp", sep=""))#
 source("0_Allocation_function.R")#
 #
-#########################
-# Estimation functions ##
-#########################
-src <- #
-'#
-#include <RcppArmadillo.h>#
-#include <algorithm>#
-#include <Rcpp.h>#
-using namespace Rcpp;#
-using namespace arma;#
-// [[Rcpp::depends(RcppArmadillo)]]#
-#
-// [[Rcpp::export]]#
-List MDCEV_ll_fnC(vec param, int nx, mat shr, vec y, vec s1_index, mat p, List X_list, int base=0){#
-	int R = shr.n_cols, N = shr.n_rows;#
-	vec beta0_norm = zeros(1), gamma0_norm = ones<vec>(1); #
-	vec beta = param.subvec(0, nx-1), beta0_sub = param.subvec(nx, nx+R-2), #
-		gamma1	= param.subvec(nx+R-1, 2*nx+R-2), gamma0 = param.subvec(2*nx+R-1, 2*(nx+R)-2);#
-	vec beta0 = zeros(R);#
-	if(base == 0){#
-		beta0 	= join_cols(beta0_norm, beta0_sub);#
-	}else{#
-		int j=0;#
-		for(int i=0; i<R; i++){#
-			if(i==base - 1){#
-				continue;#
-			}else{#
-				beta0(i) = beta0_sub(j); #
-				j++; #
-			}#
-		}#
-	}	 #
-	double sigma = exp(param(2*(nx+R)-1));#
-#
-	// Utility V_tilde and indicator matrix for the original R alternatives;#
-	mat V_tilde = zeros(N, R), d_tilde = zeros(N, R), gamma = zeros(N, R);#
-	umat sgn_shr_tilde = shr > 0;#
-	for(int i=0; i<R; i++){#
-		mat Xtmp 		= X_list[i];#
-		gamma.col(i)	= exp(Xtmp * gamma1 + gamma0(i)); #
-		d_tilde.col(i)	= shr.col(i) + gamma.col(i)%p.col(i)/y;#
-		V_tilde.col(i) 	= Xtmp * beta + beta0(i) - log(d_tilde.col(i)/gamma.col(i));#
-	}#
-	// Jacobean matrix determinant; #
-	mat d_sgn = d_tilde % sgn_shr_tilde;#
-	vec J = log(sum(d_sgn, 1)) - sum(log(d_tilde) % sgn_shr_tilde, 1);#
-	mat sgn_shr = arma::conv_to<arma::mat>::from(sgn_shr_tilde); #
-	vec M = sum(sgn_shr, 1);#
-	// Sum up the log likelihood; #
-	vec ll = J - (M - ones<vec>(N)) * log(sigma) + sum(V_tilde % sgn_shr_tilde/sigma, 1) #
-			- M % log(sum(exp(V_tilde/sigma), 1)) ; #
-	List out = List::create(_["ll"]=ll, _["V_tilde"]=V_tilde);#
-	return(out);#
-}#
-// [[Rcpp::export]]#
-colvec MDCEV_LogLike_fnC(vec param, int nx, vec s1_index, arma::mat shr, vec y, arma::mat p, List X_list, int base=0){#
-	List ll_out	= MDCEV_ll_fnC(param, nx, shr, y, s1_index, p, X_list, base);#
-	colvec llvec 	= ll_out["ll"];#
-// 	NumericVector ll = as<NumericVector>(wrap(llvec));#
-// 	ll.attr("gradient") = grad;#
-	return(llvec);#
-}#
-'#
-sourceCpp(code = src)
-##################
-# Simualte data ##
-##################
 # Set paraemters #
 R		<- 3 		# Number of alternatives#
 Ra		<- R		# Number of alternatives + number of outside options#
 exp_outside <- quant_outside <- FALSE#
 beta0 	<- c(0, -1, -1)#
 beta	<- c(.5, -.7)#
-gamma1	<- c(-1, .6)#
-gamma0 	<- c(-1, 0, -1)#
+gamma0 	<- gamma	<- c(1, 1, 1)#
 sigma 	<- 1#
 qz_cons	<- Inf#
 #
@@ -830,85 +879,147 @@ price 	<- matrix(runif(N*R, 2, 4), N, R)#
 Q		<- runif(N, 1, 20)#
 y		<- rowSums(price) * Q/R #
 #
-par(mfrow=c(3,1))#
-hist(y, breaks=100)#
-hist(Q, breaks=100)#
-hist(as.vector(price), breaks=100)#
-#
 eps_draw<- matrix(rgumbel(N*R), N, R)#
 xbeta	<- do.call(cbind, lapply(1:R, function(i) X_list[[i]] %*% beta + beta0[i]))#
 psi		<- exp(xbeta + eps_draw)#
-gamma	<- do.call(cbind, lapply(1:R, function(i) X_list[[i]]%*%gamma1 + gamma0[i]))#
-gamma	<- exp(gamma)#
+#
+# par(mfrow=c(3,1))#
+# hist(y, breaks=100)#
+# hist(Q, breaks=100)#
+# hist(as.vector(price), breaks=100)#
+#
+# Use optimization for solve optimal allocation#
 e_mat <- matrix(NA, N, Ra)#
+omega	<- rep(NA, N)#
+pct		<- proc.time()#
 for(i in 1:N){#
-	tmp	<- Allocation_fn(y = y[i], psi = psi[i,], gamma[i,], Q = Inf, price = price[i,], R, Ra, qz_cons, exp_outside, quant_outside)#
-	e_mat[i,] <- tmp$e#
-}
-Ra
-eR 	<- e_mat[,1:R]
-mean(eR==0)
-eps <- 1e-4#
-eR 	<- e_mat[,1:R]#
-eR[eR<=eps] <- 0#
-mean(eR==0)
-sel	<- apply(eR, 1, function(x) !all(x==0))#
-eR 	<- eR[sel,]#
-Q	<- Q[sel]#
-y	<- y[sel]#
-price <- price[sel,]#
-X_list <- lapply(X_list, function(x) x[sel,])#
-e1_index <- apply(eR, 1, function(x) which(x== min(x[x>0])))#
-shr		<- eR/y
-# Esitmation #
-MDCEV_wrapper <- function(param){#
-	MDCEV_LogLike_fnC(param, nx, s1_index = e1_index, shr = shr, y = y, p=price, X_list = X_list)#
+	tmp	<- Allocation_fn(y = y[i], psi = psi[i,], gamma, Q = Q[i], price = price[i,], R, Ra, qz_cons, exp_outside, quant_outside)#
+	e_mat[i,] 	<- tmp$e#
+	omega[i] 	<- tmp$max#
+}#
+use.time1	<- proc.time() - pct#
+#
+# Use efficient algorithm for solution#
+allc_fn <- function(y, psi, gamma, price, R){#
+	bu	<- psi/price#
+	idx	<- order(bu, decreasing = T)#
+	sorted.bu	<- bu[idx]#
+	mu	<- 0#
+	M 	<- 0#
+	e	<- rep(0, R)#
+	mu.track	<- NULL#
+	while(mu/y < sorted.bu[(M+1)] & M < R){#
+		M	<- M + 1#
+		sel	<- idx[1:M]#
+		mu	<- sum(gamma[sel]*psi[sel]) / (1 + sum(gamma[sel]*price[sel]/y))#
+		mu.track	<- c(mu.track, mu)#
+	}#
+	sel 	<- idx[1:M]#
+	e[sel] 	<- gamma[sel]*(psi[sel]*y/mu - price[sel])#
+	return(list (e = e, mu = mu, mu.track =mu.track))#
 }#
 #
-# Estimation with multiple initial values (full set of parameters)#
-theta_init0	<- c(beta, beta0[-1], gamma1, gamma0, log(sigma))#
-theta_init2	<- theta_init1 <- theta_init0#
-theta_init1[1:(nx+R)] <- theta_init0[1:(nx+R)] + rnorm(nx+R)#
-theta_init2[1:(nx+R)] <- rep(1, nx+R)#
-theta_init 	<- list(theta_init0, theta_init1, theta_init2)#
-system.time(tmp <- MDCEV_wrapper(theta_init[[1]]))
-tmp_sol <- vector("list", length(theta_init))#
-pct <- proc.time()#
-for(i in 1:length(theta_init)){#
-	names(theta_init[[i]]) <- c(paste("beta_",1:nx, sep=""), paste("beta0_",2:R,sep=""), #
-								paste("gamma1_",1:nx, sep=""), paste("gamma0_",1:R, sep=""),#
-								"ln_sigma")	#
-	tmp_sol[[i]]	<- maxLik(MDCEV_wrapper, start=theta_init[[i]], method="BFGS")#
+all_vec_fn	<- function(y, psi, gamma, price, R){#
+	N 	<- length(y)#
+	bu	<- psi/price#
+	idx	<- t(apply(bu, 1, order, decreasing = T))#
+	sorted.bu	<- t(apply(bu, 1, sort, decreasing = T))#
+	mu	<- rep(0, N)#
+	M	<- rep(0, N)#
+	for(r in 1:R){#
+		sel		<- mu/y < sapply(1:N, function(i) sorted.bu[i,(M[i]+1)])#
+		if(sum(sel) > 0){#
+			M[sel]	<- M[sel] + 1#
+			pe.ind	<- t(sapply(1:N, function(i) 1*(1:R %in% idx[i,(1:M[i])])))#
+			mu[sel]	<- rowSums(gamma[sel,]*psi[sel,]*pe.ind[sel,]) / (1 + rowSums(gamma[sel,]*price[sel,]*pe.ind[sel,])/y[sel])#
+		}#
+	}#
+	e	<- gamma*(psi*y/mu - price)*pe.ind#
+	return(e)#
 }#
-sel 	<- which.max(sapply(tmp_sol, function(x) ifelse(is.null(x$maximum), NA, x$maximum)))#
-sol		<- tmp_sol[[sel]]#
-lapply(tmp_sol, summary)
-beta
-cbind(True = theta_init0, sapply(tmp_sol, coef))
-theta_init2 <- rep(1, length(theta_init2))
-i <- 3
-names(theta_init[[i]]) <- c(paste("beta_",1:nx, sep=""), paste("beta0_",2:R,sep=""), #
-								paste("gamma1_",1:nx, sep=""), paste("gamma0_",1:R, sep=""),#
-								"ln_sigma")	#
-	tmp_sol[[i]]	<- maxLik(MDCEV_wrapper, start=theta_init[[i]], method="BFGS")
-theta_init 	<- list(theta_init0, theta_init1, theta_init2)
-# Estimation with multiple initial values (full set of parameters)#
-theta_init0	<- c(beta, beta0[-1], gamma1, gamma0, log(sigma))#
-theta_init2	<- theta_init1 <- theta_init0#
-theta_init1[1:(nx+R)] <- theta_init0[1:(nx+R)] + rnorm(nx+R)#
-theta_init2 <- rep(1, length(theta_init2))#
-theta_init 	<- list(theta_init0, theta_init1, theta_init2)#
-system.time(tmp <- MDCEV_wrapper(theta_init[[1]]))#
 #
-tmp_sol <- vector("list", length(theta_init))#
-pct <- proc.time()#
-for(i in 1:length(theta_init)){#
-	names(theta_init[[i]]) <- c(paste("beta_",1:nx, sep=""), paste("beta0_",2:R,sep=""), #
-								paste("gamma1_",1:nx, sep=""), paste("gamma0_",1:R, sep=""),#
-								"ln_sigma")	#
-	tmp_sol[[i]]	<- maxLik(MDCEV_wrapper, start=theta_init[[i]], method="BFGS")#
+e_mat1 <- matrix(NA, N, R)#
+omega1	<- rep(NA, N)#
+mu		<- rep(NA, N)#
+pct		<- proc.time()#
+for(i in 1:N){#
+	tmp			<- allc_fn(y = y[i], psi = psi[i,], gamma, price = price[i,], R)#
+	e_mat1[i,] 	<- tmp$e#
+	mu[i]		<- tmp$mu#
+	omega1[i]	<- uP_fn(e=e_mat1[i,], psi = psi[i,], gamma, price=price[i,], R, Ra, qz_cons, exp_outside, quant_outside)#
 }#
-sel 	<- which.max(sapply(tmp_sol, function(x) ifelse(is.null(x$maximum), NA, x$maximum)))#
-sol		<- tmp_sol[[sel]]#
-lapply(tmp_sol, summary)#
-cbind(True = theta_init0, sapply(tmp_sol, coef))
+use.time2 <- proc.time() - pct
+str(X_list)
+X.list.new	<- vector("list", length = R+1)#
+X.list.new	<- X_list[[c(1:R, 1)]]
+X.list.new	<- X_list[c(1:R, 1)]
+str(X.list.new)
+eps_draw_new<- cbind(eps_draw, rgumbel(N))
+beta0
+beta0[c(1:R,1)]
+# Add a new choice alternative #
+beta0.new	<- beta0[c(1:R,1)]#
+X.list.new	<- vector("list", length = R+1)#
+X.list.new	<- X_list[c(1:R, 1)]#
+eps_draw_new<- cbind(eps_draw, rgumbel(N))#
+xbeta.new	<- do.call(cbind, lapply(1:(R+1), function(i) X.list.new[[i]] %*% beta + beta0.new[i]))#
+psi.new		<- exp(xbeta.new + eps_draw.new)
+psi.new		<- exp(xbeta.new + eps_draw_new)
+gamma
+gamma.new	<- gamma[c(1:R,1)]
+price.new	<- price[,c(1:R,1)]
+# Add a new choice alternative ##
+#################################
+beta0.new	<- beta0[c(1:R,1)]#
+gamma.new	<- gamma[c(1:R,1)]#
+X.list.new	<- vector("list", length = R+1)#
+X.list.new	<- X_list[c(1:R, 1)]#
+eps_draw_new<- cbind(eps_draw, rgumbel(N))#
+xbeta.new	<- do.call(cbind, lapply(1:(R+1), function(i) X.list.new[[i]] %*% beta + beta0.new[i]))#
+psi.new		<- exp(xbeta.new + eps_draw_new)#
+price.new	<- price[,c(1:R,1)]#
+#
+e_mat1.new 	<- matrix(NA, N, R)#
+omega1.new	<- rep(NA, N)#
+mu.new		<- rep(NA, N)
+tmp			<- allc_fn(y = y[i], psi = psi.new[i,], gamma.new, price = price.new[i,], R+1)
+tmp
+e_mat1.new 	<- matrix(NA, N, R)#
+omega1.new	<- rep(NA, N)#
+mu.new		<- rep(NA, N)#
+pct		<- proc.time()#
+for(i in 1:N){#
+	tmp				<- allc_fn(y = y[i], psi = psi.new[i,], gamma.new, price = price.new[i,], R+1)#
+	e_mat1.new[i,] 	<- tmp$e#
+	mu.new[i]		<- tmp$mu#
+	omega1.new[i]	<- uP_fn(e=e_mat1.new[i,], psi = psi.new[i,], gamma.new, price=price.new[i,], R+1, Ra+1, qz_cons, exp_outside, quant_outside)#
+}#
+use.time2 <- proc.time() - pct
+i
+e_mat1.new 	<- matrix(NA, N, R+1)#
+omega1.new	<- rep(NA, N)#
+mu.new		<- rep(NA, N)#
+pct		<- proc.time()#
+for(i in 1:N){#
+	tmp				<- allc_fn(y = y[i], psi = psi.new[i,], gamma.new, price = price.new[i,], R+1)#
+	e_mat1.new[i,] 	<- tmp$e#
+	mu.new[i]		<- tmp$mu#
+	omega1.new[i]	<- uP_fn(e=e_mat1.new[i,], psi = psi.new[i,], gamma.new, price=price.new[i,], R+1, Ra+1, qz_cons, exp_outside, quant_outside)#
+}#
+use.time2 <- proc.time() - pct
+str(mu)
+str(mu.new)
+summary(mu.new - mu)
+summary(e_mat1)#
+summary(e_mat1.new)
+cat("Average share before:\n"); print(colMeans(e_mat1/y))
+cat("Average share after:\n"); print(colMeans(e_mat1.new/y))
+head(psi)
+dim(eps_draw)
+a <- psi + eps_draw[1,]
+head(a)
+eps_draw[1,]
+psi[1:3]
+psi[1:3] - eps_draw[1,]
+psi[1:3] + eps_draw[1,]
+psi[4:6] + eps_draw[1,]

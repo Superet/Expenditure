@@ -1,0 +1,8 @@
+#!/bin/bash
+#PBS -j oe
+#PBS -l walltime=30:00:00
+#PBS -l mem=10gb
+#PBS -l ncpus=7
+
+cd /sscc/home/c/ccv103/Exercise/run/estrun_1
+R CMD BATCH tot_exp_4_newformat.r newformat.log

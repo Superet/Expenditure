@@ -1,0 +1,9 @@
+#!/bin/bash
+#PBS -J 1-9
+#PBS -j oe
+#PBS -l walltime=80:00:00
+#PBS -l mem=4gb
+#PBS -l ncpus=1
+
+cd /sscc/home/c/ccv103/Exercise/run/estrun_1
+R CMD BATCH tot_exp_5_compare_model_est.r compare_est_arr${PBS_ARRAY_INDEX}.log

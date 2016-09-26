@@ -1,0 +1,8 @@
+#!/bin/bash
+#PBS -j oe
+#PBS -l walltime=30:00:00
+#PBS -l mem=12gb
+#PBS -l ncpus=7
+
+cd /sscc/home/c/ccv103/Exercise/run/estrun_3
+R CMD BATCH category_3_marginal_effect.r DG_marginal_effect.log
