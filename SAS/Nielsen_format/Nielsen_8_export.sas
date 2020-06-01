@@ -170,15 +170,56 @@ proc univariate data = hh_format;
 	var unitprice_paid distance_haver num_module; 
 run;
 
-
 * For monthly purchase data, exclude the first 6 months that are used to calculate basket share; 
-data hh_month_dpt(drop = n); 
+data hh_month_dpt; 
 	set hh_month_dpt; 
 	by household_code;
 	if first.household_code then n = 0; 
 	n+1; 
+	/*if n <=6 then delete;*/
+run;
+
+/*Calculate average department consumption from the first 6 months; */
+data tmp; 
+	set hh_month_dpt; 
+	where n <= 6; 
+	DOL_DG 	= 0; 
+	DOL_GM	= 0; 
+	DOL_HBC	= 0; 
+	DOL_OTHER = 0; 
+	DOL_RF	= 0; 
+	DOL_NFG	= 0; 
+	
+	array d1{6} EXP_DG:;
+	array d2{6} EXP_GM:;
+	array d3{6}	EXP_HBC:;
+	array d4{6}	EXP_OTHER:;
+	array d5{6}	EXP_RF:;
+	array d6{6}	EXP_NFG:;
+	do i = 1 to 6; 
+		DOL_DG = DOL_DG + d1{i}; 
+		DOL_GM = DOL_GM + d2{i}; 
+		DOL_HBC = DOL_HBC + d3{i}; 
+		DOL_OTHER = DOL_OTHER + d4{i}; 
+		DOL_RF = DOL_RF + d5{i}; 
+		DOL_NFG = DOL_NFG + d6{i}; 
+	end;
+run;
+
+proc sql noprint;
+	create table hh_avg_consump as 
+	select household_code, mean(DOL_DG) as AVG_DG, mean(DOL_GM) as AVG_GM, mean(DOL_HBC) as AVG_HBC, 
+		mean(DOL_OTHER) as AVG_OTHER, mean(DOL_RF) as AVG_RF, mean(DOL_NFG) as AVG_NFG
+	from tmp
+	group by household_code
+	order by household_code; 
+quit;  
+
+data hh_month_dpt(drop = n); 
+	set hh_month_dpt; 
 	if n <=6 then delete;
 run;
+
 
 PROC EXPORT DATA=format_department
 			OUTFILE= "U:\Users\ccv103\Desktop\format_department.csv" 
@@ -206,6 +247,12 @@ RUN;
 
 PROC EXPORT DATA=panelists
 			OUTFILE= "U:\Users\ccv103\Desktop\panelists.csv" 
+            DBMS=CSV REPLACE;
+     PUTNAMES=YES;
+RUN;
+
+PROC EXPORT DATA=hh_avg_consump
+			OUTFILE= "U:\Users\ccv103\Desktop\avg_consump.csv" 
             DBMS=CSV REPLACE;
      PUTNAMES=YES;
 RUN;

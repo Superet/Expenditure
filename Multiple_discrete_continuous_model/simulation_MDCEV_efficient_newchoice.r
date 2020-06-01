@@ -142,3 +142,27 @@ summary(e_mat1.new)
 
 cat("Average share before:\n"); print(colMeans(e_mat1/y))
 cat("Average share after:\n"); print(colMeans(e_mat1.new/y))
+
+###########################################################
+# Sensitivity analysis of the correlation in random terms # 
+###########################################################
+xi		<- rgumbel(N)
+ggtmp	<- data.frame()
+rho.vec	<- seq(-1, 1, .1)
+
+for(i in 1:length(rho.vec)){
+	eps_draw.new<- cbind(eps_draw, rho.vec[i]*eps_draw[,1]+sqrt(1-rho.vec[i]^2)*xi)
+	psi.new		<- exp(xbeta.new + eps_draw.new)
+	tmp			<- all_vec_fn(y, psi.new, rep(1, N) %*% t(gamma.new), price.new, R+1)
+	ggtmp		<- rbind(ggtmp, c(rho = rho.vec[i], colMeans(tmp/y)))
+}
+names(ggtmp)	<- c("rho", "a", "b", "c", "new.a")
+tmp				<- setNames(c(rho = NA, colMeans(e_mat1/y), 0), c("rho", "a", "b", "c", "new.a") )
+ggtmp			<- rbind(ggtmp, tmp)
+ggtmp1			<- melt(ggtmp, id.vars = "rho")
+
+ggplot(ggtmp, aes(rho, a + new.a)) + geom_line()
+ggplot(ggtmp1, aes(rho, value)) + geom_line() + 
+		geom_hline(data = subset(ggtmp1,is.na(rho)), aes(yintercept = value), col = "red", linetype = 2) + 
+		facet_grid(. ~ variable) 
+

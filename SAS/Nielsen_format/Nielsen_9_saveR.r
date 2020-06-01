@@ -1,10 +1,13 @@
 library(data.table)
 
 setwd("U:/Users/ccv103/Desktop")
+setwd("U:/Users/ccv103/Documents/Research/Store switching/run")
+
 hh_dist		<- read.csv("hh_format.csv", header = T)
 hh_dpt		<- read.csv("hh_format_dpt.csv", header = T)
 hh_month	<- read.csv("hh_month_dpt.csv", header = T)
 pan			<- read.csv("panelists.csv", header = T)
+fmt_dpt		<- read.csv("format_department.csv", header = T)
 codebook	<- read.csv("U:/Users/ccv103/Documents/Research/Store switching/run/code_book.csv", header = T)
 cpi			<- read.csv("CPI.csv")
 
@@ -12,6 +15,7 @@ names(hh_dist)
 names(hh_dpt)
 names(hh_month)
 names(pan)
+names(fmt_dpt)
 
 # Rename the expenditure data
 fmt_name	<- levels(hh_dist$channel_type)
@@ -72,4 +76,4 @@ tmp		<- setNames(tmp$segment, tmp$household_code)
 pan$segment 	<- tmp[as.character(pan$household_code)]
 
 # save(pan, hh_dist, file = "hh_fmt.rdata")
-save(pan, hh_dist, hh_dpt, hh_month, file = paste("hh_month_exp_", as.character(Sys.Date()),".rdata", sep=""))
+save(pan, hh_dist, hh_dpt, hh_month, fmt_dpt,file = paste("hh_month_exp_", as.character(Sys.Date()),".rdata", sep=""))
